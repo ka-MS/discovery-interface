@@ -1358,7 +1358,7 @@ Device42(원천)와 Maximo(타겟) 사이의 매핑 작업 문서다.
 | --- | --- |
 | Target 컬럼 | `MAXATTRIBUTE.ATTRIBUTENAME` |
 | 한글명 | `L_MAXATTRIBUTE.TITLE` (LANGCODE='KO') |
-| 타입 | `MAXATTRIBUTE.MAXTYPE` + `LENGTH` |
+| 타입 | `MAXATTRIBUTE.MAXTYPE` + `LENGTH` + `SCALE` |
 | Null | `MAXATTRIBUTE.REQUIRED` 반전 |
 | 구분 | 분석. 직접 / 변환 / 상수 / 채번 / 원천없음 / 미결 |
 | Source | 분석. Device42 뷰.컬럼 |
