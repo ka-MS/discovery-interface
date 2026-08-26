@@ -41,3 +41,6 @@ out/
 
 ### db-access-kit symlink (worktree)
 /local
+
+### TMP
+local/
