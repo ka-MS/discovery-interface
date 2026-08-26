@@ -31,5 +31,11 @@ bash local/db-access-kit/scripts/run-maximo.sh   <쿼리파일> <출력디렉터
 
 | 쿼리 | 용도 |
 | --- | --- |
+| `device42/device-type-distribution.sql` | type/subtype 분포, virtualsubtype_id 대응 |
+| `device42/view-counts.sql` | 뷰별 건수, 파트 타입 분포 |
+| `device42/device-related-inventory.sql` | 장비 한 대의 연관 자원 건수 |
+| `device42/source-coverage-by-subtype.sql` | subtype별 원천 가용성, 식별자 충전율 |
+| `device42/etl-target-simulation.sql` | 현행 필터 적용 시 적재 대상과 제외 대상 |
 | `maximo/table-description.sql` | 테이블 한글 설명 |
 | `maximo/column-skeleton.sql` | 컬럼 매핑표 앞 4열 생성 |
+| `maximo/dpa-child-coverage.sql` | DPA 자식 테이블 노드 커버리지, ASSETCLASS 분포 |
