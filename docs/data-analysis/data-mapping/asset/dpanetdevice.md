@@ -37,7 +37,7 @@
 | OSVERSION | 운영 체제 버전 | ALN(128) | Y |  |  |  |
 | RAMSIZE | RAM 크기 | DECIMAL(10,2) | Y |  |  |  |
 | RAMUNIT | RAM 단위 | ALN(16) | Y |  |  |  |
-| VRAMSIZE | RAM 크기 | ALN(32) | Y |  |  |  |
+| VRAMSIZE | RAM 크기 | ALN(32) | Y | 원천없음 | – | 비영속 속성(PERSISTENT=0). DB 컬럼이 아니므로 적재 대상이 아니다 |
 
 구분 허용값: 직접 / 변환 / 상수 / 채번 / 원천없음 / 미결
 

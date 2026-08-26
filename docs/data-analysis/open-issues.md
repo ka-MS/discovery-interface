@@ -45,6 +45,31 @@ COMPUTER 가 된다. Maximo 에 PDU 용 ASSETCLASS 와 DPA 테이블이 없다.
 
 판정 순서는 `knowledge/device42/device-types.md` 참조.
 
+## ISSUE-4 자식 태스크의 조회 조건이 부모와 다르다
+
+**상태:** 기록만 한다.
+
+`DeployedAssetIntegrate` 와 `DpaComputerIntegrate` 의 원천 조회 조건이 서로 다르다.
+
+| 태스크 | 조건 |
+| --- | --- |
+| DeployedAssetIntegrate | `type IN ('virtual','physical')` AND `virtualsubtype_id IS NULL OR <> 15` |
+| DpaComputerIntegrate | `network_device` 거짓 AND `physicalsubtype <> 'Network Printer'` AND `type` 이 `unknown` 아님 |
+
+두 조건의 차이를 관측 기준으로 대조한 결과다.
+
+| 부모 | 자식 | 대상 | 건수 |
+| --- | --- | --- | --- |
+| 제외 | 포함 | virtual / Docker Container | 12 |
+| 포함 | 제외 | physical / Generic (network_device) | 2 |
+| 포함 | 제외 | physical / Network Printer | 1 |
+
+`포함/제외` 3건은 정상이다. NETDEVICE·NETPRINTER 로 분류된 자산이라 DPACOMPUTER 대상이 아니다.
+
+`제외/포함` 12건이 문제다. 부모가 적재하지 않은 Docker Container 를 자식이 대상으로 잡아, 매 실행마다 교차키 조회에 실패하고 경고 로그만 남긴다. 데이터가 잘못 들어가지는 않지만 불필요한 조회와 로그가 발생한다.
+
+자식 태스크를 새로 만들 때 부모와 같은 필터를 쓰도록 맞춰야 한다.
+
 ## 처리 완료
 
 | 항목 | 결론 |

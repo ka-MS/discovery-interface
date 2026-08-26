@@ -30,16 +30,16 @@
 
 ## 진행 현황
 
-`구분` 열 채움 상태 기준이다.
+`구분` 열 채움 상태 기준이다. `작성 완료` 는 모든 행의 `구분` 이 채워졌다는 뜻이며, `미결` 로 남은 행은 각 문서의 6절에 사유가 있다.
 
 | 테이블 | Device42 원천 | 컬럼 매핑 |
 | --- | --- | --- |
-| DEPLOYEDASSET | `view_device_v2` | 미작성 |
-| DPACOMPUTER | `view_device_v2`, `view_part_v1`(RAM) | 미작성 |
+| DEPLOYEDASSET | `view_device_v2` | 작성 완료 |
+| DPACOMPUTER | `view_device_v2`, `view_part_v1`(RAM) | 작성 완료 |
 | DPAOS | `view_deviceos_v1`, `view_os_v1` | 미작성 |
 | DPASOFTWARE | `view_softwareinuse_v1`, `view_software_v1` | 미작성 |
-| DPACPU | `view_part_v1`(CPU) | 미작성 |
-| DPADISK | `view_part_v1`(Hard Disk) | 미작성 |
+| DPACPU | `view_part_v1`(CPU) | 작성 완료 |
+| DPADISK | `view_part_v1`(Hard Disk) | 작성 완료 |
 | DPALOGICALDRIVE | `view_mountpoint_v1` | 미작성 |
 | DPANETADAPTER | `view_netport_v1` | 미작성 |
 | DPATCPIP | `view_ipaddress_v1`, `view_subnet_v1` | 미작성 |

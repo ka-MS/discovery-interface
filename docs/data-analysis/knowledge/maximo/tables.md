@@ -24,7 +24,12 @@
 | DPASWSUITE | 배치된 자산 컴퓨터 스위트 | 18 |
 | DPATCPIP | 배치된 자산 컴퓨터 TCP/IP | 15 |
 
-합계 293개 컬럼. 14개 테이블 모두 한글명이 전건 제공된다.
+합계 293개 속성. 14개 테이블 모두 한글명이 전건 제공된다.
+
+이 중 17개는 `PERSISTENT = 0` 인 비영속 속성으로 DB 컬럼이 아니다. 적재 대상은
+276개다. 비영속 속성은 10개 테이블에 분포하며 대부분 수치 컬럼의 문자열 표기
+(`VRAMSIZE`, `VMAXSPEED` 등)다. `DEPLOYEDASSET`, `DPAOS`, `DPATCPIP`,
+`DPADISPLAY` 에는 없다.
 
 ## 메타데이터 출처
 
@@ -34,4 +39,5 @@
 | 컬럼 한글명 | `MAXATTRIBUTE` / `L_MAXATTRIBUTE` (LANGCODE='KO') |
 | 타입·길이·소수자리 | `MAXATTRIBUTE.MAXTYPE`, `LENGTH`, `SCALE` |
 | 필수 여부 | `MAXATTRIBUTE.REQUIRED` |
+| 영속 여부 | `MAXATTRIBUTE.PERSISTENT` |
 | 기본값 | `MAXATTRIBUTE.DEFAULTVALUE` |

@@ -40,11 +40,11 @@
 | NUMBEROFTRAYS | 용지함 수 | INTEGER(12) | Y |  |  |  |
 | RAMUNIT | RAM 단위 | ALN(16) | Y |  |  |  |
 | SIZEUNIT | 크기 단위 | ALN(16) | Y |  |  |  |
-| VCURRENTRAMSIZE | 현재 RAM 크기 | ALN(32) | Y |  |  |  |
+| VCURRENTRAMSIZE | 현재 RAM 크기 | ALN(32) | Y | 원천없음 | – | 비영속 속성(PERSISTENT=0). DB 컬럼이 아니므로 적재 대상이 아니다 |
 | VERTICALDPI | 세로 DPI | INTEGER(12) | Y |  |  |  |
-| VMAXLENGTH | 최대 길이 | ALN(32) | Y |  |  |  |
-| VMAXRAMSIZE | 최대 RAM 크기 | ALN(32) | Y |  |  |  |
-| VMAXWIDTH | 최대 너비 | ALN(32) | Y |  |  |  |
+| VMAXLENGTH | 최대 길이 | ALN(32) | Y | 원천없음 | – | 비영속 속성(PERSISTENT=0). DB 컬럼이 아니므로 적재 대상이 아니다 |
+| VMAXRAMSIZE | 최대 RAM 크기 | ALN(32) | Y | 원천없음 | – | 비영속 속성(PERSISTENT=0). DB 컬럼이 아니므로 적재 대상이 아니다 |
+| VMAXWIDTH | 최대 너비 | ALN(32) | Y | 원천없음 | – | 비영속 속성(PERSISTENT=0). DB 컬럼이 아니므로 적재 대상이 아니다 |
 
 구분 허용값: 직접 / 변환 / 상수 / 채번 / 원천없음 / 미결
 

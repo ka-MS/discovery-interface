@@ -45,7 +45,7 @@
 | SOFTWAREID | 소프트웨어 | BIGINT(19) | N |  |  |  |
 | SOFTWARENAME | 애플리케이션 | ALN(256) | N |  |  | DEFAULTVALUE=UNKNOWN |
 | SUITEID | 스위트 ID | BIGINT(19) | Y |  |  |  |
-| SUITENAME | 스위트 | ALN(254) | Y |  |  |  |
+| SUITENAME | 스위트 | ALN(254) | Y | 원천없음 | – | 비영속 속성(PERSISTENT=0). DB 컬럼이 아니므로 적재 대상이 아니다 |
 | TLOAMPRODUCTID | 소프트웨어 | BIGINT(19) | Y |  |  |  |
 | TLOAMSOFTWAREID | 소프트웨어 | BIGINT(19) | Y |  |  |  |
 | TLOAMUNINSTDATE | 설치 제거 날짜 | DATE(4) | Y |  |  |  |
@@ -54,7 +54,7 @@
 | TYPE | 애플리케이션 유형 | ALN(64) | Y |  |  |  |
 | USAGECOUNT | 사용 회수 | INTEGER(12) | Y |  |  |  |
 | VERSION | 버전 | ALN(128) | Y |  |  |  |
-| VUSAGEDISPLAYTEXT | 사용 | ALN(64) | Y |  |  |  |
+| VUSAGEDISPLAYTEXT | 사용 | ALN(64) | Y | 원천없음 | – | 비영속 속성(PERSISTENT=0). DB 컬럼이 아니므로 적재 대상이 아니다 |
 
 구분 허용값: 직접 / 변환 / 상수 / 채번 / 원천없음 / 미결
 

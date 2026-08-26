@@ -46,7 +46,7 @@ Device42 에 대응 원천이 없다. 소프트웨어를 스위트로 묶는 개
 | SUITENAME | 스위트 | ALN(256) | Y |  |  |  |
 | USAGECOUNT | 사용 회수 | INTEGER(12) | Y |  |  |  |
 | VERSION | 버전 | ALN(64) | Y |  |  |  |
-| VUSAGEDISPLAYTEXT | 사용 | ALN(64) | Y |  |  |  |
+| VUSAGEDISPLAYTEXT | 사용 | ALN(64) | Y | 원천없음 | – | 비영속 속성(PERSISTENT=0). DB 컬럼이 아니므로 적재 대상이 아니다 |
 
 구분 허용값: 직접 / 변환 / 상수 / 채번 / 원천없음 / 미결
 

@@ -44,7 +44,7 @@
 | PORT | 포트 | ALN(16) | Y |  |  |  |
 | PROTOCOL | 프로토콜 | ALN(64) | Y |  |  |  |
 | SERIALNUMBER | 일련 번호 | ALN(64) | Y |  |  |  |
-| VBANDWIDTH | 대역폭 | ALN(32) | Y |  |  |  |
+| VBANDWIDTH | 대역폭 | ALN(32) | Y | 원천없음 | – | 비영속 속성(PERSISTENT=0). DB 컬럼이 아니므로 적재 대상이 아니다 |
 
 구분 허용값: 직접 / 변환 / 상수 / 채번 / 원천없음 / 미결
 

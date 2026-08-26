@@ -2,6 +2,7 @@
 -- DEFAULTVALUE 가 있으면 구분을 '상수' 후보로 본다.
 -- 대상 컬럼 기준은 SYSCAT.COLUMNS 가 아니라 MAXATTRIBUTE 다. ROWSTAMP 등
 -- 시스템 컬럼이 제외되어 매핑 대상과 일치한다.
+-- PERSISTENT=0 인 속성은 DB 컬럼이 아니라 적재 대상이 아니다.
 -- 대상 변경은 IN 목록만 수정한다.
 
 -- name: column-skeleton
@@ -12,7 +13,8 @@ SELECT A.OBJECTNAME,
        A.LENGTH,
        A.SCALE,
        A.REQUIRED,
-       A.DEFAULTVALUE
+       A.DEFAULTVALUE,
+       A.PERSISTENT
 FROM MAXIMO.MAXATTRIBUTE A
 LEFT JOIN MAXIMO.L_MAXATTRIBUTE L
        ON L.OWNERID = A.MAXATTRIBUTEID

@@ -4,6 +4,9 @@
 입력:
   local/db-access-kit/work/maximo/column-skeleton.tsv
   local/db-access-kit/work/maximo/table-description.tsv
+
+MAXATTRIBUTE 에는 DB 컬럼이 아닌 비영속 속성이 섞여 있다. PERSISTENT=0 인
+행은 적재 대상이 아니라는 표시를 붙인다.
 출력:
   docs/data-analysis/data-mapping/<패키지>/<테이블 소문자>.md
 
@@ -109,7 +112,12 @@ def build(table, desc, columns):
     for row in columns:
         nullable = "N" if clean(row["REQUIRED"]) == "1" else "Y"
         default = clean(row["DEFAULTVALUE"])
-        note = f"DEFAULTVALUE={default}" if default else ""
+        notes = []
+        if clean(row.get("PERSISTENT", "1")) == "0":
+            notes.append("비영속 속성(PERSISTENT=0). DB 컬럼이 아니므로 적재 대상이 아니다")
+        if default:
+            notes.append(f"DEFAULTVALUE={default}")
+        note = ". ".join(notes)
         lines.append(
             f"| {clean(row['ATTRIBUTENAME'])} | {clean(row['KO_TITLE'])} "
             f"| {type_label(row)} | {nullable} |  |  | {note} |"

@@ -40,9 +40,9 @@
 | NODEID | 노드 ID | BIGINT(19) | N |  |  |  |
 | SIZEUNIT | 크기 단위 | ALN(16) | Y |  |  |  |
 | TOTALSIZE | 총 크기 | DECIMAL(10,2) | Y |  |  |  |
-| VAVAILABLESIZE | 가용 크기 | ALN(32) | Y |  |  |  |
+| VAVAILABLESIZE | 가용 크기 | ALN(32) | Y | 원천없음 | – | 비영속 속성(PERSISTENT=0). DB 컬럼이 아니므로 적재 대상이 아니다 |
 | VOLUMELABEL | 볼륨 레이블 | ALN(16) | Y |  |  |  |
-| VTOTALSIZE | 총 크기 | ALN(32) | Y |  |  |  |
+| VTOTALSIZE | 총 크기 | ALN(32) | Y | 원천없음 | – | 비영속 속성(PERSISTENT=0). DB 컬럼이 아니므로 적재 대상이 아니다 |
 
 구분 허용값: 직접 / 변환 / 상수 / 채번 / 원천없음 / 미결
 
