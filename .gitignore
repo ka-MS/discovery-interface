@@ -35,3 +35,12 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### Claude worktrees
+.claude/worktrees/
+
+### db-access-kit symlink (worktree)
+/local
+
+### TMP
+local/

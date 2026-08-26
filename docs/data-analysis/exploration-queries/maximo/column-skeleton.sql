@@ -1,0 +1,24 @@
+-- 매핑 문서 컬럼표의 앞 4열(Target 컬럼/한글명/타입/Null)을 생성한다.
+-- DEFAULTVALUE 가 있으면 구분을 '상수' 후보로 본다.
+-- 대상 컬럼 기준은 SYSCAT.COLUMNS 가 아니라 MAXATTRIBUTE 다. ROWSTAMP 등
+-- 시스템 컬럼이 제외되어 매핑 대상과 일치한다.
+-- 대상 변경은 IN 목록만 수정한다.
+
+-- name: column-skeleton
+SELECT A.OBJECTNAME,
+       A.ATTRIBUTENAME,
+       L.TITLE AS KO_TITLE,
+       A.MAXTYPE,
+       A.LENGTH,
+       A.SCALE,
+       A.REQUIRED,
+       A.DEFAULTVALUE
+FROM MAXIMO.MAXATTRIBUTE A
+LEFT JOIN MAXIMO.L_MAXATTRIBUTE L
+       ON L.OWNERID = A.MAXATTRIBUTEID
+      AND L.LANGCODE = 'KO'
+WHERE A.OBJECTNAME IN ('DEPLOYEDASSET','DPACOMPUTER','DPAOS','DPASOFTWARE',
+                       'DPACPU','DPADISK','DPALOGICALDRIVE','DPANETADAPTER',
+                       'DPATCPIP','DPAMEDIAADAPTER','DPADISPLAY','DPASWSUITE',
+                       'DPANETDEVICE','DPANETPRINTER')
+ORDER BY A.OBJECTNAME, A.ATTRIBUTENAME;

@@ -578,7 +578,13 @@ column -t -s$'\t' local/db-access-kit/work/maximo/assetclass-dist.tsv
 <Step 1 child-coverage.tsv 출력을 `테이블 | 노드 수 | 행 수` 표로 옮긴다>
 
 부분 커버리지가 정상이다. 관측 대상이 없으면 행을 만들지 않는다.
-`DPACOMPUTER` 만 부모와 1:1 로 전건 존재한다.
+
+관측 시점 기준 `DPA*` 행은 전부 `IMPORTSOURCE` 가 비어 있는 기존 수집분에
+붙어 있다. Device42 적재분에는 자식 행이 없다. 부모만 적재되고 자식 적재는
+아직 구현되지 않았다.
+
+기존 수집분 기준으로 `DPACOMPUTER` 만 68/68 로 전건 존재한다. 부모 1건당
+자식 1건인 확장 테이블이기 때문이다. 나머지 자식 테이블은 부분이다.
 
 ## 키
 
@@ -1352,7 +1358,7 @@ Device42(원천)와 Maximo(타겟) 사이의 매핑 작업 문서다.
 | --- | --- |
 | Target 컬럼 | `MAXATTRIBUTE.ATTRIBUTENAME` |
 | 한글명 | `L_MAXATTRIBUTE.TITLE` (LANGCODE='KO') |
-| 타입 | `MAXATTRIBUTE.MAXTYPE` + `LENGTH` |
+| 타입 | `MAXATTRIBUTE.MAXTYPE` + `LENGTH` + `SCALE` |
 | Null | `MAXATTRIBUTE.REQUIRED` 반전 |
 | 구분 | 분석. 직접 / 변환 / 상수 / 채번 / 원천없음 / 미결 |
 | Source | 분석. Device42 뷰.컬럼 |
