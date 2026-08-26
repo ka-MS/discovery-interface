@@ -17,7 +17,7 @@
 | `view_netport_v1` | `device_fk` | DPANETADAPTER |
 | `view_ipaddress_v1` | `device_fk` | DPATCPIP |
 | `view_mountpoint_v1` | `device_fk` | DPALOGICALDRIVE |
-| `view_part_v1` | `device_fk` | DPACPU, DPADISK, DPAMEDIAADAPTER, DPACOMPUTER |
+| `view_part_v1` | `device_fk` | DPACPU, DPADISK, DPAMEDIAADAPTER, DPACOMPUTER, DPANETPRINTER |
 | `view_serviceinstance_v2` | `device_fk` | 대응 없음 |
 | `view_appcomp_v1` | `device_fk` | 대응 없음 |
 | `view_deviceurl_v1` | `device_fk` | 대응 없음 |
