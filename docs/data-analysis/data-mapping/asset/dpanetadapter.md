@@ -7,14 +7,14 @@
 ## 1. 관계
 
 - 부모: MAXIMO.DEPLOYEDASSET (NODEID)
-- 카디널리티: DEPLOYEDASSET 1 : <1|N> DPANETADAPTER  <!-- MERGE 키로 확정한다 -->
+- 카디널리티: DEPLOYEDASSET 1 : N DPANETADAPTER (관측 39노드/61행)
 - 선행: DEPLOYEDASSET
 
 ## 2. 테이블 매핑
 
 | Source | Target | 조인 조건 | 카디널리티 |
 | --- | --- | --- | --- |
-|  | MAXIMO.DPANETADAPTER |  |  |
+| `view_netport_v1` | MAXIMO.DPANETADAPTER |  |  |
 
 ## 3. 조회 조건
 

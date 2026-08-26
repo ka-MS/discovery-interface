@@ -32,6 +32,6 @@
 | --- | --- |
 | 테이블 한글 설명 | `MAXOBJECT` / `L_MAXOBJECT` (LANGCODE='KO') |
 | 컬럼 한글명 | `MAXATTRIBUTE` / `L_MAXATTRIBUTE` (LANGCODE='KO') |
-| 타입·길이 | `MAXATTRIBUTE.MAXTYPE`, `LENGTH` |
+| 타입·길이·소수자리 | `MAXATTRIBUTE.MAXTYPE`, `LENGTH`, `SCALE` |
 | 필수 여부 | `MAXATTRIBUTE.REQUIRED` |
 | 기본값 | `MAXATTRIBUTE.DEFAULTVALUE` |

@@ -7,14 +7,14 @@
 ## 1. 관계
 
 - 부모: MAXIMO.DEPLOYEDASSET (NODEID)
-- 카디널리티: DEPLOYEDASSET 1 : <1|N> DPADISK  <!-- MERGE 키로 확정한다 -->
+- 카디널리티: DEPLOYEDASSET 1 : N DPADISK (관측 61노드/144행)
 - 선행: DEPLOYEDASSET
 
 ## 2. 테이블 매핑
 
 | Source | Target | 조인 조건 | 카디널리티 |
 | --- | --- | --- | --- |
-|  | MAXIMO.DPADISK |  |  |
+| `view_part_v1`(Hard Disk) | MAXIMO.DPADISK |  |  |
 
 ## 3. 조회 조건
 

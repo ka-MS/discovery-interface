@@ -7,14 +7,14 @@
 ## 1. 관계
 
 - 부모: MAXIMO.DEPLOYEDASSET (NODEID)
-- 카디널리티: DEPLOYEDASSET 1 : <1|N> DPAOS  <!-- MERGE 키로 확정한다 -->
+- 카디널리티: DEPLOYEDASSET 1 : N DPAOS (관측 61노드/63행)
 - 선행: DEPLOYEDASSET
 
 ## 2. 테이블 매핑
 
 | Source | Target | 조인 조건 | 카디널리티 |
 | --- | --- | --- | --- |
-|  | MAXIMO.DPAOS |  |  |
+| `view_deviceos_v1`, `view_os_v1` | MAXIMO.DPAOS |  |  |
 
 ## 3. 조회 조건
 

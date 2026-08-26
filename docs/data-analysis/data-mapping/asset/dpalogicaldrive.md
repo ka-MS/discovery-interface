@@ -7,14 +7,14 @@
 ## 1. 관계
 
 - 부모: MAXIMO.DEPLOYEDASSET (NODEID)
-- 카디널리티: DEPLOYEDASSET 1 : <1|N> DPALOGICALDRIVE  <!-- MERGE 키로 확정한다 -->
+- 카디널리티: DEPLOYEDASSET 1 : N DPALOGICALDRIVE (관측 49노드/80행)
 - 선행: DEPLOYEDASSET
 
 ## 2. 테이블 매핑
 
 | Source | Target | 조인 조건 | 카디널리티 |
 | --- | --- | --- | --- |
-|  | MAXIMO.DPALOGICALDRIVE |  |  |
+| `view_mountpoint_v1` | MAXIMO.DPALOGICALDRIVE |  |  |
 
 ## 3. 조회 조건
 

@@ -7,14 +7,14 @@
 ## 1. 관계
 
 - 부모: MAXIMO.DEPLOYEDASSET (NODEID)
-- 카디널리티: DEPLOYEDASSET 1 : <1|N> DPASWSUITE  <!-- MERGE 키로 확정한다 -->
+- 카디널리티: DEPLOYEDASSET 1 : 1 DPASWSUITE (관측 14노드/14행)
 - 선행: DEPLOYEDASSET
 
 ## 2. 테이블 매핑
 
 | Source | Target | 조인 조건 | 카디널리티 |
 | --- | --- | --- | --- |
-|  | MAXIMO.DPASWSUITE |  |  |
+| 없음 | MAXIMO.DPASWSUITE |  |  |
 
 Device42 에 대응 원천이 없다. 소프트웨어를 스위트로 묶는 개념과 뷰가
 확인되지 않았다. 다른 수집 도구가 채우는 영역이다.
@@ -52,7 +52,7 @@ Device42 에 대응 원천이 없다. 소프트웨어를 스위트로 묶는 개
 
 ## 5. 조회 쿼리
 
-3번 조건이 반영된, Device42 에서 원천을 끌어오는 SELECT 를 둔다.
+원천이 없어 조회 쿼리가 없다. 사유는 2번을 참조한다.
 
 ## 6. 미결
 

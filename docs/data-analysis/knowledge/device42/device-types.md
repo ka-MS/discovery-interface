@@ -3,7 +3,8 @@
 > 관측 2026-08-27 · Device42 192.168.1.35
 > 재조회 docs/data-analysis/exploration-queries/device42/device-type-distribution.sql
 
-`view_device_v2.type` 과 서브타입이 적재 대상 판정과 ASSETCLASS 결정에 쓰인다.
+`view_device_v2.type` 과 서브타입은 적재 대상 판정에 쓰인다. ASSETCLASS 결정에는
+쓰이지 않는다.
 
 ## virtualsubtype_id
 
@@ -14,7 +15,9 @@
 | 14 | Hyper-V |
 | 15 | Docker Container |
 
-현행 필터가 `virtualsubtype_id <> 15` 로 Docker Container 를 제외한다.
+현행 필터는 `type IN ('virtual', 'physical') AND (virtualsubtype_id IS NULL OR
+virtualsubtype_id <> 15)` 다. `type` 절에서 `cluster`·`unknown` 이 제외되고,
+`virtualsubtype_id` 조건에서 Docker Container 가 제외된다.
 근거: `DeployedAssetIntegrate.java` `DEVICE_FILTER`
 
 ## 분포

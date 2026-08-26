@@ -49,6 +49,9 @@ Device42(원천)와 Maximo(타겟) 사이의 매핑 작업 문서다.
 bash local/db-access-kit/scripts/run-maximo.sh \
   docs/data-analysis/exploration-queries/maximo/column-skeleton.sql \
   local/db-access-kit/work/maximo
+bash local/db-access-kit/scripts/run-maximo.sh \
+  docs/data-analysis/exploration-queries/maximo/table-description.sql \
+  local/db-access-kit/work/maximo
 python3 docs/data-analysis/tools/gen-mapping-skeleton.py
 ```
 

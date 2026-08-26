@@ -7,14 +7,14 @@
 ## 1. 관계
 
 - 부모: MAXIMO.DEPLOYEDASSET (NODEID)
-- 카디널리티: DEPLOYEDASSET 1 : <1|N> DPADISPLAY  <!-- MERGE 키로 확정한다 -->
+- 카디널리티: DEPLOYEDASSET 1 : N DPADISPLAY (관측 37노드/52행)
 - 선행: DEPLOYEDASSET
 
 ## 2. 테이블 매핑
 
 | Source | Target | 조인 조건 | 카디널리티 |
 | --- | --- | --- | --- |
-|  | MAXIMO.DPADISPLAY |  |  |
+| 없음 | MAXIMO.DPADISPLAY |  |  |
 
 Device42 에 대응 원천이 없다. 모니터 정보를 담는 뷰와 데이터가 확인되지
 않았다. 다른 수집 도구가 채우는 영역이다.
@@ -48,7 +48,7 @@ Device42 에 대응 원천이 없다. 모니터 정보를 담는 뷰와 데이�
 
 ## 5. 조회 쿼리
 
-3번 조건이 반영된, Device42 에서 원천을 끌어오는 SELECT 를 둔다.
+원천이 없어 조회 쿼리가 없다. 사유는 2번을 참조한다.
 
 ## 6. 미결
 
