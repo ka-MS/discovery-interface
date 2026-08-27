@@ -59,10 +59,10 @@ MERGE 키는 `NODEID` 단독이다. 노드당 1행이므로 부모와 1:1 이다
 | NUMCPUCONFIG1 | 구성된 프로세서 수 | INTEGER(12) | Y | 원천없음 | – |  |
 | NUMCPUTOTAL1 | 총 프로세서 수 | INTEGER(12) | Y | 직접 | `view_device_v2.total_cpus` | .68 은 53대 중 20대만 값이 있다 |
 | PLANTCODE1 | 제조 공장 | ALN(32) | Y | 원천없음 | – |  |
-| RAMDESCRIPTION | RAM 설명 | ALN(256) | Y | 미결 | `view_partmodel_v1.name` | 예: `DRAM 16384 MB DIMM`. 슬롯 여러 개일 때 규칙 미정 |
+| RAMDESCRIPTION | RAM 설명 | ALN(256) | Y | 미결 | `view_partmodel_v1.name` | 예: `DRAM 16384 MB DIMM`. 다중 슬롯 장비가 있어 대표값 규칙이 필요하다 (.68 2슬롯 4대·16슬롯 1대 · .35 2슬롯 1대) |
 | RAMSIZE | RAM 크기 | DECIMAL(10,2) | Y | 변환 | `view_device_v2.ram` | 소수 2자리 반올림(HALF_UP). .68 은 53대 중 20대만 값이 있다 |
-| RAMTOTALSLOTS | RAM 총 슬롯 | INTEGER(12) | Y | 미결 | `view_part_v1`(RAM) 건수 | 파트 건수로 유도 가능. 미장착 슬롯은 알 수 없다 |
-| RAMTYPE | RAM 유형 | ALN(32) | Y | 미결 | `view_partmodel_v1.ramtype` | RAM 파트 조인으로 얻을 수 있다. 슬롯이 여러 개일 때 대표값 선정 규칙 미정 |
+| RAMTOTALSLOTS | RAM 총 슬롯 | INTEGER(12) | Y | 원천없음 | – | RAM 파트 건수는 장착된 슬롯만 센다. 미장착 슬롯을 알 수 없어 총 슬롯 수가 되지 못한다 |
+| RAMTYPE | RAM 유형 | ALN(32) | Y | 원천없음 | – | `view_partmodel_v1.ramtype` 이 양쪽 서버 모두 전건 비어 있다 (.68 0/35 · .35 0/8) |
 | RAMUNIT | RAM 단위 | ALN(16) | Y | 직접 | `view_device_v2`.ram_size_type |  |
 | RAMUNUSEDSLOTS | RAM 미사용 슬롯 | INTEGER(12) | Y | 원천없음 | – | Device42 는 미장착 슬롯을 수집하지 않는다 |
 | SMBIOS | SMBIOS | YORN(1) | N | 상수 | – | `0` |
@@ -76,7 +76,7 @@ MERGE 키는 `NODEID` 단독이다. 노드당 1행이므로 부모와 1:1 이다
 | TLOAMDEVPWDCOMPL | 비밀번호 준수 | YORN(1) | Y | 원천없음 | – | 모바일 단말 속성. 수집 대상이 아니다 |
 | TLOAMDEVPWDENBLD | 비밀번호 사용 | YORN(1) | Y | 원천없음 | – | 모바일 단말 속성. 수집 대상이 아니다 |
 | TLOAMIMEI | IMEI | ALN(64) | Y | 원천없음 | – | 모바일 단말 속성. 수집 대상이 아니다 |
-| TLOAMPARENTID | 상위 노드 Id | BIGINT(19) | Y | 미결 | `view_device_v2`.virtual_host_device_fk | 가상 호스트의 NODEID. 기존 수집분은 0/68 미사용 |
+| TLOAMPARENTID | 상위 노드 Id | BIGINT(19) | Y | 미결 | `view_device_v2.virtual_host_device_fk` | 가상 호스트의 NODEID. 적재 대상 중 호스트 관계를 가진 장비가 .68 은 0대, .35 는 55대다. 서버에 따라 값이 전혀 없을 수 있다 |
 | TLOAMPARENTNAME | 상위 | ALN(128) | Y | 원천없음 | – | 비영속 속성(PERSISTENT=0). DB 컬럼이 아니므로 적재 대상이 아니다 |
 | TLOAMPLATFORMBASE | 플랫폼 | UPPER(20) | Y | 원천없음 | – | 기존 수집분도 전건 NULL |
 | VRAMSIZE | RAM 크기 | ALN(32) | Y | 원천없음 | – | 비영속 속성(PERSISTENT=0). DB 컬럼이 아니므로 적재 대상이 아니다 |

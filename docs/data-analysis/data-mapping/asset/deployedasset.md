@@ -65,12 +65,12 @@ MERGE 키는 `(SOURCEID, IMPORTSOURCE)` 다. 재실행해도 멱등하다.
 | TLOAMHWTYPE | 하드웨어 유형 | ALN(32) | Y | 원천없음 | – | 기존 수집분도 전건 NULL |
 | TLOAMISPROMOTED | 승격 여부 | UPPER(8) | Y | 원천없음 | – | Maximo 내부 상태값 |
 | TLOAMNRSGUID | 통합 ID | ALN(192) | Y | 원천없음 | – |  |
-| TLOAMNRSHOSTSYSTEM | NRS 호스트 시스템 | ALN(128) | Y | 미결 | `view_device_v2`.virtual_host_device_fk | 가상 호스트의 이름. 자기참조 조인 필요 |
+| TLOAMNRSHOSTSYSTEM | NRS 호스트 시스템 | ALN(128) | Y | 미결 | `view_device_v2.virtual_host_device_fk` | 가상 호스트의 이름. 자기참조 조인 필요. 적재 대상 중 호스트 관계를 가진 장비가 .68 은 0대, .35 는 55대다 |
 | TLOAMNRSMANAGEDSYSTEMNAME | NRS 관리 대상 시스템 이름 | ALN(128) | Y | 원천없음 | – |  |
 | TLOAMNRSMANUFACTURER | NRS 제조업체 | ALN(128) | Y | 직접 | `view_vendor_v1.name` | MANUFACTURER 와 동일 원천. 없으면 NULL(UNKNOWN 대체 없음) |
 | TLOAMNRSMODEL | NRS 제조사/모델 | ALN(128) | Y | 미결 | `view_hardware_v1.name` | MAKEMODEL 과 동일 원천. 중복 적재 여부 미정 |
 | TLOAMNRSNAME | NRS 이름 | ALN(128) | Y | 미결 | `view_device_v2`.name | NODENAME 과 동일 원천. 중복 적재 여부 미정 |
-| TLOAMNRSPRIMARYMACADDRESS | NRS MAC 주소 | ALN(17) | Y | 미결 | `view_netport_v1.hwaddress` | 장비당 포트가 여러 개다. 대표 포트 선정 규칙 미정 |
+| TLOAMNRSPRIMARYMACADDRESS | NRS MAC 주소 | ALN(17) | Y | 미결 | `view_netport_v1.hwaddress` | 대표 포트 선정 규칙 필요. 가상 포트(veth/docker/br-) 제외 시 .68 은 85대 중 64대, .35 는 79대 중 56대가 포트 1개라 모호하지 않다. 나머지는 규칙이 필요하다 |
 | TLOAMNRSSERIALNUMBER | NRS 일련 번호 | ALN(128) | Y | 미결 | `view_device_v2`.serial_no | SERIALNUMBER 와 동일 원천. 중복 적재 여부 미정 |
 | TLOAMNRSSIGNATURE | NRS 특성 | ALN(128) | Y | 원천없음 | – |  |
 | TLOAMNRSSYSTEMBOARDUUID | NRS 시스템 보드 UUID | ALN(64) | Y | 원천없음 | – |  |
