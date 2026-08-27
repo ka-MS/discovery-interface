@@ -57,9 +57,20 @@ FROM view_netport_v1 WHERE second_device_fk IS NOT NULL
 않는다. 기존 수집분 34건은 MAC·IP 중복이 없으나 전부 단독 장비라 정책의
 근거가 되지 못한다.
 
-두 값은 1 차이다. 물리 포트 MAC 은 베이스 바로 위에서 증가한다.
-예: 베이스 `549fc6badb80`, 포트 `549fc6badb81`~`549fc6badb9c`.
+포트와 MAC 은 1:1 이며, 스위치의 물리 포트 MAC 은 빈틈없는 연속 블록이다.
+`ITMSG_L2_SW1` 은 26포트가 `0019aa435281`~`0019aa43529a`,
+`ITMSG_L3_SW1` 은 28포트가 `549fc6badb81`~`549fc6badb9c` 다.
+
+**베이스 MAC 과 포트 블록의 위치 관계는 일정하지 않다.** `ITMSG_L3_SW1` 은
+베이스 `549fc6badb80` 이 포트 블록 바로 아래지만, `ITMSG_L2_SW1` 은 베이스
+`0019aa4352c0` 이 포트 블록(`…529a` 까지)보다 위다. 산술로 유도할 수 없으며
+베이스는 포트명이 MAC 과 같은 항목으로만 식별된다.
+
 멤버별 OUI 대역이 달라(`549fc6ba…` / `0019aa43…`) 최솟값이 섞이지 않는다.
+
+논리 인터페이스(`Vlan1`, `Loopback Interface`)와 미사용 물리 포트
+(`GigabitEthernet0/0`, `Bluetooth0/4`), AWS 가상 인터페이스(`eni-…`)는 MAC 이
+없다. 전체 290포트 중 249개만 MAC 을 가지며 그중 248개가 고유하다.
 
 관리 IP 는 cluster 의 `Vlan1` 인터페이스에 붙어 있고 그 포트의
 `second_device_fk` 는 비어 있다. 따라서 IP 는 포트 경유가 아니라 위 대응표로

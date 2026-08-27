@@ -55,7 +55,10 @@ FROM view_netport_v1 WHERE second_device_fk IS NOT NULL
 cluster 를 특정한 뒤 조회한다.
 
 MAC 은 cluster 포트 중 포트 이름이 MAC 과 같은 항목이 장비 베이스 MAC 이다.
-물리 포트 MAC 은 그 값 바로 위 범위에서 증가한다.
+포트와 MAC 은 1:1 이며 물리 포트 MAC 은 연속 블록이다. 다만 베이스와 포트
+블록의 위치 관계는 일정하지 않아 산술로 유도할 수 없다. `ITMSG_L3_SW1` 은
+베이스가 블록 바로 아래(`…db80` / `…db81`~`…db9c`)지만 `ITMSG_L2_SW1` 은
+블록보다 위다(`…52c0` / `…5281`~`…529a`).
 
 **다만 베이스 MAC 포트는 `second_device_fk` 가 비어 있어 물리 멤버로 연결되지
 않는다.** cluster 귀속 값이다. cluster 는 Cisco 스택이라 물리 멤버를 여러 개
