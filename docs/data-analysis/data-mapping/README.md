@@ -57,13 +57,14 @@
 | DPANETADAPTER | `view_netport_v1` | 작성 완료 |
 | DPATCPIP | `view_ipaddress_v1`, `view_subnet_v1` | 작성 완료 |
 | DPAMEDIAADAPTER | `view_part_v1`(GPU) | 작성 완료 |
-| DPANETDEVICE | `view_device_v2`(`physical`) | 미작성 |
+| DPANETDEVICE | `view_device_v2`(`physical`), `view_netport_v1`, `view_ipaddress_v1` | 작성 완료 |
 | DPANETPRINTER | `view_device_v2`, `view_netport_v1`, `view_ipaddress_v1`, `view_part_v1`(printer_input) | 작성 완료 |
 | DPADISPLAY | 없음 | 작성 완료 (원천 없음) |
 | DPASWSUITE | 없음 | 작성 완료 (원천 없음) |
 
-`DPANETDEVICE` 는 `physical` 레코드만 사용한다. 분리된 `cluster`의 네트워크
-정보를 추정 조인하지 않는 정책은 `../open-issues.md` ISSUE-2 참조.
+`DPANETDEVICE` 는 `physical` 레코드를 적재 대상으로 삼고, 분리된 `cluster` 의
+네트워크 정보는 `view_netport_v1.second_device_fk` 로 연결해 가져온다. 이름
+기반 추정 조인이 아니라 데이터에 있는 FK 다. `../open-issues.md` ISSUE-2 참조.
 
 ## 원천이 없는 테이블
 
