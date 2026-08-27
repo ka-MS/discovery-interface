@@ -4,6 +4,9 @@
 
 > Target: MAXIMO.DPANETDEVICE · ASSETCLASS: NETDEVICE · 구현: DpaNetDeviceIntegrate.java
 
+> 관측 2026-08-27 · Device42 **양쪽 서버** 192.168.2.68 / 192.168.1.35 · Maximo BLUDB
+> 원천 건수는 `.68 / .35` 순으로 병기한다.
+
 ## 1. 관계
 
 - 부모: MAXIMO.DEPLOYEDASSET (NODEID)
@@ -15,44 +18,108 @@
 | Source | Target | 조인 조건 | 카디널리티 |
 | --- | --- | --- | --- |
 | `view_device_v2`(`physical`) | MAXIMO.DPANETDEVICE | – | 1:1 |
-| MAXIMO.DEPLOYEDASSET | (교차키) | `SOURCEID = view_device_v2.device_pk AND IMPORTSOURCE = 'Device42'` → `NODEID` | N:1 |
+| `view_netport_v1` | (연결) | `second_device_fk` = 물리 device_pk, `device_fk` = cluster device_pk | N:1 |
+| `view_ipaddress_v1` | (보강) | cluster device_pk 로 관리 IP 조회 | N:1 |
+| MAXIMO.DEPLOYEDASSET | (교차키) | `SOURCEID = 물리 device_pk AND IMPORTSOURCE = 'Device42'` → `NODEID` | N:1 |
 
-현재 적재 대상인 `physical` 레코드만 사용한다. 실제 IP·MAC·포트는 별도
-`cluster` 레코드에 있으나 두 레코드를 잇는 FK가 없어 추적할 수 없다. 이름
-접미사에 의존한 추정 조인은 하지 않는다. ISSUE-2 참조.
+네트워크 장비는 Device42 에서 두 레코드로 나뉜다. `physical` 레코드가 시리얼과
+OS 를 갖고 적재 대상이 되며, `cluster` 레코드가 포트·MAC·관리 IP 를 갖는다.
+
+**두 레코드는 `view_netport_v1.second_device_fk` 로 이어진다.** cluster 소속
+포트의 `second_device_fk` 가 물리 레코드를 가리킨다. 양쪽 서버에서 1:1 이며
+관측 기준 `.68` 28·26포트, `.35` 28·26포트가 같은 대상을 가리킨다.
+
+```sql
+-- cluster ↔ physical 대응
+SELECT DISTINCT device_fk AS cluster_pk, second_device_fk AS physical_pk
+FROM view_netport_v1 WHERE second_device_fk IS NOT NULL
+```
+
+`NETMACADDR` 은 cluster 포트 중 **포트 이름이 MAC 과 같은 항목**(장비 베이스
+MAC)을 쓴다. 물리 포트 MAC 은 이 값 바로 위 범위에서 증가한다. 예: 베이스
+`549fc6badb80`, 포트 `549fc6badb81`~`549fc6badb9c`.
+
+관리 IP 는 cluster 의 `Vlan1` 인터페이스에 붙어 있고 그 포트의
+`second_device_fk` 는 비어 있다. 따라서 IP 는 포트 경유가 아니라 위 대응표로
+cluster 를 찾아 조회한다.
 
 ## 3. 조회 조건
 
 | 조건 | 식 | 사유 |
 | --- | --- | --- |
-| 물리 레코드만 | `d.type = 'physical'` | 현재 DEPLOYEDASSET 적재 대상 레코드를 유지한다 |
-| 네트워크 장비만 | `d.network_device = true` | ASSETCLASS=NETDEVICE 대상만 적재한다 |
-| cluster 제외 | `d.type <> 'cluster'` | 연결 FK가 없으므로 이름 기반 추정 조인을 하지 않는다 |
-| 부모 존재 | 교차키 조회 결과가 있는 것만 | 부모가 없으면 적재할 수 없다 |
+| 네트워크 장비만 | `d.network_device = true` | ASSETCLASS=NETDEVICE 대상 |
+| 물리 레코드만 | `d.type = 'physical'` | 부모 DEPLOYEDASSET 이 적재하는 레코드와 일치시킨다 |
+
+부모의 적재 조건(`type IN ('virtual','physical')`)과 어긋나지 않는다. `cluster`
+레코드는 부모가 적재하지 않으므로 여기서도 대상이 아니며, 포트·IP 를 얻는
+경로로만 참조한다.
+
+관측 기준 `network_device = true` 는 양쪽 서버 모두 4건이고 그중 적재 대상은
+2건이다. 나머지 2건이 `cluster` 다.
 
 ## 4. 컬럼 매핑
 
 | Target 컬럼 | 한글명 | 타입 | Null | 구분 | Source | 변환·조건 |
 | --- | --- | --- | --- | --- | --- | --- |
-| CHANGEDATE | 변경 날짜 | DATETIME(10) | N |  |  |  |
-| CREATEDATE | 작성 날짜 | DATETIME(10) | N |  |  |  |
-| DESCRIPTION1 | 설명 | ALN(128) | Y |  |  |  |
-| FIRMWAREVERSION | 펌웨어 버전 | ALN(128) | Y |  |  |  |
-| NETMACADDR | MAC 주소 | ALN(17) | Y | 원천없음 | – | 실제 값은 분리된 `cluster`의 `view_netport_v1.hwaddress`에 있으나 연결 FK가 없어 추적할 수 없다 |
-| NETSOURCEID1 | 네트워크 소스 ID | ALN(128) | Y |  |  |  |
-| NETWORKADDRESS | 네트워크 주소 | ALN(39) | Y | 원천없음 | – | 실제 IP는 분리된 `cluster`의 `view_ipaddress_v1`에 있으나 연결 FK가 없어 추적할 수 없다 |
-| NODEID | 노드 ID | BIGINT(19) | N |  |  |  |
-| OSVERSION | 운영 체제 버전 | ALN(128) | Y |  |  |  |
-| RAMSIZE | RAM 크기 | DECIMAL(10,2) | Y |  |  |  |
-| RAMUNIT | RAM 단위 | ALN(16) | Y |  |  |  |
+| CHANGEDATE | 변경 날짜 | DATETIME(10) | N | 채번 | – | 적재 시각 |
+| CREATEDATE | 작성 날짜 | DATETIME(10) | N | 채번 | – | 적재 시각 |
+| DESCRIPTION1 | 설명 | ALN(128) | Y | 원천없음 | – | 기존 수집분도 0/34. `os_name` 이 후보이나 컬럼 용도 미확인 |
+| FIRMWAREVERSION | 펌웨어 버전 | ALN(128) | Y | 원천없음 | – | `bios_version`·`bios_revision`·`bios_fw_revision` 이 스위치 레코드에서 전건 비어 있다. 기존 수집분도 0/34 |
+| NETMACADDR | MAC 주소 | ALN(17) | Y | 변환 | `view_netport_v1.hwaddress` | cluster 포트 중 `port = hwaddress` 인 베이스 MAC. 관측 2/2 · 2/2. 기존 수집분 34/34 |
+| NETSOURCEID1 | 네트워크 소스 ID | ALN(128) | Y | 원천없음 | – | 기존 수집분도 0/34 |
+| NETWORKADDRESS | 네트워크 주소 | ALN(39) | Y | 변환 | `view_ipaddress_v1.ip_address` | cluster 대응 후 관리 IP. 2절의 대응표 경유. 관측 2/2 · 2/2. 기존 수집분 29/34 |
+| NODEID | 노드 ID | BIGINT(19) | N | 채번 | – | 부모 DEPLOYEDASSET.NODEID. `(SOURCEID, IMPORTSOURCE)` 로 조회 |
+| OSVERSION | 운영 체제 버전 | ALN(128) | Y | 직접 | `view_device_v2.os_version` | 물리 레코드 값. 예: `Gibraltar 16.12.4`, `12.2(25)SEB4`. 관측 2/2 · 2/2. 기존 수집분은 0/34 라 새로 채우는 값이다 |
+| RAMSIZE | RAM 크기 | DECIMAL(10,2) | Y | 원천없음 | – | `view_device_v2.ram` 이 스위치 레코드에서 전건 비어 있다. 기존 수집분은 전건 `0.00` 자리표시 |
+| RAMUNIT | RAM 단위 | ALN(16) | Y | 원천없음 | – | 기존 수집분은 전건 `KB` 자리표시 |
 | VRAMSIZE | RAM 크기 | ALN(32) | Y | 원천없음 | – | 비영속 속성(PERSISTENT=0). DB 컬럼이 아니므로 적재 대상이 아니다 |
 
 구분 허용값: 직접 / 변환 / 상수 / 채번 / 원천없음 / 미결
 
 ## 5. 조회 쿼리
 
-3번 조건이 반영된, Device42 에서 원천을 끌어오는 SELECT 를 둔다.
+```sql
+WITH map AS (
+    SELECT DISTINCT device_fk AS cluster_pk, second_device_fk AS physical_pk
+    FROM view_netport_v1
+    WHERE second_device_fk IS NOT NULL
+),
+base_mac AS (
+    SELECT device_fk AS cluster_pk, MIN(hwaddress) AS base_mac
+    FROM view_netport_v1
+    WHERE hwaddress IS NOT NULL AND hwaddress <> ''
+      AND LOWER(port) = LOWER(hwaddress)
+    GROUP BY device_fk
+),
+mgmt_ip AS (
+    SELECT device_fk AS cluster_pk, MIN(ip_address) AS mgmt_ip
+    FROM view_ipaddress_v1
+    GROUP BY device_fk
+)
+SELECT
+    d.device_pk,
+    d.name,
+    d.os_version,
+    b.base_mac,
+    m.mgmt_ip
+FROM view_device_v2 d
+LEFT JOIN map      mp ON mp.physical_pk = d.device_pk
+LEFT JOIN base_mac b  ON b.cluster_pk   = mp.cluster_pk
+LEFT JOIN mgmt_ip  m  ON m.cluster_pk   = mp.cluster_pk
+WHERE d.network_device = true
+  AND d.type = 'physical'
+ORDER BY d.device_pk
+```
+
+양쪽 서버 실행 결과가 일치한다. 시리얼 `JAE24461ECG` 는 베이스 MAC
+`549fc6badb80` · 관리 IP `192.168.2.3`, `CAT1040RGWU` 는 `0019aa4352c0` ·
+`192.168.2.2` 로 동일하다.
 
 ## 6. 미결
 
-- ISSUE-2 — `physical`만 사용하고 FK가 없는 `cluster`의 IP·MAC·포트는 추정 조인하지 않는다.
+- ISSUE-1 — 동일 스위치가 서버에 따라 다른 `device_pk` 를 갖는다. `.68` 은 13·108,
+  `.35` 는 284·283 이고 시리얼(`JAE24461ECG`, `CAT1040RGWU`)은 같다.
+- `DESCRIPTION1` 은 원천 후보로 `os_name` 이 있으나 컬럼 용도가 확인되지 않았다.
+  기존 수집분은 0/34 다. 채우지 않는다.
+- `RAMSIZE`·`RAMUNIT` 은 기존 수집분이 `0.00`·`KB` 로 전건 채워져 있으나 실측값이
+  아닌 자리표시다. 같은 방식으로 채울지, NULL 로 둘지 정해야 한다.

@@ -18,29 +18,46 @@ Device42 `device_pk` 가 들어간다. `device_pk` 는 수집 서버가 다르�
 
 ## ISSUE-2 스위치가 두 레코드로 분리됨
 
-**상태:** 정책 확정. DPANETDEVICE 매핑에 반영.
+**상태:** 해결. 연결 수단을 찾았다.
 
 네트워크 장비가 Device42 에서 두 레코드로 나뉜다.
 
 | 레코드 | 보유 | 미보유 |
 | --- | --- | --- |
-| `type = 'cluster'` | netport, ipaddress | serial_no |
-| `type = 'physical'`, 이름에 ` - Switch N` 접미 | serial_no | netport, ipaddress |
+| `type = 'cluster'` | netport, MAC, 관리 IP | serial_no, OS |
+| `type = 'physical'`, 이름에 ` - Switch N` 접미 | serial_no, OS, hardware_fk | netport, IP |
 
-현행 필터는 `type IN ('virtual','physical')` 이므로 physical 쪽만 적재된다.
-포트와 IP 는 cluster 쪽에 있어 `DPANETDEVICE.NETWORKADDRESS` 와
-`NETMACADDR` 의 원천이 없다.
+부모 DEPLOYEDASSET 은 `type IN ('virtual','physical')` 이므로 physical 쪽만
+적재한다. 그런데 포트·MAC·IP 는 cluster 쪽에 있다.
 
-두 레코드를 잇는 FK 는 없다. `host_chassis_device_fk`,
-`virtual_host_device_fk`, `vm_manager_device_fk`, `chassisslot_fk` 가 모두
-비어 있다. 이름 접미사 규칙 외에 연결 수단이 확인되지 않았다.
+**두 레코드는 `view_netport_v1.second_device_fk` 로 이어진다.** cluster 소속
+포트의 `second_device_fk` 가 물리 레코드를 가리킨다.
 
-확정 정책은 다음과 같다.
+```sql
+SELECT DISTINCT device_fk AS cluster_pk, second_device_fk AS physical_pk
+FROM view_netport_v1 WHERE second_device_fk IS NOT NULL
+```
 
-- 현재 적재 대상인 `type = 'physical'` 레코드만 DPANETDEVICE 원천으로 사용한다.
-- 이름 접미사에 의존한 `cluster` 추정 조인은 하지 않는다.
-- 실제 IP·MAC·포트는 `cluster` 레코드에 있으나 연결 FK가 없어 추적할 수 없으므로
-  `DPANETDEVICE.NETWORKADDRESS`, `NETMACADDR`는 `원천없음`으로 처리한다.
+양쪽 서버에서 1:1 로 성립하며 결과가 일치한다.
+
+| 서버 | cluster → physical | 연결 포트 수 |
+| --- | --- | --- |
+| .68 | 11 → 13, 12 → 108 | 28, 26 |
+| .35 | 282 → 284, 281 → 283 | 28, 26 |
+
+장비 레벨 FK(`host_chassis_device_fk`, `virtual_host_device_fk`,
+`vm_manager_device_fk`, `chassisslot_fk`)는 네 레코드 모두 비어 있다. 연결은
+포트 레벨에만 있다. 이전 기록은 장비 레벨만 확인하고 연결 수단이 없다고
+판단한 것이며 사실과 다르다.
+
+관리 IP 는 cluster 의 `Vlan1` 인터페이스에 붙어 있고 그 포트의
+`second_device_fk` 는 비어 있다. 따라서 IP 는 포트 경유가 아니라 위 대응표로
+cluster 를 특정한 뒤 조회한다.
+
+MAC 은 cluster 포트 중 포트 이름이 MAC 과 같은 항목이 장비 베이스 MAC 이다.
+물리 포트 MAC 은 그 값 바로 위 범위에서 증가한다.
+
+적용은 `data-mapping/asset/dpanetdevice.md` 참조.
 
 ## ISSUE-3 PDU 가 COMPUTER 로 분류됨
 
