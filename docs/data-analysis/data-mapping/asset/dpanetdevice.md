@@ -35,13 +35,27 @@ SELECT DISTINCT device_fk AS cluster_pk, second_device_fk AS physical_pk
 FROM view_netport_v1 WHERE second_device_fk IS NOT NULL
 ```
 
-`NETMACADDR` 은 cluster 포트 중 **포트 이름이 MAC 과 같은 항목**(장비 베이스
-MAC)을 쓴다. 물리 포트 MAC 은 이 값 바로 위 범위에서 증가한다. 예: 베이스
-`549fc6badb80`, 포트 `549fc6badb81`~`549fc6badb9c`.
+**cluster 는 물리 멤버를 여러 개 가질 수 있다.** Cisco 스택 구성이며 이름의
+` - Switch N` 접미가 멤버 번호다. 관측 시점에는 양쪽 서버 모두 cluster 당
+멤버가 1개지만 구조상 1:N 이다. 멤버가 늘어나는 경우를 전제로 매핑한다.
+
+`NETMACADDR` 선정 규칙은 미결이다. 후보가 둘이고 성격이 다르다.
+
+| 후보 | 값 | 귀속 | 다중 멤버 시 |
+| --- | --- | --- | --- |
+| 베이스 MAC (포트 이름 = MAC 인 항목) | `549fc6badb80` | cluster. `second_device_fk` 가 비어 있어 물리 멤버로 연결되지 않는다 | 멤버 전원이 같은 값을 받는다. 부적합 |
+| 멤버 자신의 포트 MAC 최솟값 | `549fc6badb81` | 물리 멤버 | 멤버마다 다른 값. 적합 |
+
+두 값은 1 차이다. 물리 포트 MAC 은 베이스 바로 위에서 증가한다.
+예: 베이스 `549fc6badb80`, 포트 `549fc6badb81`~`549fc6badb9c`.
+멤버별 OUI 대역이 달라(`549fc6ba…` / `0019aa43…`) 최솟값이 섞이지 않는다.
 
 관리 IP 는 cluster 의 `Vlan1` 인터페이스에 붙어 있고 그 포트의
 `second_device_fk` 는 비어 있다. 따라서 IP 는 포트 경유가 아니라 위 대응표로
-cluster 를 찾아 조회한다.
+cluster 를 찾아 조회한다. 관측 기준 cluster 당 IP 는 1개다.
+
+스택은 관리 IP 를 공유하므로 멤버가 여럿이면 여러 행이 같은
+`NETWORKADDRESS` 를 갖는다. 스택 구조상 정상이지만 자산 식별에는 쓸 수 없다.
 
 ## 3. 조회 조건
 
@@ -65,9 +79,9 @@ cluster 를 찾아 조회한다.
 | CREATEDATE | 작성 날짜 | DATETIME(10) | N | 채번 | – | 적재 시각 |
 | DESCRIPTION1 | 설명 | ALN(128) | Y | 원천없음 | – | 기존 수집분도 0/34. `os_name` 이 후보이나 컬럼 용도 미확인 |
 | FIRMWAREVERSION | 펌웨어 버전 | ALN(128) | Y | 원천없음 | – | `bios_version`·`bios_revision`·`bios_fw_revision` 이 스위치 레코드에서 전건 비어 있다. 기존 수집분도 0/34 |
-| NETMACADDR | MAC 주소 | ALN(17) | Y | 변환 | `view_netport_v1.hwaddress` | cluster 포트 중 `port = hwaddress` 인 베이스 MAC. 관측 2/2 · 2/2. 기존 수집분 34/34 |
+| NETMACADDR | MAC 주소 | ALN(17) | Y | 미결 | `view_netport_v1.hwaddress` | 단수 컬럼이라 포트 28개 중 하나를 골라야 한다. 베이스 MAC 은 cluster 귀속이라 다중 멤버 시 중복된다. 멤버 자신의 포트 MAC 최솟값이 대안이다. 2절 참조 |
 | NETSOURCEID1 | 네트워크 소스 ID | ALN(128) | Y | 원천없음 | – | 기존 수집분도 0/34 |
-| NETWORKADDRESS | 네트워크 주소 | ALN(39) | Y | 변환 | `view_ipaddress_v1.ip_address` | cluster 대응 후 관리 IP. 2절의 대응표 경유. 관측 2/2 · 2/2. 기존 수집분 29/34 |
+| NETWORKADDRESS | 네트워크 주소 | ALN(39) | Y | 변환 | `view_ipaddress_v1.ip_address` | cluster 대응 후 관리 IP. 관측 2/2 · 2/2, cluster 당 IP 1개. 다중 멤버 시 여러 행이 같은 값을 갖는다. 기존 수집분 29/34 |
 | NODEID | 노드 ID | BIGINT(19) | N | 채번 | – | 부모 DEPLOYEDASSET.NODEID. `(SOURCEID, IMPORTSOURCE)` 로 조회 |
 | OSVERSION | 운영 체제 버전 | ALN(128) | Y | 직접 | `view_device_v2.os_version` | 물리 레코드 값. 예: `Gibraltar 16.12.4`, `12.2(25)SEB4`. 관측 2/2 · 2/2. 기존 수집분은 0/34 라 새로 채우는 값이다 |
 | RAMSIZE | RAM 크기 | DECIMAL(10,2) | Y | 원천없음 | – | `view_device_v2.ram` 이 스위치 레코드에서 전건 비어 있다. 기존 수집분은 전건 `0.00` 자리표시 |
@@ -117,6 +131,12 @@ ORDER BY d.device_pk
 
 ## 6. 미결
 
+- **`NETMACADDR` 선정 규칙 미결.** 2절의 두 후보 중 하나를 정해야 한다.
+  베이스 MAC 은 cluster 귀속이라 멤버가 여럿이면 중복된다. 멤버 자신의 포트
+  MAC 최솟값은 멤버별로 다르지만 관례적인 장비 MAC 과 1 차이가 난다.
+  기존 수집분의 `NETMACADDR` 34건이 베이스인지 첫 포트인지 확인되지 않았다.
+- **다중 멤버 스택 미검증.** 관측 시점에 cluster 당 물리 멤버가 1개뿐이라
+  1:N 동작을 실측하지 못했다. 멤버가 둘 이상인 스택이 생기면 재확인이 필요하다.
 - ISSUE-1 — 동일 스위치가 서버에 따라 다른 `device_pk` 를 갖는다. `.68` 은 13·108,
   `.35` 는 284·283 이고 시리얼(`JAE24461ECG`, `CAT1040RGWU`)은 같다.
 - `DESCRIPTION1` 은 원천 후보로 `os_name` 이 있으나 컬럼 용도가 확인되지 않았다.

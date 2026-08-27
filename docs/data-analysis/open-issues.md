@@ -18,7 +18,7 @@ Device42 `device_pk` 가 들어간다. `device_pk` 는 수집 서버가 다르�
 
 ## ISSUE-2 스위치가 두 레코드로 분리됨
 
-**상태:** 해결. 연결 수단을 찾았다.
+**상태:** 연결 수단은 해결. 다중 멤버 스택의 값 귀속 규칙은 미결.
 
 네트워크 장비가 Device42 에서 두 레코드로 나뉜다.
 
@@ -56,6 +56,16 @@ cluster 를 특정한 뒤 조회한다.
 
 MAC 은 cluster 포트 중 포트 이름이 MAC 과 같은 항목이 장비 베이스 MAC 이다.
 물리 포트 MAC 은 그 값 바로 위 범위에서 증가한다.
+
+**다만 베이스 MAC 포트는 `second_device_fk` 가 비어 있어 물리 멤버로 연결되지
+않는다.** cluster 귀속 값이다. cluster 는 Cisco 스택이라 물리 멤버를 여러 개
+가질 수 있고(이름의 ` - Switch N` 이 멤버 번호), 멤버가 여럿이면 전원이 같은
+베이스 MAC 을 받게 된다. `DPANETDEVICE.NETMACADDR` 은 단수 컬럼이므로
+귀속 규칙을 정해야 한다. 멤버 자신의 포트 MAC 최솟값이 대안이다.
+
+관측 시점에는 양쪽 서버 모두 cluster 당 멤버가 1개라 1:N 동작을 실측하지
+못했다. 관리 IP 도 cluster 당 1개이며, 스택은 IP 를 공유하므로 멤버가 여럿이면
+여러 행이 같은 `NETWORKADDRESS` 를 갖는다.
 
 적용은 `data-mapping/asset/dpanetdevice.md` 참조.
 
