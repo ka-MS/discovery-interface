@@ -14,6 +14,9 @@
 `physicalsubtype = 'PDU'`가 COMPUTER로 분류됐다. Maximo에 대응 ASSETCLASS와
 DPA 테이블이 없어 `DEPLOYEDASSET`과 COMPUTER 자식의 조회 대상에서 제외했다.
 
+필터 적용 전에 적재된 PDU 1건(`SOURCEID=172`)은 Maximo에 남아 있다. 삭제는
+ISSUE-5의 삭제 정책을 정한 뒤 처리한다.
+
 ## ISSUE-4 자식 태스크의 조회 조건이 부모와 다름
 
 **결론:** 해결.

@@ -53,6 +53,8 @@ FROM view_netport_v1 WHERE second_device_fk IS NOT NULL
 자식 테이블의 자체 ID 는 Maximo 시퀀스로 발번한다. 재실행 시 같은 원천 행을
 찾기 위해 `SOURCE_TARGET_MAP` 을 신설한다.
 
+현재 Db2에는 `SOURCE_TARGET_MAP` 테이블이 없다. 구현 전에 DDL을 적용해야 한다.
+
 | 컬럼 | 값 |
 | --- | --- |
 | `SOURCE_SYSTEM` | `DEVICE42` |
@@ -120,9 +122,10 @@ Maximo 는 자식 테이블에 이름을 넣기 전에 정규화하는 계층을
 자식 테이블만 적재한다. 마스터 등록은 추후 고려한다.
 
 근거는 강제성이 없다는 점이다. `SYSCAT.REFERENCES` 에 DPA 계열 FK 제약이
-하나도 없어 미등록 이름을 넣어도 적재가 성공한다. 현행 `DEPLOYEDASSET` 적재분
-31건 중 3건(`Cisco` 2, `ASUS` 1)이 이미 `DPAMMANUFACTURER` 미등록 상태로
-들어가 있고 문제가 발생하지 않았다.
+하나도 없어 미등록 이름을 넣어도 적재가 성공한다. 현행 Device42
+`DEPLOYEDASSET` 70건 중 4건(`Cisco` 2, `GIGABYTE` 1, `Geist` 1)이 이미
+`DPAMMANUFACTURER` 미등록 상태로 들어가 있고 문제가 발생하지 않았다.
+`Geist` 1건은 삭제 정책을 기다리는 PDU다.
 
 정규화 기계가 실제로 돌고 있지도 않다. 변형표는 전 도메인 전건
 `정규명 = 원시명` 이라 별칭이 하나도 없고, 마스터의 `VALIDATED` 도 전건 `0` 이다.

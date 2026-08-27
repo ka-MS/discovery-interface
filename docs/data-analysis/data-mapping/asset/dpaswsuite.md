@@ -25,7 +25,7 @@ Device42 에 대응 원천이 없다. 소프트웨어 여러 개를 스위트 �
 - 스위트 뷰가 없다. `view_softwaresuite_v1`, `view_suite_v1`,
   `view_softwarecomponent_v1` 모두 두 서버에서 500 을 반환한다. DOQL 에서
   500 은 뷰명 또는 권한 오류를 뜻한다.
-  `knowledge/device42/doql-constraints.md` 참조.
+  `../../knowledge/device42/doql-constraints.md` 참조.
 - `view_software_v1` 에 묶음 컬럼이 없다. 소프트웨어 원천이 넓은 2.68 에서도
   `category_name` 은 2234/2273 이 비어 있고, 값이 있는 39건도
   `Software Development`·`Security` 같은 분류라 스위트 구성원 관계가 아니다.

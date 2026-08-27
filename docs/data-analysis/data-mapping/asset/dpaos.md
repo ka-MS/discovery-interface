@@ -13,7 +13,7 @@
 - 동기화 ID: `SOURCE_TARGET_MAP`의 `view_deviceos_v1.deviceos_pk`
 
 스키마는 노드당 다건을 허용하지만 Device42 원천은 장비당 최대 1건이다.
-판별 규칙은 `../knowledge/maximo/deployedasset-model.md` 참조.
+판별 규칙은 `../../knowledge/maximo/deployedasset-model.md` 참조.
 
 ## 2. 테이블 매핑
 
@@ -29,7 +29,7 @@
 
 | 서버 | COMPUTER 대상 | OS 보유 | 행 수 |
 | --- | --- | --- | --- |
-| 192.168.1.35 | 67장비 | 59장비 | 59 |
+| 192.168.1.35 | 66장비 | 59장비 | 59 |
 | 192.168.2.68 | 28장비 | 20장비 | 20 |
 
 `view_deviceos_v1.os_name` 은 양쪽 전건(1.35 59/59, 2.68 20/20)
@@ -90,7 +90,7 @@ WHERE d.type IN ('virtual', 'physical')
   AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)
   AND (d.network_device = false OR d.network_device IS NULL)
   AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer', 'PDU'))
-ORDER BY o.device_fk
+ORDER BY o.device_fk, o.deviceos_pk
 ```
 
 ## 6. 미결

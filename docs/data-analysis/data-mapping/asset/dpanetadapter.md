@@ -26,7 +26,7 @@
 
 | 서버 | 원천 | MAC 주소 | 포트명 | 속도·프로토콜 |
 | --- | --- | --- | --- | --- |
-| 192.168.1.35 | 66장비/142행 | 133/142 | 76/142 | 각 5/142 |
+| 192.168.1.35 | 65장비/140행 | 135/140 | 74/140 | 각 0/140 |
 | 192.168.2.68 | 27장비/82행 | 74/82 | 74/82 | 각 0/82 |
 
 ## 3. 조회 조건
@@ -49,7 +49,7 @@
 | CHANGEDATE | 변경 날짜 | DATETIME(10) | N | 채번 | – | 적재 시각 |
 | CHIPSET | 칩셋 | ALN(64) | Y | 원천없음 | – | 대응 원천이 없다 |
 | CREATEDATE | 작성 날짜 | DATETIME(10) | N | 채번 | – | 적재 시각 |
-| DESCRIPTION | 설명 | ALN(256) | Y | 직접 | `view_netport_v1.description` | 1.35는 5/142, 2.68은 0/82 |
+| DESCRIPTION | 설명 | ALN(256) | Y | 직접 | `view_netport_v1.description` | 양쪽 서버 모두 전건 비어 있다 |
 | FIRMWAREVERSION | 펌웨어 버전 | ALN(32) | Y | 원천없음 | – | 대응 원천이 없다 |
 | MAKEMODEL | 제조/모델 | ALN(128) | N | 상수 | – | `'UNKNOWN'`. 포트 뷰에 어댑터 모델이 없다. DEFAULTVALUE=UNKNOWN |
 | MANUFACTURER | 제조업체 | ALN(128) | N | 직접 | `view_vendor_v1.name` | `vendor_fk` 조인. 양 서버 모두 관측값이 없어 현재는 `UNKNOWN`. DEFAULTVALUE=UNKNOWN |
@@ -57,7 +57,7 @@
 | NETMACADDR2 | MAC 주소 2 | ALN(17) | Y | 변환 | `view_netport_v1.hwaddress2` | `UPPER(hwaddress2)`. 양 서버 모두 관측값 없음 |
 | NODEID | 노드 ID | BIGINT(19) | N | 채번 | – | 부모 DEPLOYEDASSET.NODEID. `(SOURCEID, IMPORTSOURCE)` 로 조회 |
 | PORT | 포트 | ALN(16) | Y | 변환 | `view_netport_v1.port` | `LEFT(port, 16)`. 관측 최대 71자로 타겟 길이에 맞춘다 |
-| PROTOCOL | 프로토콜 | ALN(64) | Y | 직접 | `view_netport_v1.global_type` | 1.35는 5/142(`ethernet`), 2.68은 0/82 |
+| PROTOCOL | 프로토콜 | ALN(64) | Y | 직접 | `view_netport_v1.global_type` | 양쪽 서버 모두 전건 비어 있다 |
 | SERIALNUMBER | 일련 번호 | ALN(64) | Y | 원천없음 | – | 대응 원천이 없다 |
 | VBANDWIDTH | 대역폭 | ALN(32) | Y | 원천없음 | – | 비영속 속성(PERSISTENT=0). DB 컬럼이 아니므로 적재 대상이 아니다 |
 

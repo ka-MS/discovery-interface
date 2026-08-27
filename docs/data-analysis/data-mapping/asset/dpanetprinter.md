@@ -14,7 +14,7 @@
 기본키가 `NODEID` 다. 대리키가 없어 노드당 1행만 존재할 수 있다.
 `DPANETPRINTERSEQ` 가 존재하지만 이 테이블은 쓰지 않고 부모에서 받은 `NODEID`
 를 그대로 쓴다. MERGE 매칭 키도 `NODEID` 하나로 끝나므로 ISSUE-5 대상이
-아니다. 근거는 `../knowledge/maximo/deployedasset-model.md` 참조.
+아니다. 근거는 `../../knowledge/maximo/deployedasset-model.md` 참조.
 
 ## 2. 테이블 매핑
 

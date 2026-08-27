@@ -14,8 +14,9 @@ bash local/db-access-kit/scripts/run-maximo.sh   <쿼리파일> <출력디렉터
 
 ## Device42 서버 선택
 
-Device42 는 두 대이고 수집 범위가 다르다. 실행기는 `DB_ACCESS_ENV` 로 접속
-파일을 고른다. `connections.env` 를 편집하지 않는다. 다른 세션이 같이 쓴다.
+데모 검증용 Device42 는 두 대이고 수집 범위가 다르다. 운영 적재는 한 서버만
+사용한다. 실행기는 조사할 서버 하나를 `DB_ACCESS_ENV` 로 고른다.
+`connections.env` 를 편집하지 않는다. 다른 세션이 같이 쓴다.
 
 | 서버 | 접속 파일 | 넓은 원천 | 장비 수 |
 | --- | --- | --- | --- |
@@ -32,7 +33,7 @@ DB_ACCESS_ENV=local/db-access-kit/connections-d42-35.env \
 
 출력 디렉터리를 서버별로 나눈다. 같은 쿼리의 결과가 서로 덮어쓰지 않게 한다.
 
-**한 대만 보고 결론을 내지 않는다.** 같은 뷰라도 건수가 크게 다르다.
+매핑 조사 때만 두 서버를 각각 확인한다. 같은 뷰라도 건수가 크게 다르다.
 `view_part_v1` 은 192.168.2.68 에서 479건, 192.168.1.35 에서 86건이다.
 결과를 문서에 옮길 때 어느 서버 관측인지 함께 적는다.
 
@@ -71,7 +72,8 @@ Maximo 는 한 대뿐이라 `DB_ACCESS_ENV` 없이 기본 파일을 쓴다.
 | `device42/dpa-software-mapping.sql` | 소프트웨어의 COMPUTER 대상 원천, 자연키 유일성 |
 | `maximo/table-description.sql` | 테이블 한글 설명 |
 | `maximo/column-skeleton.sql` | 컬럼 매핑표 앞 4열 생성 |
-| `maximo/dpa-child-coverage.sql` | DPA 자식 테이블 노드 커버리지, ASSETCLASS 분포 |
+| `maximo/dpa-child-coverage.sql` | DPA 자식 테이블 노드 커버리지, ASSETCLASS 분포, Device42 부모 목록 |
+| `maximo/dpa-key-structure.sql` | DPA 기본키 구조와 Device42 자식 적재 건수 |
 | `maximo/dpa-hardware-existing-values.sql` | 세 DPA 하드웨어 자식의 기존값 관례 |
 | `maximo/dpa-child-sequences.sql` | 자체 ID를 쓰는 DPA 자식의 시퀀스와 현재 ID 범위 |
 | `maximo/dpa-os-network-existing-values.sql` | DPAOS·DPATCPIP·DPANETPRINTER·DPASWSUITE 기존값 관례 |

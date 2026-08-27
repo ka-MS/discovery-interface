@@ -54,7 +54,7 @@ MERGE 키는 `(SOURCEID, IMPORTSOURCE)` 다. 재실행해도 멱등하다.
 | NODENAME | 노드 | ALN(128) | N | 직접 | `view_device_v2`.name | 비어 있으면 `UNKNOWN` |
 | ORGID | 조직 | UPPER(8) | Y | 원천없음 | – | Maximo 조직 체계 값. 수집 원천이 아니다 |
 | PLUSPCUSTOMER | 고객 | UPPER(12) | Y | 원천없음 | – |  |
-| SERIALNUMBER | 일련 번호 | ALN(64) | Y | 직접 | `view_device_v2.serial_no` | .68 VMWare 17/18, EC2 0/8 · .35 전체 13/70 |
+| SERIALNUMBER | 일련 번호 | ALN(64) | Y | 직접 | `view_device_v2.serial_no` | .68 VMWare 17/18, EC2 0/8 · .35 전체 12/69 |
 | SITEID | 사이트 | UPPER(8) | Y | 원천없음 | – | Maximo 조직 체계 값. 수집 원천이 아니다 |
 | SOURCEID | 소스 | ALN(128) | Y | 변환 | `view_device_v2`.device_pk | 문자열로 변환. MERGE 키의 일부 |
 | SOURCEID2 | Source2 | ALN(128) | Y | 원천없음 | – | 보조 키 컬럼. 현행 적재는 사용하지 않는다 |
@@ -100,5 +100,5 @@ ORDER BY d.device_pk
 
 ## 6. 미결
 
-- 적재 대상 규모가 서버별로 크게 다르다. .68 은 31대(COMPUTER 28 / NETDEVICE 2 / NETPRINTER 1),
-  .35 는 70대(COMPUTER 67 / NETDEVICE 2 / NETPRINTER 1)다.
+- `SYSTEMROLE`, `TLOAMNRSHOSTSYSTEM`, `TLOAMNRSMODEL`, `TLOAMNRSNAME`,
+  `TLOAMNRSPRIMARYMACADDRESS`, `TLOAMNRSSERIALNUMBER`의 매핑 규칙이 미정이다.

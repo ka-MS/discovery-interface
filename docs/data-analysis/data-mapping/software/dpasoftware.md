@@ -108,7 +108,7 @@ WHERE d.type IN ('virtual', 'physical')
   AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)
   AND (d.network_device = false OR d.network_device IS NULL)
   AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer', 'PDU'))
-ORDER BY u.device_fk, s.name, u.version
+ORDER BY u.device_fk, s.name, u.version, u.softwareinuse_pk
 ```
 
 ## 6. 미결

@@ -24,7 +24,8 @@
 | `view_device_v2` | (대상 판정) | `view_part_v1.device_fk = device_pk` | N:1 |
 | MAXIMO.DEPLOYEDASSET | (교차키) | `SOURCEID = view_part_v1.device_fk AND IMPORTSOURCE = 'Device42'` → `NODEID` | N:1 |
 
-관측 6파트/6장비로 장비당 1건이지만, 물리 디스크가 여러 개인 장비에서는 N 이 된다.
+관측은 .35 6파트/6장비, .68 22파트/17장비다. 물리 디스크가 여러 개인
+장비에서는 N 이 된다.
 
 ## 3. 조회 조건
 
@@ -86,10 +87,9 @@ WHERE pm.type_name = 'Hard Disk'
   AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)
   AND (d.network_device = false OR d.network_device IS NULL)
   AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer', 'PDU'))
-ORDER BY p.device_fk, pm.name
+ORDER BY p.device_fk, pm.name, p.part_pk
 ```
 
 ## 6. 미결
 
-- `DISKTYPE` 은 양쪽 서버 모두 대응 원천이 없다. `media_type_name` 은 .35 전건 `storage`, .68 전건 NULL 이다.
-- `SYSTEMNAME` 은 기존 수집분이 `1` 로 채워 이름이 아닌 플래그로 쓰인다. 용도를 확인하기 전에는 채우지 않는다.
+없음.

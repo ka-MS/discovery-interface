@@ -24,7 +24,8 @@
 | `view_device_v2` | (대상 판정) | `view_part_v1.device_fk = device_pk` | N:1 |
 | MAXIMO.DEPLOYEDASSET | (교차키) | `SOURCEID = view_part_v1.device_fk AND IMPORTSOURCE = 'Device42'` → `NODEID` | N:1 |
 
-파트 1건이 행 1건이 되므로 소켓 수만큼 행이 생긴다. 관측 43파트/11장비.
+파트 1건이 행 1건이 되므로 소켓 수만큼 행이 생긴다. 관측은 .35
+42파트/10장비, .68 66파트/18장비다.
 
 ## 3. 조회 조건
 
@@ -47,12 +48,12 @@
 | DESCRIPTION | 설명 | ALN(256) | Y | 변환 | `view_part_v1.description` | 비어 있으면 `view_partmodel_v1.name`. .68 은 전건 비어 있다 |
 | IS64BITEN | 64비트 사용 | YORN(1) | N | 상수 | – | 기존 수집분도 전건 `0`. DEFAULTVALUE=0 |
 | MAKEMODEL | 제조/모델 | ALN(128) | N | 직접 | `view_partmodel_v1.name` | 없으면 `UNKNOWN`. DEFAULTVALUE=UNKNOWN |
-| MANUFACTURER | 제조업체 | ALN(128) | N | 직접 | `view_vendor_v1.name` | `view_partmodel_v1.vendor_fk` 조인. .68 66/67 · .35 42/43. 없으면 `UNKNOWN` |
+| MANUFACTURER | 제조업체 | ALN(128) | N | 직접 | `view_vendor_v1.name` | `view_partmodel_v1.vendor_fk` 조인. .68 66/66 · .35 42/42. 없으면 `UNKNOWN` |
 | MAXSPEED | 최대 속도 | DECIMAL(10,2) | Y | 직접 | `view_partmodel_v1.speed` | 소수 2자리 |
 | NODEID | 노드 ID | BIGINT(19) | N | 채번 | – | 부모 DEPLOYEDASSET.NODEID. `(SOURCEID, IMPORTSOURCE)` 로 조회 |
 | NUMACTIVECORE | 활성 코어 | INTEGER(12) | Y | 원천없음 | – | Device42 는 활성 코어를 구분하지 않는다 |
-| NUMCORE | 코어 | INTEGER(12) | Y | 직접 | `view_partmodel_v1.cores` | .68 66/67 |
-| SERIALNUMBER | 일련 번호 | ALN(64) | Y | 원천없음 | – | 양쪽 서버 모두 전건 미보유 (.68 0/67 · .35 0/43) |
+| NUMCORE | 코어 | INTEGER(12) | Y | 직접 | `view_partmodel_v1.cores` | .68 66/66 |
+| SERIALNUMBER | 일련 번호 | ALN(64) | Y | 원천없음 | – | 양쪽 서버 모두 전건 미보유 (.68 0/66 · .35 0/42) |
 | SPEEDUNIT | 속도 단위 | ALN(16) | Y | 직접 | `view_partmodel_v1.speed_unit` | 관측값 `GHz` |
 | TLOAMCPUTYPE | 프로세서 유형 | ALN(128) | Y | 원천없음 | – |  |
 | TLOAMFAMILY | 프로세서 제품군 | ALN(128) | Y | 원천없음 | – |  |
@@ -83,9 +84,9 @@ WHERE pm.type_name = 'CPU'
   AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)
   AND (d.network_device = false OR d.network_device IS NULL)
   AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer', 'PDU'))
-ORDER BY p.device_fk, p.slot
+ORDER BY p.device_fk, p.slot, p.part_pk
 ```
 
 ## 6. 미결
 
-- `DESCRIPTION` 은 .68 에서 전건 비어 있다. 모델명으로 대체할지 NULL 로 둘지 정해야 한다.
+없음.

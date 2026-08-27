@@ -31,12 +31,12 @@ IP 가 여럿이므로 IP 1건당 1행을 적재한다. 1행으로 줄이기 위
 | IP 건수 | 192.168.1.35 | 192.168.2.68 |
 | --- | --- | --- |
 | 0 | 7 | 1 |
-| 1 | 53 | 16 |
+| 1 | 52 | 16 |
 | 2 | 4 | 10 |
 | 3 | 2 | – |
 | 4 | 1 | – |
 | 9 | – | 1 |
-| 합계 | 67장비 / 71행 | 28장비 / 45행 |
+| 합계 | 66장비 / 70행 | 28장비 / 45행 |
 
 아래 컬럼 매핑의 수치는 `1.35 / 2.68` 순으로 적는다.
 
@@ -58,12 +58,12 @@ IP 가 여럿이므로 IP 1건당 1행을 적재한다. 1행으로 줄이기 위
 | DNSSERVER1 | DNS 서버 1 | ALN(100) | Y | 원천없음 | – | 대응 원천이 없다. 기존 수집분도 0/53 |
 | DNSSERVER2 | DNS 서버 2 | ALN(100) | Y | 원천없음 | – | 대응 원천이 없다 |
 | DNSSERVER3 | DNS 서버 3 | ALN(100) | Y | 원천없음 | – | 대응 원천이 없다 |
-| GATEWAY | 게이트웨이 | ALN(32) | Y | 직접 | `view_subnet_v1.gateway` | 관측 0/71 · 0/45. 두 서버 모두 전건 비어 있어 현재는 NULL 이다 |
-| HOST | 호스트 | ALN(128) | Y | 직접 | `view_device_v2.name` | 관측 71/71 · 45/45, 최대 41자. 같은 장비라도 서버에 따라 이름이 다를 수 있다 |
+| GATEWAY | 게이트웨이 | ALN(32) | Y | 직접 | `view_subnet_v1.gateway` | 관측 0/70 · 0/45. 두 서버 모두 전건 비어 있어 현재는 NULL 이다 |
+| HOST | 호스트 | ALN(128) | Y | 직접 | `view_device_v2.name` | 관측 70/70 · 45/45, 최대 41자. 같은 장비라도 서버에 따라 이름이 다를 수 있다 |
 | NODEID | 노드 ID | BIGINT(19) | N | 채번 | – | 부모 DEPLOYEDASSET.NODEID. `(SOURCEID, IMPORTSOURCE)` 로 조회 |
 | PRIMARYWINS | 기본 WINS | ALN(32) | Y | 원천없음 | – | 대응 원천이 없다 |
 | SECONDARYWINS | 보조 WINS | ALN(32) | Y | 원천없음 | – | 대응 원천이 없다 |
-| TCPIPADDRESS | TCP/IP 주소 | ALN(39) | N | 변환 | `view_ipaddress_v1.ip_address` | `HOST(ip_address)`. inet 타입이라 그냥 캐스팅하면 `/32` 접미가 붙는다. 관측 71/71 · 45/45, 접미 포함 최대 18자. IPv6 는 양쪽 0건 |
+| TCPIPADDRESS | TCP/IP 주소 | ALN(39) | N | 변환 | `view_ipaddress_v1.ip_address` | `HOST(ip_address)`. inet 타입이라 그냥 캐스팅하면 `/32` 접미가 붙는다. 관측 70/70 · 45/45, 접미 포함 최대 18자. IPv6 는 양쪽 0건 |
 | TCPIPDOMAIN | TCP/IP 도메인 | ALN(256) | Y | 원천없음 | – | 대응 원천이 없다. 장비명에 FQDN 이 섞여 있으나 도메인 컬럼이 아니다 |
 | TCPIPID | TcpIp ID | BIGINT(19) | N | 채번 | – | `NEXT VALUE FOR MAXIMO.DPATCPIPSEQ`. INSERT 시에만 발번하고 `SOURCE_TARGET_MAP`으로 유지한다 |
 | TCPIPNETMASK | 네트워크 마스크 | ALN(32) | Y | 변환 | `view_subnet_v1.mask_bits` | 비트 수를 점 표기 넷마스크로 변환한다(`24` → `255.255.255.0`). `mask_bits = 0` 은 catch-all 서브넷이므로 NULL |
@@ -75,7 +75,7 @@ IP 가 여럿이므로 IP 1건당 1행을 적재한다. 1행으로 줄이기 위
 
 | mask_bits | 192.168.1.35 | 192.168.2.68 |
 | --- | --- | --- |
-| 24 | 48 | 12 |
+| 24 | 47 | 12 |
 | 22 | 10 | 13 |
 | 20 | 5 | 5 |
 | 0 (catch-all) | 8 | 15 |
@@ -100,7 +100,7 @@ WHERE d.type IN ('virtual', 'physical')
   AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)
   AND (d.network_device = false OR d.network_device IS NULL)
   AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer', 'PDU'))
-ORDER BY i.device_fk, i.ip_address
+ORDER BY i.device_fk, i.ip_address, i.ipaddress_pk
 ```
 
 ## 6. 미결

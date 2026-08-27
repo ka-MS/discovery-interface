@@ -80,7 +80,7 @@ WHERE d.type IN ('virtual', 'physical')
   AND (d.network_device = false OR d.network_device IS NULL)
   AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer', 'PDU'))
   AND LOWER(COALESCE(m.fstype_name, '')) NOT IN ('overlay', 'devtmpfs', 'efivarfs')
-ORDER BY m.device_fk, m.mountpoint
+ORDER BY m.device_fk, m.mountpoint, m.mountpoint_pk
 ```
 
 ## 6. 미결

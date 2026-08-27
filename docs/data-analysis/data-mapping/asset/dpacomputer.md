@@ -37,10 +37,10 @@ MERGE 키는 `NODEID` 단독이다. 노드당 1행이므로 부모와 1:1 이다
 
 | Target 컬럼 | 한글명 | 타입 | Null | 구분 | Source | 변환·조건 |
 | --- | --- | --- | --- | --- | --- | --- |
-| BIOSDATE | BIOS 날짜 | DATETIME(10) | Y | 변환 | `view_device_v2.bios_release_date` | ISO_LOCAL_DATE 우선, 실패 시 `MM/dd/yyyy`. 둘 다 실패하면 NULL. .68 은 53대 중 2대만 값이 있다 |
-| BIOSNAME | BIOS | ALN(64) | Y | 원천없음 | – | `view_device_v2.bios_vendor_fk` 가 있으나 .68 에서 53대 중 1대뿐이다 |
+| BIOSDATE | BIOS 날짜 | DATETIME(10) | Y | 변환 | `view_device_v2.bios_release_date` | ISO_LOCAL_DATE 우선, 실패 시 `MM/dd/yyyy`. 둘 다 실패하면 NULL. .68 은 28대 중 2대만 값이 있다 |
+| BIOSNAME | BIOS | ALN(64) | Y | 원천없음 | – | `view_device_v2.bios_vendor_fk` 가 있으나 .68 에서 28대 중 1대뿐이다 |
 | BIOSPNP | PNP | YORN(1) | N | 상수 | – | `0` |
-| BIOSVERSION | BIOS 버전 | ALN(32) | Y | 직접 | `view_device_v2.bios_version` | 수집률이 매우 낮다. .68 은 대상 53대 중 2대뿐이다 |
+| BIOSVERSION | BIOS 버전 | ALN(32) | Y | 직접 | `view_device_v2.bios_version` | 수집률이 매우 낮다. .68 은 대상 28대 중 2대뿐이다 |
 | CAPACITYMODEL1 | 용량 모델 | ALN(128) | Y | 원천없음 | – | 메인프레임 용량 지표. 수집 대상이 아니다 |
 | CHANGEDATE | 변경 날짜 | DATETIME(10) | N | 채번 | – | 적재 시각 |
 | CREATEDATE | 작성 날짜 | DATETIME(10) | N | 채번 | – | 적재 시각 |
@@ -56,10 +56,10 @@ MERGE 키는 `NODEID` 단독이다. 노드당 1행이므로 부모와 1:1 이다
 | NODEID | 노드 ID | BIGINT(19) | N | 채번 | – | 부모 DEPLOYEDASSET.NODEID. `(SOURCEID, IMPORTSOURCE)` 로 조회. 교차키가 없으면 로그만 남기고 건너뛴다 |
 | NUMCORETOTAL | 총 코어 | INTEGER(12) | Y | 변환 | `view_device_v2`.total_cpus, .core_per_cpu | 두 값의 곱. 하나라도 NULL 이면 NULL |
 | NUMCPUCONFIG1 | 구성된 프로세서 수 | INTEGER(12) | Y | 원천없음 | – |  |
-| NUMCPUTOTAL1 | 총 프로세서 수 | INTEGER(12) | Y | 직접 | `view_device_v2.total_cpus` | .68 은 53대 중 20대만 값이 있다 |
+| NUMCPUTOTAL1 | 총 프로세서 수 | INTEGER(12) | Y | 직접 | `view_device_v2.total_cpus` | .68 은 28대 중 20대만 값이 있다 |
 | PLANTCODE1 | 제조 공장 | ALN(32) | Y | 원천없음 | – |  |
 | RAMDESCRIPTION | RAM 설명 | ALN(256) | Y | 미결 | `view_partmodel_v1.name` | 예: `DRAM 16384 MB DIMM`. 다중 슬롯 장비가 있어 대표값 규칙이 필요하다 (.68 2슬롯 4대·16슬롯 1대 · .35 2슬롯 1대) |
-| RAMSIZE | RAM 크기 | DECIMAL(10,2) | Y | 변환 | `view_device_v2.ram` | 소수 2자리 반올림(HALF_UP). .68 은 53대 중 20대만 값이 있다 |
+| RAMSIZE | RAM 크기 | DECIMAL(10,2) | Y | 변환 | `view_device_v2.ram` | 소수 2자리 반올림(HALF_UP). .68 은 28대 중 20대만 값이 있다 |
 | RAMTOTALSLOTS | RAM 총 슬롯 | INTEGER(12) | Y | 원천없음 | – | RAM 파트 건수는 장착된 슬롯만 센다. 미장착 슬롯을 알 수 없어 총 슬롯 수가 되지 못한다 |
 | RAMTYPE | RAM 유형 | ALN(32) | Y | 원천없음 | – | `view_partmodel_v1.ramtype` 이 양쪽 서버 모두 전건 비어 있다 (.68 0/35 · .35 0/8) |
 | RAMUNIT | RAM 단위 | ALN(16) | Y | 직접 | `view_device_v2`.ram_size_type |  |
@@ -103,7 +103,5 @@ ORDER BY d.device_pk
 
 ## 6. 미결
 
-- **주요 원천의 수집률이 낮다.** .68 대상 53대 중 BIOS 버전·일자는 2대, RAM·CPU 수는 20대만 값이 있다.
-  적재해도 대부분 NULL 이 된다. 수집 설정으로 개선되는지 확인이 필요하다.
-- RAM 상세(`RAMTYPE`, `RAMDESCRIPTION`, `RAMTOTALSLOTS`)는 `view_part_v1`(RAM) 조인으로 얻을 수 있다.
-  .68 은 RAM 파트 35건/16대이며 슬롯 19/35, 제조사 3/35 다. 슬롯이 여러 개일 때의 대표값 규칙이 필요하다.
+- `RAMDESCRIPTION`의 다중 슬롯 대표값 규칙이 미정이다.
+- `TLOAMPARENTID`에 호스트의 `NODEID`를 연결하는 규칙이 미정이다.
