@@ -4,6 +4,9 @@
 
 > Target: MAXIMO.DEPLOYEDASSET · ASSETCLASS: COMPUTER, NETDEVICE, NETPRINTER · 구현: DeployedAssetIntegrate.java
 
+> 관측 2026-08-27 · Device42 192.168.1.35 · Maximo BLUDB
+> 본문의 원천 건수는 이 서버 기준이다. 192.168.2.68 은 파트·소프트웨어·마운트가 더 넓다.
+
 ## 1. 관계
 
 - 계층의 루트. 부모 없음.

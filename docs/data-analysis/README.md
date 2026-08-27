@@ -6,8 +6,23 @@ Device42(원천)와 Maximo(타겟) 사이의 매핑 작업 문서다.
 
 1. `knowledge/maximo/deployedasset-model.md` — 타겟 구조와 ASSETCLASS 판별자
 2. `knowledge/device42/views.md` — 원천 뷰와 device 연결 키
-3. `data-mapping/README.md` — 라우팅과 진행 현황
-4. `data-mapping/<패키지>/<테이블>.md` — 테이블별 매핑
+3. `knowledge/device42/servers.md` — **조사 전 필수.** Device42 서버가 둘이고 성격이 다르다
+4. `data-mapping/README.md` — 라우팅과 진행 현황
+5. `data-mapping/<패키지>/<테이블>.md` — 테이블별 매핑
+
+## 조사 대상 서버
+
+Device42 는 두 대이고 수집 범위가 다르다. **한 대만 보고 결론을 내지 않는다.**
+
+| 서버 | 넓은 원천 |
+| --- | --- |
+| 192.168.2.68 | 소프트웨어, 파트, 마운트 |
+| 192.168.1.35 | 네트워크, OS |
+
+같은 뷰라도 건수가 크게 다르다. 예를 들어 `view_part_v1` 은 192.168.2.68 에서
+479건, 192.168.1.35 에서 86건이다. 한쪽 수치를 절대값으로 옮겨 적으면 안 된다.
+
+전환 방법과 커버리지 표는 `knowledge/device42/servers.md` 에 있다.
 
 ## 구성
 

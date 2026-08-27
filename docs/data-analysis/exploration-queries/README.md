@@ -12,6 +12,23 @@ bash local/db-access-kit/scripts/run-maximo.sh   <쿼리파일> <출력디렉터
 
 출력은 `local/db-access-kit/work/` 아래에만 둔다. 저장소에 커밋하지 않는다.
 
+## 실행 전 확인: 어느 Device42 인가
+
+Device42 는 두 대이고 수집 범위가 다르다. 실행 전에 지금 어느 쪽에 붙는지
+확인한다.
+
+```bash
+grep -E '^D42_RESOLVE=' local/db-access-kit/connections.env
+```
+
+| 서버 | 넓은 원천 |
+| --- | --- |
+| 192.168.2.68 | 소프트웨어, 파트, 마운트 |
+| 192.168.1.35 | 네트워크, OS |
+
+조사 대상에 맞는 서버를 고르고, 결과를 문서에 옮길 때 어느 서버 관측인지
+함께 적는다. 상세는 `../knowledge/device42/servers.md` 참조.
+
 ## 쿼리 파일 규칙
 
 - 블록 구분은 `-- name: <이름>`. 이름에 쓸 수 있는 문자는 `[a-zA-Z0-9-]` 뿐이다.
