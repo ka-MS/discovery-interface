@@ -120,7 +120,7 @@ COMPUTER 가 된다. Maximo 에 PDU 용 ASSETCLASS 와 DPA 테이블이 없다.
 
 ## ISSUE-5 1:N 자식 테이블의 MERGE 매칭 키
 
-**상태:** 정책 정의 대기. 대상은 `DPADISK` 하나로 좁혀졌다.
+**상태:** 정책 정의 대기. 남은 대상은 `DPADISK` 다.
 
 자체 ID 를 쓰는 10개 테이블은 ID 를 시퀀스로 발번한다. 발번은 해결됐지만
 재실행 시 같은 원천 행을 다시 찾아낼 매칭 키가 따로 있어야 한다. 없으면
@@ -138,7 +138,7 @@ COMPUTER 가 된다. Maximo 에 PDU 용 ASSETCLASS 와 DPA 테이블이 없다.
 | DPATCPIP | `TCPIPADDRESS` | TCP/IP 주소 | 53/53 |
 | DPAOS | `NAME` | 운영 체제 | 63/63 |
 | DPASWSUITE | `SUITEID` | 스위트 ID | 14/14 |
-| DPASOFTWARE | `TLOAMSOFTWAREID` | 소프트웨어 | 13031/13031 |
+| DPASOFTWARE | `SOFTWARENAME`+`VERSION`+`INSTALLPATH` | 애플리케이션·버전·설치 경로 | 13031/13031 유일 |
 | DPACPU | `CPUNUM` | 프로세서 ID | 0/57 |
 | DPADISK | `SERIALNUMBER` | 일련 번호 | 0/144 |
 | DPADISPLAY | `SERIALNUMBER` | 일련 번호 | 0/52 |
@@ -169,6 +169,7 @@ INSERT 가 되어 행이 중복된다. 두 성격은 공존할 수 없으므로 
 | DPAOS | `NAME` | `view_os_v1.name` | 가능 |
 | DPADISK | `SERIALNUMBER` | `view_part_v1.serial_no` (.68 12/22 · .35 1/6) | 폴백 필요 |
 | DPAMEDIAADAPTER | `SERIALNUMBER` | `view_part_v1.serial_no` (GPU 파트) | 미조사 |
+| DPASOFTWARE | `SOFTWARENAME`+`VERSION`+`INSTALLPATH` | `view_software_v1.name`, `view_softwareinuse_v1.version`, `.install_path` | 가능 (중복 제거 필요) |
 
 ### 남은 결정
 
@@ -185,8 +186,78 @@ INSERT 가 되어 행이 중복된다. 두 성격은 공존할 수 없으므로 
 있다. 적재 전 중복 제거 규칙이 필요하다. 최신 것만 남길지, 건너뛰고 로그만
 남길지 정한다.
 
+**DPASOFTWARE 원천의 중복 제거.** 자연키는
+`(NODEID, SOFTWARENAME, VERSION, INSTALLPATH)` 로 확정됐다. 타겟 13031행이
+전건 유일하다. `INSTALLPATH` 가 없으면 6221키로 줄어드는데, 한 노드에 같은
+이름·버전이 최대 219건 있기 때문이다(노드 8 의 `MKS Toolkit 8` 이 219개 경로).
+
+Device42 는 `install_path` 가 거의 비어 있다(`.68` 72/4900, `.35` 3/485).
+대신 원천 자체에 중복이 거의 없다. `(device, name, version)` 기준으로 `.35` 는
+485/485 유일이고 `.68` 은 4859키/4900행이다. `.68` 의 41행에 대해 적재 전
+중복 제거 규칙이 필요하다. DPACPU 와 같은 결정이다.
+
+`TLOAMSOFTWAREID` 는 쓰지 않는다. Maximo 가 `TLOAMSOFTWARESEQ` 로 자체
+발번하는 값이라 Device42 가 댈 수 없고, `DPAMSOFTWARE.SOFTWAREID` 를 가리키지도
+않는다(13031 중 1건만 우연히 일치).
+
 **서버 한 대만 보고 판단하지 않는다.** 위 두 건 모두 한 서버만 봤을 때와
 양쪽을 봤을 때 결론이 달랐다.
+
+## ISSUE-6 DPA 마스터 데이터 등록
+
+**상태:** 추후 고려. 현재는 자식 테이블만 적재한다.
+
+Maximo 는 자식 테이블에 이름을 넣기 전에 정규화하는 계층을 둔다. 도메인마다
+마스터와 변형 두 테이블이 있다.
+
+| 도메인 | 마스터 | 행 | 변형 | 행 |
+| --- | --- | --- | --- | --- |
+| 소프트웨어 | `DPAMSOFTWARE` | 1982 | `DPAMSWVARIANT` | 1982 |
+| 제조사 | `DPAMMANUFACTURER` | 315 | `DPAMMANUVARIANT` | 315 |
+| 어댑터 | `DPAMADAPTER` | 59 | `DPAMADPTVARIANT` | 59 |
+| OS | `DPAMOS` | 23 | `DPAMOSVARIANT` | 23 |
+| 프로세서 | `DPAMPROCESSOR` | 13 | `DPAMPROCVARIANT` | 13 |
+
+마스터는 정규명 목록이고(`<도메인>NAME` 유일 인덱스), 변형은 수집기가 주워온
+원시 문자열을 정규명으로 접는 매핑표다(`<도메인>VARIANT` 유일 인덱스).
+자식 테이블은 정규명을 저장한다. `*MOVE` 는 `PERSISTENT = 0` 이라 물리 테이블이
+없다.
+
+### 결정
+
+자식 테이블만 적재한다. 마스터 등록은 추후 고려한다.
+
+근거는 강제성이 없다는 점이다. `SYSCAT.REFERENCES` 에 DPA 계열 FK 제약이
+하나도 없어 미등록 이름을 넣어도 적재가 성공한다. 현행 `DEPLOYEDASSET` 적재분
+31건 중 3건(`Cisco` 2, `ASUS` 1)이 이미 `DPAMMANUFACTURER` 미등록 상태로
+들어가 있고 문제가 발생하지 않았다.
+
+정규화 기계가 실제로 돌고 있지도 않다. 변형표는 전 도메인 전건
+`정규명 = 원시명` 이라 별칭이 하나도 없고, 마스터의 `VALIDATED` 도 전건 `0` 이다.
+기존 수집기가 발견한 이름을 1:1 로 등록만 해놓은 상태다.
+
+### 추후 고려할 때 필요한 것
+
+기존 수집분은 자식 이름을 전건 마스터에 등록해 놓았다.
+
+| 자식 컬럼 | 마스터 | 기존 수집분 등록률 |
+| --- | --- | --- |
+| `DPAOS.NAME` | `DPAMOS` | 63/63 |
+| `DPAOS.MANUFACTURER` | `DPAMMANUFACTURER` | 63/63 |
+| `DPACPU.MAKEMODEL` | `DPAMPROCESSOR` | 57/57 |
+| `DPANETADAPTER.MAKEMODEL` | `DPAMADAPTER` | 61/61 |
+| `DPASOFTWARE.MANUFACTURER` | `DPAMMANUFACTURER` | 12974/13031 |
+
+등록하지 않으면 해당 이름은 사전에 존재하지 않는다. 라이선스 준수나 이름 통합을
+시작할 때 후보 목록에 뜨지 않는다. 그때 소급 등록할지, 등록 태스크를 추가할지
+정한다.
+
+등록 태스크를 만든다면 자식 태스크와 결합도가 낮다. `DPAM*` 는 노드와 무관한
+전역 사전이라 부모의 `NODEID` 발번을 기다릴 필요가 없고, `@Order` 로 자식보다
+앞에 두면 된다. 각 마스터에 대응 시퀀스가 있다(`DPAMSOFTWARESEQ` 등).
+
+Device42 원천도 있다. `view_softwareinuse_v1.alias_name`(관측 674/4900)이
+변형 테이블과 같은 개념이다.
 
 ## 처리 완료
 

@@ -3,7 +3,7 @@
 배치된 자산 컴퓨터 스위트
 
 > Target: MAXIMO.DPASWSUITE · ASSETCLASS: COMPUTER · 구현: DpaSwSuiteIntegrate.java
-> 관측 2026-08-27 · Device42 192.168.1.35 / Maximo BLUDB
+> 관측 2026-08-27 · Device42 192.168.1.35 · 192.168.2.68 / Maximo BLUDB
 
 ## 1. 관계
 
@@ -23,12 +23,18 @@ Device42 에 대응 원천이 없다. 소프트웨어 여러 개를 스위트 �
 확인한 근거는 세 가지다.
 
 - 스위트 뷰가 없다. `view_softwaresuite_v1`, `view_suite_v1`,
-  `view_softwarecomponent_v1` 모두 500 을 반환한다. DOQL 에서 500 은 뷰명
-  또는 권한 오류를 뜻한다. `knowledge/device42/doql-constraints.md` 참조.
-- `view_software_v1` 에 묶음 컬럼이 없다. `category_name` 은 807/808 이 비어
-  있고 `server_software_fk` 는 0/808 이라 스위트 구성원 관계를 담지 않는다.
+  `view_softwarecomponent_v1` 모두 두 서버에서 500 을 반환한다. DOQL 에서
+  500 은 뷰명 또는 권한 오류를 뜻한다.
+  `knowledge/device42/doql-constraints.md` 참조.
+- `view_software_v1` 에 묶음 컬럼이 없다. 소프트웨어 원천이 넓은 2.68 에서도
+  `category_name` 은 2234/2273 이 비어 있고, 값이 있는 39건도
+  `Software Development`·`Security` 같은 분류라 스위트 구성원 관계가 아니다.
+  `server_software_fk` 는 0/2273 이다. 1.35 는 807/808 이 비어 있다.
 - 기존 수집분 14행은 전부 `MSOFFICE` / `Office XP Standard` 다. Windows 인벤토리
   수집기의 스위트 개념이며 Device42 수집 범위와 겹치지 않는다.
+
+소프트웨어 원천 규모는 2.68 이 훨씬 크다(`view_software_v1` 2273 대 808,
+`view_softwareinuse_v1` 4900 대 585). 넓은 쪽에서도 스위트 개념이 없다.
 
 ## 3. 조회 조건
 

@@ -3,7 +3,7 @@
 배치된 자산 컴퓨터 네트워크 어댑터
 
 > Target: MAXIMO.DPANETADAPTER · ASSETCLASS: COMPUTER · 구현: DpaNetAdapterIntegrate.java
-> 관측 2026-08-27 · Device42 192.168.1.35 / Maximo BLUDB
+> 관측 2026-08-27 · Device42 192.168.1.35, 192.168.2.68 / Maximo BLUDB
 
 ## 1. 관계
 
@@ -20,8 +20,13 @@
 | `view_device_v2` | (대상 판정) | `view_netport_v1.device_fk = device_pk` | N:1 |
 | MAXIMO.DEPLOYEDASSET | (교차키) | `SOURCEID = view_netport_v1.device_fk AND IMPORTSOURCE = 'Device42'` → `NODEID` | N:1 |
 
-COMPUTER 대상 원천은 관측 66장비/142행이다. MAC 주소는 133/142,
-포트명은 76/142, 속도와 프로토콜은 각각 5/142행에 값이 있다.
+뷰 컬럼 구조는 두 서버가 동일하다. COMPUTER 대상 원천과 주요 컬럼 충전율은
+다음과 같다.
+
+| 서버 | 원천 | MAC 주소 | 포트명 | 속도·프로토콜 |
+| --- | --- | --- | --- | --- |
+| 192.168.1.35 | 66장비/142행 | 133/142 | 76/142 | 각 5/142 |
+| 192.168.2.68 | 27장비/82행 | 74/82 | 74/82 | 각 0/82 |
 
 ## 3. 조회 조건
 
@@ -35,7 +40,7 @@ COMPUTER 대상 원천은 관측 66장비/142행이다. MAC 주소는 133/142,
 
 | Target 컬럼 | 한글명 | 타입 | Null | 구분 | Source | 변환·조건 |
 | --- | --- | --- | --- | --- | --- | --- |
-| ADAPTERID | 어댑터 | BIGINT(19) | N | 채번 | – | 대리키. 원천 `netport_pk` 는 재수집 시 바뀌므로 쓰지 않는다 |
+| ADAPTERID | 어댑터 | BIGINT(19) | N | 채번 | – | `NEXT VALUE FOR MAXIMO.DPANETADAPTERSEQ`. 테이블 전역 연번이며 INSERT 시에만 발번하고 MATCHED 시 유지한다 |
 | ADAPTERTYPE | 어댑터 유형 | ALN(32) | Y | 상수 | – | `'Network Adapter'`. 기존 수집분도 61/61 전건 동일 |
 | ASSETTAG | 자산 태그 | ALN(64) | Y | 원천없음 | – | `view_netport_v1`에 자산 태그가 없다 |
 | BANDWIDTH | 대역폭 | DECIMAL(10,2) | Y | 변환 | `view_netport_v1.port_speed` | 첫 공백 앞 숫자를 소수 2자리로 변환. 값이 없거나 숫자가 아니면 NULL |
@@ -43,15 +48,15 @@ COMPUTER 대상 원천은 관측 66장비/142행이다. MAC 주소는 133/142,
 | CHANGEDATE | 변경 날짜 | DATETIME(10) | N | 채번 | – | 적재 시각 |
 | CHIPSET | 칩셋 | ALN(64) | Y | 원천없음 | – | 대응 원천이 없다 |
 | CREATEDATE | 작성 날짜 | DATETIME(10) | N | 채번 | – | 적재 시각 |
-| DESCRIPTION | 설명 | ALN(256) | Y | 직접 | `view_netport_v1.description` | 관측 5/142 |
+| DESCRIPTION | 설명 | ALN(256) | Y | 직접 | `view_netport_v1.description` | 1.35는 5/142, 2.68은 0/82 |
 | FIRMWAREVERSION | 펌웨어 버전 | ALN(32) | Y | 원천없음 | – | 대응 원천이 없다 |
 | MAKEMODEL | 제조/모델 | ALN(128) | N | 상수 | – | `'UNKNOWN'`. 포트 뷰에 어댑터 모델이 없다. DEFAULTVALUE=UNKNOWN |
-| MANUFACTURER | 제조업체 | ALN(128) | N | 직접 | `view_vendor_v1.name` | `vendor_fk` 조인. 관측 0/142이므로 현재는 `UNKNOWN`. DEFAULTVALUE=UNKNOWN |
-| NETMACADDR1 | MAC 주소 1 | ALN(17) | Y | 변환 | `view_netport_v1.hwaddress` | `UPPER(hwaddress)`. 관측값은 구분자 없는 12자리이며 기존 수집분 형식과 같다 |
-| NETMACADDR2 | MAC 주소 2 | ALN(17) | Y | 변환 | `view_netport_v1.hwaddress2` | `UPPER(hwaddress2)`. 관측 0/142 |
+| MANUFACTURER | 제조업체 | ALN(128) | N | 직접 | `view_vendor_v1.name` | `vendor_fk` 조인. 양 서버 모두 관측값이 없어 현재는 `UNKNOWN`. DEFAULTVALUE=UNKNOWN |
+| NETMACADDR1 | MAC 주소 1 | ALN(17) | Y | 변환 | `view_netport_v1.hwaddress` | `UPPER(hwaddress)`. 양 서버 관측값은 구분자 없는 12자리이며 기존 수집분 형식과 같다 |
+| NETMACADDR2 | MAC 주소 2 | ALN(17) | Y | 변환 | `view_netport_v1.hwaddress2` | `UPPER(hwaddress2)`. 양 서버 모두 관측값 없음 |
 | NODEID | 노드 ID | BIGINT(19) | N | 채번 | – | 부모 DEPLOYEDASSET.NODEID. `(SOURCEID, IMPORTSOURCE)` 로 조회 |
 | PORT | 포트 | ALN(16) | Y | 변환 | `view_netport_v1.port` | `LEFT(port, 16)`. 관측 최대 71자로 타겟 길이에 맞춘다 |
-| PROTOCOL | 프로토콜 | ALN(64) | Y | 직접 | `view_netport_v1.global_type` | 관측 5/142, 값 `ethernet` |
+| PROTOCOL | 프로토콜 | ALN(64) | Y | 직접 | `view_netport_v1.global_type` | 1.35는 5/142(`ethernet`), 2.68은 0/82 |
 | SERIALNUMBER | 일련 번호 | ALN(64) | Y | 원천없음 | – | 대응 원천이 없다 |
 | VBANDWIDTH | 대역폭 | ALN(32) | Y | 원천없음 | – | 비영속 속성(PERSISTENT=0). DB 컬럼이 아니므로 적재 대상이 아니다 |
 
@@ -81,4 +86,4 @@ ORDER BY n.device_fk, n.netport_pk
 
 ## 6. 미결
 
-- ISSUE-5 — `ADAPTERID` 채번 범위와 재실행 시 키 유지 규칙이 미정이다.
+- ISSUE-5 — `ADAPTERID` 시퀀스 발번은 확정. 재실행 시 같은 원천 행을 찾는 MERGE 매칭 키 정책만 남았다.

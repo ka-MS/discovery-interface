@@ -50,7 +50,7 @@
 | DEPLOYEDASSET | `view_device_v2` | 작성 완료 |
 | DPACOMPUTER | `view_device_v2`, `view_part_v1`(RAM) | 작성 완료 |
 | DPAOS | `view_deviceos_v1`, `view_os_v1` | 작성 완료 |
-| DPASOFTWARE | `view_softwareinuse_v1`, `view_software_v1` | 미작성 |
+| DPASOFTWARE | `view_softwareinuse_v1`, `view_software_v1` | 작성 완료 |
 | DPACPU | `view_part_v1`(CPU) | 작성 완료 |
 | DPADISK | `view_part_v1`(Hard Disk) | 작성 완료 |
 | DPALOGICALDRIVE | `view_mountpoint_v1` | 작성 완료 |

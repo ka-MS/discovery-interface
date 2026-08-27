@@ -18,67 +18,11 @@
 | Source | Target | 조인 조건 | 카디널리티 |
 | --- | --- | --- | --- |
 | `view_device_v2`(`physical`) | MAXIMO.DPANETDEVICE | – | 1:1 |
-| `view_netport_v1` | (연결) | `second_device_fk` = 물리 device_pk, `device_fk` = cluster device_pk | N:1 |
-| `view_ipaddress_v1` | (보강) | cluster device_pk 로 관리 IP 조회 | N:1 |
-| MAXIMO.DEPLOYEDASSET | (교차키) | `SOURCEID = 물리 device_pk AND IMPORTSOURCE = 'Device42'` → `NODEID` | N:1 |
+| `view_netport_v1` | (연결) | `second_device_fk` = 물리 `device_pk`, `device_fk` = cluster `device_pk` | N:1 |
+| `view_ipaddress_v1` | (보강) | `device_fk` = cluster `device_pk` | N:1 |
+| MAXIMO.DEPLOYEDASSET | (교차키) | `SOURCEID` = 물리 `device_pk` AND `IMPORTSOURCE` = `'Device42'` → `NODEID` | N:1 |
 
-네트워크 장비는 Device42 에서 두 레코드로 나뉜다. `physical` 레코드가 시리얼과
-OS 를 갖고 적재 대상이 되며, `cluster` 레코드가 포트·MAC·관리 IP 를 갖는다.
-
-**두 레코드는 `view_netport_v1.second_device_fk` 로 이어진다.** cluster 소속
-포트의 `second_device_fk` 가 물리 레코드를 가리킨다. 양쪽 서버에서 1:1 이며
-관측 기준 `.68` 28·26포트, `.35` 28·26포트가 같은 대상을 가리킨다.
-
-```sql
--- cluster ↔ physical 대응
-SELECT DISTINCT device_fk AS cluster_pk, second_device_fk AS physical_pk
-FROM view_netport_v1 WHERE second_device_fk IS NOT NULL
-```
-
-**cluster 는 물리 멤버를 여러 개 가질 수 있다.** Cisco 스택 구성이며 이름의
-` - Switch N` 접미가 멤버 번호다. 관측 시점에는 양쪽 서버 모두 cluster 당
-멤버가 1개지만 구조상 1:N 이다. 멤버가 늘어나는 경우를 전제로 매핑한다.
-
-`NETMACADDR` 선정 규칙은 미결이다. 단수 컬럼이라 포트 28개 중 하나를 골라야
-한다. 후보가 둘이고 의미가 다르다.
-
-| 후보 | 값 | 귀속 | 관점 |
-| --- | --- | --- | --- |
-| 베이스 MAC (포트 이름 = MAC 인 항목) | `549fc6badb80` | cluster. `second_device_fk` 가 비어 있어 물리 멤버로 연결되지 않는다 | 이 장비에 접속하는 주소. 운영 관점 |
-| 멤버 자신의 포트 MAC 최솟값 | `549fc6badb81` | 물리 멤버 | 이 물리 유닛의 MAC. 자산 관점 |
-
-**멤버 여럿이 같은 값을 갖는 것 자체는 문제가 아니다.** 스택은 관리 IP 와
-베이스 MAC 을 공유하므로 그것이 물리적 사실이다. 스키마도 막지 않는다.
-`DPANETDEVICE` 는 PK 가 `NODEID` 라 멤버마다 자기 행을 갖고, `DEPLOYEDASSET`
-의 유니크 인덱스는 `(NODENAME, DOMAINNAME, ASSETCLASS, TLOAMHASH)` 이며
-`NODENAME` 은 멤버마다 다르다.
-
-`MAXATTRIBUTE` 의 컬럼 설명은 "네트워크 MAC 주소" 뿐이라 범위를 규정하지
-않는다. 기존 수집분 34건은 MAC·IP 중복이 없으나 전부 단독 장비라 정책의
-근거가 되지 못한다.
-
-포트와 MAC 은 1:1 이며, 스위치의 물리 포트 MAC 은 빈틈없는 연속 블록이다.
-`ITMSG_L2_SW1` 은 26포트가 `0019aa435281`~`0019aa43529a`,
-`ITMSG_L3_SW1` 은 28포트가 `549fc6badb81`~`549fc6badb9c` 다.
-
-**베이스 MAC 과 포트 블록의 위치 관계는 일정하지 않다.** `ITMSG_L3_SW1` 은
-베이스 `549fc6badb80` 이 포트 블록 바로 아래지만, `ITMSG_L2_SW1` 은 베이스
-`0019aa4352c0` 이 포트 블록(`…529a` 까지)보다 위다. 산술로 유도할 수 없으며
-베이스는 포트명이 MAC 과 같은 항목으로만 식별된다.
-
-멤버별 OUI 대역이 달라(`549fc6ba…` / `0019aa43…`) 최솟값이 섞이지 않는다.
-
-논리 인터페이스(`Vlan1`, `Loopback Interface`)와 미사용 물리 포트
-(`GigabitEthernet0/0`, `Bluetooth0/4`), AWS 가상 인터페이스(`eni-…`)는 MAC 이
-없다. 전체 290포트 중 249개만 MAC 을 가지며 그중 248개가 고유하다.
-
-관리 IP 는 cluster 의 `Vlan1` 인터페이스에 붙어 있고 그 포트의
-`second_device_fk` 는 비어 있다. 따라서 IP 는 포트 경유가 아니라 위 대응표로
-cluster 를 찾아 조회한다. 관측 기준 cluster 당 IP 는 1개다.
-
-스택은 관리 IP 를 공유하므로 멤버가 여럿이면 여러 행이 같은
-`NETWORKADDRESS` 를 갖는다. 물리적 사실이며 문제가 아니다. 자산 식별은
-`DEPLOYEDASSET.SERIALNUMBER` 로 하며 IP·MAC 은 식별자가 아니다.
+레코드 분리 구조와 값 귀속 규칙은 `../../open-issues.md` ISSUE-2 참조.
 
 ## 3. 조회 조건
 
@@ -116,41 +60,50 @@ cluster 를 찾아 조회한다. 관측 기준 cluster 당 IP 는 1개다.
 ## 5. 조회 쿼리
 
 ```sql
-WITH map AS (
-    SELECT DISTINCT device_fk AS cluster_pk, second_device_fk AS physical_pk
+WITH target AS (
+    SELECT device_pk, os_version
+    FROM view_device_v2
+    WHERE network_device = true
+      AND type = 'physical'
+),
+link AS (
+    SELECT second_device_fk AS physical_pk,
+           device_fk        AS cluster_pk,
+           MIN(hwaddress)   AS mac
     FROM view_netport_v1
     WHERE second_device_fk IS NOT NULL
-),
-base_mac AS (
-    SELECT device_fk AS cluster_pk, MIN(hwaddress) AS base_mac
-    FROM view_netport_v1
-    WHERE hwaddress IS NOT NULL AND hwaddress <> ''
-      AND LOWER(port) = LOWER(hwaddress)
-    GROUP BY device_fk
-),
-mgmt_ip AS (
-    SELECT device_fk AS cluster_pk, MIN(ip_address) AS mgmt_ip
-    FROM view_ipaddress_v1
-    GROUP BY device_fk
+      AND hwaddress IS NOT NULL
+      AND hwaddress <> ''
+    GROUP BY second_device_fk, device_fk
 )
-SELECT
-    d.device_pk,
-    d.name,
-    d.os_version,
-    b.base_mac,
-    m.mgmt_ip
-FROM view_device_v2 d
-LEFT JOIN map      mp ON mp.physical_pk = d.device_pk
-LEFT JOIN base_mac b  ON b.cluster_pk   = mp.cluster_pk
-LEFT JOIN mgmt_ip  m  ON m.cluster_pk   = mp.cluster_pk
-WHERE d.network_device = true
-  AND d.type = 'physical'
-ORDER BY d.device_pk
+SELECT t.device_pk,
+       t.os_version,
+       l.mac,
+       (SELECT MIN(ip_address)
+          FROM view_ipaddress_v1
+         WHERE device_fk = l.cluster_pk) AS mgmt_ip
+FROM target t
+LEFT JOIN link l ON l.physical_pk = t.device_pk
+ORDER BY t.device_pk
 ```
 
-양쪽 서버 실행 결과가 일치한다. 시리얼 `JAE24461ECG` 는 베이스 MAC
-`549fc6badb80` · 관리 IP `192.168.2.3`, `CAT1040RGWU` 는 `0019aa4352c0` ·
-`192.168.2.2` 로 동일하다.
+### 전제
+
+- MAC 전용 뷰가 없다 → MAC 은 `view_netport_v1.hwaddress` 에만 있다.
+- 네트워크 장비는 두 레코드로 쪼개진다 → `physical` 에 시리얼·OS, `cluster` 에 포트·MAC·IP.
+- 부모는 `physical` 만 적재한다 → 적재 대상에 네트워크 정보가 없다.
+- 장비 레벨 FK 는 전부 비어 있다 → 유일한 연결은 포트의 `second_device_fk`(cluster 포트 → 물리 스위치).
+
+### 절차
+
+1. **대상** — `view_device_v2` 에서 `network_device = true AND type = 'physical'` → `device_pk`, `os_version`
+2. **cluster 역추적** — `view_netport_v1` 에서 `second_device_fk = device_pk` 인 포트들 → 그 `device_fk` 가 cluster
+3. **MAC** — 2번 포트들의 `hwaddress` 최솟값. 베이스 MAC 은 `second_device_fk` 가 비어 자동 제외되므로 그 스위치 고유값만 남는다
+4. **IP** — `Vlan1` 포트도 `second_device_fk` 가 비어 포트 경유가 안 된다. cluster `device_pk` 로 `view_ipaddress_v1` 을 직접 조회해 최솟값
+5. **부모 키** — `DEPLOYEDASSET` 에서 `SOURCEID = device_pk AND IMPORTSOURCE = 'Device42'` → `NODEID`. 없으면 건너뛴다
+
+양쪽 서버 실행 결과가 일치한다. `JAE24461ECG` 는 `549fc6badb81` · `192.168.2.3`,
+`CAT1040RGWU` 는 `0019aa435281` · `192.168.2.2` 다.
 
 ## 6. 미결
 

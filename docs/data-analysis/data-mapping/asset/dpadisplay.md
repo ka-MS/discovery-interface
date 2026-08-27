@@ -3,7 +3,7 @@
 배치된 자산 컴퓨터 디스플레이
 
 > Target: MAXIMO.DPADISPLAY · ASSETCLASS: COMPUTER · 구현: DpaDisplayIntegrate.java
-> 관측 2026-08-27 · Device42 192.168.1.35 / Maximo BLUDB
+> 관측 2026-08-27 · Device42 192.168.1.35, 192.168.2.68 / Maximo BLUDB
 
 ## 1. 관계
 
@@ -17,14 +17,15 @@
 | --- | --- | --- | --- |
 | 없음 | MAXIMO.DPADISPLAY | – | 적재 행 없음 |
 
-Device42 에 대응 원천이 없다. 모니터 정보를 담는 뷰와 데이터가 확인되지
-않았다. 다른 수집 도구가 채우는 영역이다.
+두 Device42 서버 모두 `view_display_v1`, `view_monitor_v1`이 존재하지 않는다.
+모니터 정보를 담는 다른 대응 뷰와 데이터도 확인되지 않았다. 다른 수집 도구가
+채우는 영역이다.
 
 ## 3. 조회 조건
 
 | 조건 | 식 | 사유 |
 | --- | --- | --- |
-| 원천 없음 | – | Device42에 대응 뷰와 데이터가 없다 |
+| 원천 없음 | – | 두 Device42 서버 모두 대응 뷰와 데이터가 없다 |
 
 ## 4. 컬럼 매핑
 
@@ -35,7 +36,7 @@ Device42 에 대응 원천이 없다. 모니터 정보를 담는 뷰와 데이�
 | COLORDEPTHBIT | 색상 수(비트) | INTEGER(12) | Y | 원천없음 | – | 대응 원천이 없다 |
 | CREATEDATE | 작성 날짜 | DATETIME(10) | N | 원천없음 | – | 대응 원천이 없어 DPADISPLAY 행을 생성하지 않는다 |
 | DESCRIPTION | 설명 | ALN(256) | Y | 원천없음 | – | 대응 원천이 없다 |
-| DISPLAYID | 디스플레이 ID | BIGINT(19) | N | 원천없음 | – | 대응 원천이 없어 채번 대상 행이 없다 |
+| DISPLAYID | 디스플레이 ID | BIGINT(19) | N | 원천없음 | – | 대응 시퀀스는 `MAXIMO.DPADISPLAYSEQ`. 원천이 없어 현재는 채번 대상 행이 없다 |
 | DISPLAYSIZE | 디스플레이 크기 | INTEGER(12) | Y | 원천없음 | – | 대응 원천이 없다 |
 | DISPLAYTYPE | 디스플레이 유형 | ALN(32) | Y | 원천없음 | – | 대응 원천이 없다 |
 | MAKEMODEL | 제조/모델 | ALN(128) | Y | 원천없음 | – | 대응 원천이 없다 |

@@ -26,6 +26,22 @@
 `view_device_v2` 는 `virtual_host_device_fk`, `host_chassis_device_fk`,
 `vm_manager_device_fk` 로 자기 자신을 참조한다.
 
+## 포트와 MAC
+
+MAC 전용 뷰는 없다. MAC 은 `view_netport_v1.hwaddress` 에만 있으며 포트와 1:1 이다.
+`hwaddress2` 는 전건 비어 있다.
+
+관측 290포트 중 249개가 MAC 을 가지며 그중 248개가 고유하다. MAC 이 없는 것은
+논리 인터페이스(`Vlan1`, `Loopback Interface`), 미사용 물리 포트
+(`GigabitEthernet0/0`, `Bluetooth0/4`), AWS 가상 인터페이스(`eni-…`)다.
+
+스위치의 물리 포트 MAC 은 빈틈없는 연속 블록이다. `ITMSG_L2_SW1` 은 26포트가
+`0019aa435281`~`0019aa43529a`, `ITMSG_L3_SW1` 은 28포트가
+`549fc6badb81`~`549fc6badb9c` 다.
+
+`second_device_fk` 가 채워진 포트는 cluster → physical 방향뿐이다. 서버·VM
+포트에는 없다.
+
 ## 보강 조인용 뷰
 
 | 뷰 | 조인 키 | 용도 |
@@ -50,6 +66,9 @@
 
 MAC 주소는 `view_netport_v1.hwaddress` 에 있다. 커스텀필드 값은
 `view_device_v2.vendor_custom_fields` 컬럼에 있다.
+
+`view_display_v1`, `view_monitor_v1` 부재는 192.168.1.35와 192.168.2.68
+양쪽에서 확인했다.
 
 ## 건수
 

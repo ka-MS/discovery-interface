@@ -3,7 +3,7 @@
 배치된 자산 네트워크 프린터
 
 > Target: MAXIMO.DPANETPRINTER · ASSETCLASS: NETPRINTER · 구현: DpaNetPrinterIntegrate.java
-> 관측 2026-08-27 · Device42 192.168.1.35 / Maximo BLUDB
+> 관측 2026-08-27 · Device42 192.168.1.35 · 192.168.2.68 / Maximo BLUDB
 
 ## 1. 관계
 
@@ -31,7 +31,18 @@
 (`printer_input`, `printer_output`)라 프린터 사양이 아니다. 이 중
 `printer_input` 건수만 용지함 수로 쓴다.
 
-관측 대상은 1장비/1행이다.
+관측 대상은 두 서버 모두 1장비/1행이다. 그런데 같은 프린터다. `serial_no`,
+MAC, IP 가 모두 같고 `device_pk` 만 다르다(1.35 `285`, 2.68 `10`).
+ISSUE-1 의 실사례이므로 `device_pk` 를 기준으로 삼지 않는다.
+
+서버 간 차이는 아래와 같다. 적재 대상 값은 모두 같다.
+
+| 항목 | 192.168.1.35 | 192.168.2.68 |
+| --- | --- | --- |
+| `device_pk` | 285 | 10 |
+| `name` | `192.168.1.3` | `SEC842519C49C88` |
+| 포트명 | `Loopback Interface` 외 무명 1건 | `Embedded Ethernet Controller...` 외 `Loopback Interface` |
+| MAC / IP / 용지함 | `842519C49C88` / `192.168.1.3` / 3 | 동일 |
 
 ## 3. 조회 조건
 
@@ -101,5 +112,7 @@ ORDER BY d.device_pk
 
 ## 6. 미결
 
-- ISSUE-6 — MAC 과 IP 가 각각 2건 이상인 프린터에서 어느 값을 쓸지 규칙이 없다.
-  관측 대상 1장비는 각 1건이라 현재는 드러나지 않는다.
+- MAC 과 IP 가 각각 2건 이상인 프린터에서 어느 값을 쓸지 규칙이 없다. 기본키가
+  `NODEID` 라 노드당 1행만 가능한데 원천은 포트와 IP 를 여럿 가질 수 있다.
+  두 서버를 다 봐도 프린터는 같은 1장비뿐이고 MAC·IP 가 각 1건이라 현재는
+  드러나지 않는다.

@@ -18,7 +18,7 @@ WHERE d.type IN ('virtual', 'physical')
   AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)
   AND (d.network_device = false OR d.network_device IS NULL)
   AND (d.physicalsubtype IS NULL OR d.physicalsubtype <> 'Network Printer')
-  AND LOWER(COALESCE(m.fstype_name, '')) NOT IN ('overlay', 'devtmpfs')
+  AND LOWER(COALESCE(m.fstype_name, '')) NOT IN ('overlay', 'devtmpfs', 'efivarfs')
 ORDER BY m.device_fk, m.mountpoint;
 
 -- name: logical-drive-filesystems

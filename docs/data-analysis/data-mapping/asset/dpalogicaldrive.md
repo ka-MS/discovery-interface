@@ -3,7 +3,7 @@
 배치된 자산 컴퓨터 논리 드라이브
 
 > Target: MAXIMO.DPALOGICALDRIVE · ASSETCLASS: COMPUTER · 구현: DpaLogicalDriveIntegrate.java
-> 관측 2026-08-27 · Device42 192.168.1.35 / Maximo BLUDB
+> 관측 2026-08-27 · Device42 192.168.1.35, 192.168.2.68 / Maximo BLUDB
 
 ## 1. 관계
 
@@ -19,8 +19,13 @@
 | `view_device_v2` | (대상 판정) | `view_mountpoint_v1.device_fk = device_pk` | N:1 |
 | MAXIMO.DEPLOYEDASSET | (교차키) | `SOURCEID = view_mountpoint_v1.device_fk AND IMPORTSOURCE = 'Device42'` → `NODEID` | N:1 |
 
-COMPUTER 대상 원천은 6장비/84행이다. 이 중 컨테이너·시스템 의사 파일시스템
-64행(`overlay` 62, `devtmpfs` 2)을 제외해 6장비/20행을 적재 대상으로 삼는다.
+뷰 컬럼 구조는 두 서버가 동일하다. COMPUTER 대상과 의사 파일시스템 제외 결과는
+다음과 같다.
+
+| 서버 | 원천 | 제외 | 적재 대상 |
+| --- | --- | --- | --- |
+| 192.168.1.35 | 6장비/84행 | `overlay` 62, `devtmpfs` 2 | 6장비/20행 |
+| 192.168.2.68 | 19장비/109행 | `overlay` 38, `devtmpfs` 9, `efivarfs` 1 | 19장비/61행 |
 
 ## 3. 조회 조건
 
@@ -28,7 +33,7 @@ COMPUTER 대상 원천은 6장비/84행이다. 이 중 컨테이너·시스템 �
 | --- | --- | --- |
 | 부모 적재 대상 | `d.type IN ('virtual','physical') AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)` | DEPLOYEDASSET 필터와 일치시킨다 |
 | COMPUTER만 | `(d.network_device = false OR d.network_device IS NULL) AND (d.physicalsubtype IS NULL OR d.physicalsubtype <> 'Network Printer')` | 다른 ASSETCLASS의 자식을 만들지 않는다 |
-| 의사 파일시스템 제외 | `LOWER(COALESCE(m.fstype_name,'')) NOT IN ('overlay','devtmpfs')` | 컨테이너 overlay와 `/dev` 의사 파일시스템은 논리 드라이브가 아니다 |
+| 의사 파일시스템 제외 | `LOWER(COALESCE(m.fstype_name,'')) NOT IN ('overlay','devtmpfs','efivarfs')` | 컨테이너 overlay, `/dev`, EFI 변수 의사 파일시스템은 논리 드라이브가 아니다 |
 | 부모 존재 | 교차키 조회 결과가 있는 것만 | 부모가 없으면 적재할 수 없다 |
 
 ## 4. 컬럼 매핑
@@ -43,8 +48,8 @@ COMPUTER 대상 원천은 6장비/84행이다. 이 중 컨테이너·시스템 �
 | DESCRIPTION | 설명 | ALN(256) | Y | 원천없음 | – | Device42 마운트포인트 뷰에 설명 컬럼이 없다 |
 | DRIVETYPE | 드라이브 유형 | ALN(32) | Y | 상수 | – | `'UNKNOWN'`. 기존 수집분도 80/80 전건 `UNKNOWN` |
 | ENCRYPTED | 비밀번호화됨 | YORN(1) | N | 상수 | – | `0`. Device42에 암호화 여부가 없고 기존 수집분도 전건 `0` |
-| FILESYSTEM | 파일 시스템 | ALN(32) | Y | 직접 | `view_mountpoint_v1.fstype_name` | 관측 11종, 최대 8자 |
-| LOGICALDRIVEID | 논리 드라이브 ID | BIGINT(19) | N | 채번 | – | 대리키. 원천 `mountpoint_pk` 는 재수집 시 바뀌므로 쓰지 않는다 |
+| FILESYSTEM | 파일 시스템 | ALN(32) | Y | 직접 | `view_mountpoint_v1.fstype_name` | 필터 후 양 서버 관측 10종, 최대 7자. 2.68에 NULL 1건 |
+| LOGICALDRIVEID | 논리 드라이브 ID | BIGINT(19) | N | 채번 | – | `NEXT VALUE FOR MAXIMO.DPALOGICALDRIVESEQ`. 테이블 전역 연번이며 INSERT 시에만 발번하고 MATCHED 시 유지한다 |
 | MOUNT | 드라이브 | ALN(256) | Y | 직접 | `view_mountpoint_v1.mountpoint` | 관측 최대 131자 |
 | NODEID | 노드 ID | BIGINT(19) | N | 채번 | – | 부모 DEPLOYEDASSET.NODEID. `(SOURCEID, IMPORTSOURCE)` 로 조회 |
 | SIZEUNIT | 크기 단위 | ALN(16) | Y | 상수 | – | `'MB'`. `capacity`, `free_capacity`의 Device42 관측 단위 |
@@ -72,10 +77,10 @@ WHERE d.type IN ('virtual', 'physical')
   AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)
   AND (d.network_device = false OR d.network_device IS NULL)
   AND (d.physicalsubtype IS NULL OR d.physicalsubtype <> 'Network Printer')
-  AND LOWER(COALESCE(m.fstype_name, '')) NOT IN ('overlay', 'devtmpfs')
+  AND LOWER(COALESCE(m.fstype_name, '')) NOT IN ('overlay', 'devtmpfs', 'efivarfs')
 ORDER BY m.device_fk, m.mountpoint
 ```
 
 ## 6. 미결
 
-- ISSUE-5 — `LOGICALDRIVEID` 채번 범위와 재실행 시 키 유지 규칙이 미정이다.
+- ISSUE-5 — `LOGICALDRIVEID` 시퀀스 발번은 확정. 재실행 시 같은 원천 행을 찾는 MERGE 매칭 키 정책만 남았다.
