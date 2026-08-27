@@ -3,8 +3,18 @@
 > 관측 2026-08-27 · Device42 192.168.1.35
 > 재조회 docs/data-analysis/exploration-queries/device42/source-coverage-by-subtype.sql
 
-접속 대상은 `local/db-access-kit/connections.env` 의 `D42_RESOLVE` 로 전환한다.
+접속 대상은 서버별 접속 파일을 `DB_ACCESS_ENV` 로 지정해 고른다.
+`connections.env` 를 편집하지 않는다. 다른 세션이 같이 쓰기 때문이다.
+
+| 서버 | 접속 파일 |
+| --- | --- |
+| 192.168.2.68 | `local/db-access-kit/connections-d42-68.env` |
+| 192.168.1.35 | `local/db-access-kit/connections-d42-35.env` |
+
+두 파일은 `D42_RESOLVE` 한 줄만 다르고 나머지는 `connections.env` 와 같다.
 `D42_BASE_URL` 은 인증서 이름과 맞추기 위해 `https://Device42Demo` 로 유지한다.
+
+실행 예시는 `../../exploration-queries/README.md` 참조.
 
 | 서버 | 용도 |
 | --- | --- |

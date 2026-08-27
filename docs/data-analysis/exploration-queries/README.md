@@ -12,22 +12,33 @@ bash local/db-access-kit/scripts/run-maximo.sh   <쿼리파일> <출력디렉터
 
 출력은 `local/db-access-kit/work/` 아래에만 둔다. 저장소에 커밋하지 않는다.
 
-## 실행 전 확인: 어느 Device42 인가
+## Device42 서버 선택
 
-Device42 는 두 대이고 수집 범위가 다르다. 실행 전에 지금 어느 쪽에 붙는지
-확인한다.
+Device42 는 두 대이고 수집 범위가 다르다. 실행기는 `DB_ACCESS_ENV` 로 접속
+파일을 고른다. `connections.env` 를 편집하지 않는다. 다른 세션이 같이 쓴다.
+
+| 서버 | 접속 파일 | 넓은 원천 | 장비 수 |
+| --- | --- | --- | --- |
+| 192.168.2.68 | `local/db-access-kit/connections-d42-68.env` | 소프트웨어, 파트, 마운트 | 95 |
+| 192.168.1.35 | `local/db-access-kit/connections-d42-35.env` | 네트워크, OS | 85 |
 
 ```bash
-grep -E '^D42_RESOLVE=' local/db-access-kit/connections.env
+DB_ACCESS_ENV=local/db-access-kit/connections-d42-68.env \
+  bash local/db-access-kit/scripts/run-device42.sh <쿼리파일> local/db-access-kit/work/device42-68
+
+DB_ACCESS_ENV=local/db-access-kit/connections-d42-35.env \
+  bash local/db-access-kit/scripts/run-device42.sh <쿼리파일> local/db-access-kit/work/device42-35
 ```
 
-| 서버 | 넓은 원천 |
-| --- | --- |
-| 192.168.2.68 | 소프트웨어, 파트, 마운트 |
-| 192.168.1.35 | 네트워크, OS |
+출력 디렉터리를 서버별로 나눈다. 같은 쿼리의 결과가 서로 덮어쓰지 않게 한다.
 
-조사 대상에 맞는 서버를 고르고, 결과를 문서에 옮길 때 어느 서버 관측인지
-함께 적는다. 상세는 `../knowledge/device42/servers.md` 참조.
+**한 대만 보고 결론을 내지 않는다.** 같은 뷰라도 건수가 크게 다르다.
+`view_part_v1` 은 192.168.2.68 에서 479건, 192.168.1.35 에서 86건이다.
+결과를 문서에 옮길 때 어느 서버 관측인지 함께 적는다.
+
+Maximo 는 한 대뿐이라 `DB_ACCESS_ENV` 없이 기본 파일을 쓴다.
+
+상세는 `../knowledge/device42/servers.md` 참조.
 
 ## 쿼리 파일 규칙
 
