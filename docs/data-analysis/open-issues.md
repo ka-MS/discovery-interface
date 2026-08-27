@@ -18,7 +18,7 @@ Device42 `device_pk` 가 들어간다. `device_pk` 는 수집 서버가 다르�
 
 ## ISSUE-2 스위치가 두 레코드로 분리됨
 
-**상태:** 기록만 한다.
+**상태:** 정책 확정. DPANETDEVICE 매핑에 반영.
 
 네트워크 장비가 Device42 에서 두 레코드로 나뉜다.
 
@@ -34,6 +34,13 @@ Device42 `device_pk` 가 들어간다. `device_pk` 는 수집 서버가 다르�
 두 레코드를 잇는 FK 는 없다. `host_chassis_device_fk`,
 `virtual_host_device_fk`, `vm_manager_device_fk`, `chassisslot_fk` 가 모두
 비어 있다. 이름 접미사 규칙 외에 연결 수단이 확인되지 않았다.
+
+확정 정책은 다음과 같다.
+
+- 현재 적재 대상인 `type = 'physical'` 레코드만 DPANETDEVICE 원천으로 사용한다.
+- 이름 접미사에 의존한 `cluster` 추정 조인은 하지 않는다.
+- 실제 IP·MAC·포트는 `cluster` 레코드에 있으나 연결 FK가 없어 추적할 수 없으므로
+  `DPANETDEVICE.NETWORKADDRESS`, `NETMACADDR`는 `원천없음`으로 처리한다.
 
 ## ISSUE-3 PDU 가 COMPUTER 로 분류됨
 
@@ -69,6 +76,18 @@ COMPUTER 가 된다. Maximo 에 PDU 용 ASSETCLASS 와 DPA 테이블이 없다.
 `제외/포함` 12건이 문제다. 부모가 적재하지 않은 Docker Container 를 자식이 대상으로 잡아, 매 실행마다 교차키 조회에 실패하고 경고 로그만 남긴다. 데이터가 잘못 들어가지는 않지만 불필요한 조회와 로그가 발생한다.
 
 자식 태스크를 새로 만들 때 부모와 같은 필터를 쓰도록 맞춰야 한다.
+
+## ISSUE-5 DPA 자식 대리키 채번 규칙 미정
+
+**상태:** 구현 규칙 정의 대기.
+
+`DPACPU.CPUID`, `DPADISK.DISKID`, `DPALOGICALDRIVE.LOGICALDRIVEID`,
+`DPANETADAPTER.ADAPTERID`, `DPAMEDIAADAPTER.ADAPTERID` 는 원천 pk 를 그대로
+쓸 수 없다. Device42의 `part_pk`, `mountpoint_pk`, `netport_pk` 는 재수집 시
+바뀌기 때문이다.
+
+각 타겟 테이블 내 전역 연번과 노드 내 연번 중 어떤 범위로 채번할지, 재실행 시
+동일 원천 행의 키를 어떻게 유지할지 구현 규칙을 정해야 한다.
 
 ## 처리 완료
 

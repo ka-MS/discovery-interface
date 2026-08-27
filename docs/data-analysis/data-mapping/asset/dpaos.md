@@ -7,7 +7,7 @@
 ## 1. 관계
 
 - 부모: MAXIMO.DEPLOYEDASSET (NODEID)
-- 카디널리티: DEPLOYEDASSET 1 : N DPAOS (관측 61노드/63행)
+- 카디널리티: DEPLOYEDASSET 1 : N DPAOS (PK 는 `OSID`. 관측 61노드/63행)
 - 선행: DEPLOYEDASSET
 
 ## 2. 테이블 매핑

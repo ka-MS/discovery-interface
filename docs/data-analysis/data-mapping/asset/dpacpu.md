@@ -7,7 +7,7 @@
 ## 1. 관계
 
 - 부모: MAXIMO.DEPLOYEDASSET (NODEID)
-- 카디널리티: DEPLOYEDASSET 1 : N DPACPU (관측 49노드/57행)
+- 카디널리티: DEPLOYEDASSET 1 : N DPACPU (PK 는 `CPUID`. 관측 49노드/57행)
 - 선행: DEPLOYEDASSET
 
 ## 2. 테이블 매핑

@@ -40,16 +40,17 @@
 | DPASOFTWARE | `view_softwareinuse_v1`, `view_software_v1` | 미작성 |
 | DPACPU | `view_part_v1`(CPU) | 작성 완료 |
 | DPADISK | `view_part_v1`(Hard Disk) | 작성 완료 |
-| DPALOGICALDRIVE | `view_mountpoint_v1` | 미작성 |
-| DPANETADAPTER | `view_netport_v1` | 미작성 |
+| DPALOGICALDRIVE | `view_mountpoint_v1` | 작성 완료 |
+| DPANETADAPTER | `view_netport_v1` | 작성 완료 |
 | DPATCPIP | `view_ipaddress_v1`, `view_subnet_v1` | 미작성 |
-| DPAMEDIAADAPTER | `view_part_v1`(GPU) | 미작성 |
-| DPANETDEVICE | 원천 미확정 | 미작성 |
+| DPAMEDIAADAPTER | `view_part_v1`(GPU) | 작성 완료 |
+| DPANETDEVICE | `view_device_v2`(`physical`) | 미작성 |
 | DPANETPRINTER | `view_device_v2`, `view_part_v1`(printer_*) | 미작성 |
-| DPADISPLAY | 없음 | 해당 없음 |
+| DPADISPLAY | 없음 | 작성 완료 (원천 없음) |
 | DPASWSUITE | 없음 | 해당 없음 |
 
-`DPANETDEVICE` 의 원천 미확정 사유는 `../open-issues.md` ISSUE-2 참조.
+`DPANETDEVICE` 는 `physical` 레코드만 사용한다. 분리된 `cluster`의 네트워크
+정보를 추정 조인하지 않는 정책은 `../open-issues.md` ISSUE-2 참조.
 
 ## 원천이 없는 테이블
 

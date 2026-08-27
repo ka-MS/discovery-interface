@@ -7,7 +7,7 @@
 ## 1. 관계
 
 - 부모: MAXIMO.DEPLOYEDASSET (NODEID)
-- 카디널리티: DEPLOYEDASSET 1 : 1 DPACOMPUTER (관측 68노드/68행, MERGE 키가 NODEID 단독)
+- 카디널리티: DEPLOYEDASSET 1 : 1 DPACOMPUTER (PK 가 `NODEID` 단독. 관측 68노드/68행)
 - 선행: DEPLOYEDASSET
 
 ## 2. 테이블 매핑

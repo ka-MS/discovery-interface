@@ -36,6 +36,9 @@ bash local/db-access-kit/scripts/run-maximo.sh   <쿼리파일> <출력디렉터
 | `device42/device-related-inventory.sql` | 장비 한 대의 연관 자원 건수 |
 | `device42/source-coverage-by-subtype.sql` | subtype별 원천 가용성, 식별자 충전율 |
 | `device42/etl-target-simulation.sql` | 현행 필터 적용 시 적재 대상과 제외 대상 |
+| `device42/dpa-hardware-source-shapes.sql` | 논리 드라이브·네트워크·GPU 원천 뷰 컬럼 형태 |
+| `device42/dpa-hardware-mapping.sql` | 논리 드라이브·네트워크·GPU의 COMPUTER 대상 원천과 값 분포 |
 | `maximo/table-description.sql` | 테이블 한글 설명 |
 | `maximo/column-skeleton.sql` | 컬럼 매핑표 앞 4열 생성 |
 | `maximo/dpa-child-coverage.sql` | DPA 자식 테이블 노드 커버리지, ASSETCLASS 분포 |
+| `maximo/dpa-hardware-existing-values.sql` | 세 DPA 하드웨어 자식의 기존값 관례 |

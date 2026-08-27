@@ -7,7 +7,7 @@
 ## 1. 관계
 
 - 부모: MAXIMO.DEPLOYEDASSET (NODEID)
-- 카디널리티: DEPLOYEDASSET 1 : 1 DPATCPIP (관측 53노드/53행)
+- 카디널리티: DEPLOYEDASSET 1 : N DPATCPIP (PK 는 `TCPIPID`. 관측은 53노드/53행이나 스키마는 다건을 허용한다)
 - 선행: DEPLOYEDASSET
 
 ## 2. 테이블 매핑

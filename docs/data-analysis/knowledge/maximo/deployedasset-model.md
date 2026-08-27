@@ -23,6 +23,29 @@
 
 관측 시점 기준 ASSETCLASS 교차 사례와 부모 없는 자식 행은 없었다.
 
+## 카디널리티 판별
+
+자식 테이블의 기본키가 부모와의 카디널리티를 결정한다.
+
+| 기본키 | 카디널리티 | 테이블 |
+| --- | --- | --- |
+| `NODEID` | 1 : 1 | DPACOMPUTER, DPANETDEVICE, DPANETPRINTER |
+| 자체 ID | 1 : N | DPACPU(`CPUID`), DPADISK(`DISKID`), DPADISPLAY(`DISPLAYID`), DPALOGICALDRIVE(`LOGICALDRIVEID`), DPAMEDIAADAPTER(`ADAPTERID`), DPANETADAPTER(`ADAPTERID`), DPAOS(`OSID`), DPASOFTWARE(`SOFTWAREID`), DPASWSUITE(`DPASWSUITEID`), DPATCPIP(`TCPIPID`) |
+
+`NODEID` 가 기본키면 노드당 1행만 가능하다. 자체 ID 가 기본키면 `NODEID` 는
+외래키일 뿐이라 노드당 여러 행이 허용된다.
+
+1:N 이면 반드시 자체 ID 가 있다. 역은 일반적으로 성립하지 않는다. 자체 ID 를
+두면서 `NODEID` 에 유니크 제약을 걸어 1:1 로 묶을 수 있기 때문이다. 다만 이
+14개 테이블에는 그런 경우가 없다. 자체 ID 를 가진 10개 테이블의 유니크 인덱스는
+모두 `(자체ID, NODEID)` 형태라 `NODEID` 중복을 막지 않는다.
+
+행 수가 노드 수와 같다고 해서 1:1 인 것은 아니다. 관측 시점에 노드당 1행이었을
+뿐일 수 있다. DPATCPIP, DPAMEDIAADAPTER, DPASWSUITE 가 그런 경우다.
+
+재조회: `SYSCAT.INDEXES` 의 `UNIQUERULE IN ('P','U')`, 또는
+`MAXATTRIBUTE.PRIMARYKEYCOLSEQ > 0`.
+
 ## 자식 테이블 커버리지
 
 | 테이블 | 노드 수 | 행 수 |

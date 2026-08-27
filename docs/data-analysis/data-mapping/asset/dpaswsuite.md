@@ -7,7 +7,7 @@
 ## 1. 관계
 
 - 부모: MAXIMO.DEPLOYEDASSET (NODEID)
-- 카디널리티: DEPLOYEDASSET 1 : 1 DPASWSUITE (관측 14노드/14행)
+- 카디널리티: DEPLOYEDASSET 1 : N DPASWSUITE (PK 는 `DPASWSUITEID`, 유니크 인덱스는 `(SUITEID, NODEID)`. 관측은 14노드/14행이나 스키마는 다건을 허용한다)
 - 선행: DEPLOYEDASSET
 
 ## 2. 테이블 매핑

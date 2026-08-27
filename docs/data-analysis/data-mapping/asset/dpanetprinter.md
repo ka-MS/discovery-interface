@@ -7,7 +7,7 @@
 ## 1. 관계
 
 - 부모: MAXIMO.DEPLOYEDASSET (NODEID)
-- 카디널리티: DEPLOYEDASSET 1 : 1 DPANETPRINTER (관측 4노드/4행)
+- 카디널리티: DEPLOYEDASSET 1 : 1 DPANETPRINTER (PK 가 `NODEID` 단독. 관측 4노드/4행)
 - 선행: DEPLOYEDASSET
 
 ## 2. 테이블 매핑
