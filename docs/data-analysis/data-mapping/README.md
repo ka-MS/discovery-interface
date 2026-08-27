@@ -7,7 +7,20 @@
 | `asset/deployedasset.md` | `integration/asset/DeployedAssetIntegrate.java` |
 | `asset/dpacomputer.md` | `integration/asset/DpaComputerIntegrate.java` |
 | `asset/dpaos.md` | `integration/asset/DpaOsIntegrate.java` |
+| `asset/dpacpu.md` | `integration/asset/DpaCpuIntegrate.java` |
+| `asset/dpadisk.md` | `integration/asset/DpaDiskIntegrate.java` |
+| `asset/dpalogicaldrive.md` | `integration/asset/DpaLogicalDriveIntegrate.java` |
+| `asset/dpanetadapter.md` | `integration/asset/DpaNetAdapterIntegrate.java` |
+| `asset/dpatcpip.md` | `integration/asset/DpaTcpIpIntegrate.java` |
+| `asset/dpamediaadapter.md` | `integration/asset/DpaMediaAdapterIntegrate.java` |
+| `asset/dpadisplay.md` | `integration/asset/DpaDisplayIntegrate.java` |
+| `asset/dpaswsuite.md` | `integration/asset/DpaSwSuiteIntegrate.java` |
+| `asset/dpanetdevice.md` | `integration/asset/DpaNetDeviceIntegrate.java` |
+| `asset/dpanetprinter.md` | `integration/asset/DpaNetPrinterIntegrate.java` |
 | `software/dpasoftware.md` | `integration/software/DpaSoftwareIntegrate.java` |
+
+`DpaOsIntegrate` 외 자식 구현 클래스는 아직 없다. 표는 문서 한 장이 대응할
+구현 클래스를 가리킨다.
 
 ## 실행 순서
 
@@ -36,18 +49,18 @@
 | --- | --- | --- |
 | DEPLOYEDASSET | `view_device_v2` | 작성 완료 |
 | DPACOMPUTER | `view_device_v2`, `view_part_v1`(RAM) | 작성 완료 |
-| DPAOS | `view_deviceos_v1`, `view_os_v1` | 미작성 |
+| DPAOS | `view_deviceos_v1`, `view_os_v1` | 작성 완료 |
 | DPASOFTWARE | `view_softwareinuse_v1`, `view_software_v1` | 미작성 |
 | DPACPU | `view_part_v1`(CPU) | 작성 완료 |
 | DPADISK | `view_part_v1`(Hard Disk) | 작성 완료 |
 | DPALOGICALDRIVE | `view_mountpoint_v1` | 작성 완료 |
 | DPANETADAPTER | `view_netport_v1` | 작성 완료 |
-| DPATCPIP | `view_ipaddress_v1`, `view_subnet_v1` | 미작성 |
+| DPATCPIP | `view_ipaddress_v1`, `view_subnet_v1` | 작성 완료 |
 | DPAMEDIAADAPTER | `view_part_v1`(GPU) | 작성 완료 |
 | DPANETDEVICE | `view_device_v2`(`physical`) | 미작성 |
-| DPANETPRINTER | `view_device_v2`, `view_part_v1`(printer_*) | 미작성 |
+| DPANETPRINTER | `view_device_v2`, `view_netport_v1`, `view_ipaddress_v1`, `view_part_v1`(printer_input) | 작성 완료 |
 | DPADISPLAY | 없음 | 작성 완료 (원천 없음) |
-| DPASWSUITE | 없음 | 해당 없음 |
+| DPASWSUITE | 없음 | 작성 완료 (원천 없음) |
 
 `DPANETDEVICE` 는 `physical` 레코드만 사용한다. 분리된 `cluster`의 네트워크
 정보를 추정 조인하지 않는 정책은 `../open-issues.md` ISSUE-2 참조.
@@ -60,4 +73,4 @@
 | 테이블 | 사유 |
 | --- | --- |
 | DPADISPLAY | 모니터 정보. Device42 에 대응 뷰와 데이터가 없다 |
-| DPASWSUITE | 소프트웨어 스위트 묶음. Device42 에 suite 개념이 없다 |
+| DPASWSUITE | 소프트웨어 스위트 묶음. Device42 에 suite 뷰가 없고 `view_software_v1` 에도 묶음 컬럼이 없다 |

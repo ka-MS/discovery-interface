@@ -77,6 +77,7 @@ ORDER BY p.device_fk, p.slot
 
 ## 6. 미결
 
+- ISSUE-5 — 1:N 자식의 MERGE 매칭 키 정책. 이 테이블 후보는 `(NODEID, CPUNUM)` 이며 원천 `slot` 이 43/43 유일하다.
 - **MERGE 매칭 키 미정.** `CPUID` 는 시퀀스로 발번하므로 재실행 시 같은 파트를
   다시 찾아낼 키가 따로 있어야 한다. 없으면 실행할 때마다 행이 늘어난다.
   후보는 `(NODEID, CPUNUM)` 이다. 원천 `view_part_v1.slot` 이 관측 43건 전부

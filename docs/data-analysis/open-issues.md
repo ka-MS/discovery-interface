@@ -82,12 +82,84 @@ COMPUTER 가 된다. Maximo 에 PDU 용 ASSETCLASS 와 DPA 테이블이 없다.
 **상태:** 구현 규칙 정의 대기.
 
 `DPACPU.CPUID`, `DPADISK.DISKID`, `DPALOGICALDRIVE.LOGICALDRIVEID`,
-`DPANETADAPTER.ADAPTERID`, `DPAMEDIAADAPTER.ADAPTERID` 는 원천 pk 를 그대로
-쓸 수 없다. Device42의 `part_pk`, `mountpoint_pk`, `netport_pk` 는 재수집 시
+`DPANETADAPTER.ADAPTERID`, `DPAMEDIAADAPTER.ADAPTERID`, `DPAOS.OSID`,
+`DPATCPIP.TCPIPID` 는 원천 pk 를 그대로 쓸 수 없다. Device42의 `part_pk`,
+`mountpoint_pk`, `netport_pk`, `deviceos_pk`, `ipaddress_pk` 는 재수집 시
 바뀌기 때문이다.
 
 각 타겟 테이블 내 전역 연번과 노드 내 연번 중 어떤 범위로 채번할지, 재실행 시
 동일 원천 행의 키를 어떻게 유지할지 구현 규칙을 정해야 한다.
+
+`DPANETPRINTER` 는 해당 없다. 이 테이블만 기본키가 `NODEID` 라 대리키가 없다.
+
+## ISSUE-6 1:1 자식에 원천이 복수일 때의 선택 규칙 미정
+
+**상태:** 구현 규칙 정의 대기.
+
+`DPANETPRINTER` 는 기본키가 `NODEID` 라 노드당 1행만 가능하다. 그런데 원천인
+프린터 장비는 포트와 IP 를 여러 개 가질 수 있다.
+
+관측 대상 1장비는 포트 2건 중 MAC 보유 1건, IP 1건이라 규칙 없이도 값이
+하나로 정해진다. `hwaddress` 가 빈 포트(`Loopback Interface`)를 제외하는
+조건까지가 현재 문서화된 규칙이다.
+
+MAC 또는 IP 가 2건 이상인 프린터가 들어오면 `NETMACADDR` 과
+`NETWORKADDRESS` 에 어느 값을 쓸지 정해야 한다. 원천 pk 순서에 의존하는
+선택은 쓸 수 없다.
+
+`DPATCPIP` 는 이 문제가 없다. `(TCPIPID, NODEID)` 유일 인덱스와 비유일
+`NODEID` 인덱스라 IP 1건당 1행을 적재하면 된다.
+
+## ISSUE-5 1:N 자식 테이블의 MERGE 매칭 키
+
+**상태:** 정책 정의 대기.
+
+자체 ID 를 쓰는 10개 테이블은 ID 를 시퀀스로 발번한다. 발번은 해결됐지만
+재실행 멱등성에는 같은 원천 행을 다시 찾아낼 매칭 키가 따로 있어야 한다.
+없으면 실행할 때마다 행이 늘어난다.
+
+`DEPLOYEDASSET` 이 참고 형태다. `(SOURCEID, IMPORTSOURCE)` 로 매칭하고
+`NOT MATCHED` 분기에서만 시퀀스를 호출한다.
+
+### 자연키가 이미 있는 테이블
+
+별도 조치가 필요 없다.
+
+| 테이블 | 자연키 후보 |
+| --- | --- |
+| DPATCPIP | `TCPIPADDRESS` |
+| DPALOGICALDRIVE | `MOUNT` |
+| DPANETADAPTER | `NETMACADDR1` |
+| DPASOFTWARE | `TLOAMSOFTWAREID` (기존 수집분 13031/13031 채움) |
+| DPAOS | `NODEID` 단독으로 충분한지 확인 필요 |
+
+### 자연키가 없는 테이블
+
+DPACPU, DPADISK, DPAMEDIAADAPTER, DPADISPLAY.
+
+`SERIALNUMBER` 를 매칭 키 컨테이너로 쓰는 방안이 있다. 근거는 기존 수집분의
+`DPACPU` 다. 57/57 이 `Source ID: <n>` 형식이고 값이 전부 상이하다.
+
+다만 전례는 `DPACPU` 하나뿐이다. 같은 컬럼을 가진 다른 7개 테이블은 전건
+NULL 이다. `DPALOGICALDRIVE` 와 `DPATCPIP` 에는 컬럼 자체가 없다.
+
+컨테이너를 정해도 담는 값이 불안정하면 문제가 남는다. Device42 `part_pk` 를
+넣으면 ISSUE-1 을 그대로 물려받는다. 재수집 시 값이 바뀌어 매칭이 깨진다.
+원천의 안정적 값을 직렬화해 넣어야 한다.
+
+| 테이블 | 안정값 후보 | 실측 |
+| --- | --- | --- |
+| DPACPU | `view_part_v1.slot` | 43/43 보유, `(device_fk, slot)` 43/43 유일 |
+| DPADISK | 없음 | `slot` 0/6, `serial_no` 1/6 |
+| DPAMEDIAADAPTER | 미조사 | |
+| DPADISPLAY | 원천 없음 | |
+
+`DPADISK` 가 미해결이다. `(NODEID, MAKEMODEL)` 은 관측 6건에서 유일하지만
+모델명이 `sda 300 GB` 처럼 용량만 담는 경우가 있어 같은 디스크를 여러 개 단
+장비에서 충돌한다.
+
+`SERIALNUMBER` 는 한글명이 "일련 번호" 다. 매칭 키를 넣으면 의미가 어긋난다.
+전용 컬럼을 쓸지, 기존 `DPACPU` 관례를 따를지 정해야 한다.
 
 ## 처리 완료
 
