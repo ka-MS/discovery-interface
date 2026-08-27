@@ -4,8 +4,8 @@
 
 > Target: MAXIMO.DEPLOYEDASSET · ASSETCLASS: COMPUTER, NETDEVICE, NETPRINTER · 구현: DeployedAssetIntegrate.java
 
-> 관측 2026-08-27 · Device42 192.168.1.35 · Maximo BLUDB
-> 본문의 원천 건수는 이 서버 기준이다. 192.168.2.68 은 파트·소프트웨어·마운트가 더 넓다.
+> 관측 2026-08-27 · Device42 **양쪽 서버** 192.168.2.68 / 192.168.1.35 · Maximo BLUDB
+> 원천 건수는 서버별로 병기한다. 표기는 `.68 / .35` 순이다.
 
 ## 1. 관계
 
@@ -48,14 +48,14 @@ MERGE 키는 `(SOURCEID, IMPORTSOURCE)` 다. 재실행해도 멱등하다.
 | HWDETECTIONTOOL | 하드웨어 검색 도구 | ALN(256) | Y | 상수 | – | `'Device42'` |
 | HWLASTSCANDATE | 하드웨어 최종 스캔 날짜 | DATETIME(10) | Y | 직접 | `view_device_v2`.last_discovered |  |
 | IMPORTSOURCE | 가져오기 소스 | ALN(128) | Y | 상수 | – | `'Device42'`. MERGE 키의 일부 |
-| MAKEMODEL | 제조/모델 | ALN(128) | Y | 직접 | `view_hardware_v1.name` | `view_device_v2`.hardware_fk 조인. 가상 장비는 전건 NULL |
+| MAKEMODEL | 제조/모델 | ALN(128) | Y | 직접 | `view_hardware_v1.name` | `view_device_v2.hardware_fk` 조인. 가상 장비는 양쪽 서버 모두 전건 NULL (.68 VMWare 0/18, EC2 0/8 · .35 VMWare 0/55) |
 | MANUFACTURER | 제조업체 | ALN(128) | N | 직접 | `view_vendor_v1.name` | `view_hardware_v1.vendor_fk` 조인. 없으면 `UNKNOWN`. DEFAULTVALUE=UNKNOWN |
 | NODEID | 노드 ID | BIGINT(19) | N | 채번 | – | `MAXIMO.DEPLOYEDASSETSEQ`. INSERT 시에만 발번, MERGE MATCHED 시 유지 |
 | NODEID2 | 노드 ID 2 | BIGINT(19) | Y | 원천없음 | – | 보조 키 컬럼. 현행 적재는 사용하지 않는다 |
 | NODENAME | 노드 | ALN(128) | N | 직접 | `view_device_v2`.name | 비어 있으면 `UNKNOWN` |
 | ORGID | 조직 | UPPER(8) | Y | 원천없음 | – | Maximo 조직 체계 값. 수집 원천이 아니다 |
 | PLUSPCUSTOMER | 고객 | UPPER(12) | Y | 원천없음 | – |  |
-| SERIALNUMBER | 일련 번호 | ALN(64) | Y | 직접 | `view_device_v2`.serial_no |  |
+| SERIALNUMBER | 일련 번호 | ALN(64) | Y | 직접 | `view_device_v2.serial_no` | .68 VMWare 17/18, EC2 0/8 · .35 전체 13/70 |
 | SITEID | 사이트 | UPPER(8) | Y | 원천없음 | – | Maximo 조직 체계 값. 수집 원천이 아니다 |
 | SOURCEID | 소스 | ALN(128) | Y | 변환 | `view_device_v2`.device_pk | 문자열로 변환. MERGE 키의 일부. pk 불안정 문제는 ISSUE-1 |
 | SOURCEID2 | Source2 | ALN(128) | Y | 원천없음 | – | 보조 키 컬럼. 현행 적재는 사용하지 않는다 |
@@ -74,7 +74,7 @@ MERGE 키는 `(SOURCEID, IMPORTSOURCE)` 다. 재실행해도 멱등하다.
 | TLOAMNRSSERIALNUMBER | NRS 일련 번호 | ALN(128) | Y | 미결 | `view_device_v2`.serial_no | SERIALNUMBER 와 동일 원천. 중복 적재 여부 미정 |
 | TLOAMNRSSIGNATURE | NRS 특성 | ALN(128) | Y | 원천없음 | – |  |
 | TLOAMNRSSYSTEMBOARDUUID | NRS 시스템 보드 UUID | ALN(64) | Y | 원천없음 | – |  |
-| TLOAMNRSUUID | NRS 가상 머신 UUID | ALN(64) | Y | 직접 | `view_device_v2`.uuid | 장비 식별의 안정 키 후보. ISSUE-1 참조 |
+| TLOAMNRSUUID | NRS 가상 머신 UUID | ALN(64) | Y | 직접 | `view_device_v2.uuid` | 장비 식별의 안정 키 후보. 단 .68 의 EC2 8대는 uuid·serial 모두 없다. ISSUE-1 참조 |
 | TLOAMNRSVMID | NRS VMID | ALN(128) | Y | 원천없음 | – |  |
 | TLOAMSTATUS | 상태 | UPPER(20) | Y | 변환 | `view_device_v2`.in_service | 참이면 `ACTIVE`, 거짓이면 `INACTIVE` |
 
@@ -101,4 +101,7 @@ ORDER BY d.device_pk
 ## 6. 미결
 
 - ISSUE-1 — `SOURCEID` 에 넣는 `device_pk` 가 수집 서버·재수집에 따라 바뀌어 동일 장비가 중복 적재된다.
-- ISSUE-3 — `physicalsubtype = 'PDU'` 장비가 COMPUTER 로 분류된다.
+  대안으로 거론되는 `uuid` 도 .68 의 Amazon EC2 8대는 `uuid` 와 `serial_no` 가 모두 없어 키가 되지 못한다.
+- ISSUE-3 — `physicalsubtype = 'PDU'` 장비가 COMPUTER 로 분류된다. .35 에서만 관측되며 .68 에는 PDU 장비가 없다.
+- 적재 대상 규모가 서버별로 크게 다르다. .68 은 31대(COMPUTER 28 / NETDEVICE 2 / NETPRINTER 1),
+  .35 는 70대(COMPUTER 67 / NETDEVICE 2 / NETPRINTER 1)다.

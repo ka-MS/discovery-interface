@@ -126,17 +126,26 @@ INSERT 가 되어 행이 중복된다. 두 성격은 공존할 수 없으므로 
 | DPALOGICALDRIVE | `MOUNT` | `view_mountpoint_v1.mountpoint` | 가능 |
 | DPATCPIP | `TCPIPADDRESS` | `view_ipaddress_v1.ip_address` | 가능 |
 | DPAOS | `NAME` | `view_os_v1.name` | 가능 |
-| DPADISK | `SERIALNUMBER` | `view_part_v1.serial_no` (1/6) | **불가** |
+| DPADISK | `SERIALNUMBER` | `view_part_v1.serial_no` (.68 12/22 · .35 1/6) | 폴백 필요 |
 | DPAMEDIAADAPTER | `SERIALNUMBER` | `view_part_v1.serial_no` (GPU 파트) | 미조사 |
 
 ### 남은 결정
 
-`DPADISK` 는 Device42 가 디스크 일련번호를 수집하지 못해 자연키를 채울 수 없다.
-수집 설정으로 해결되는지 확인하고, 안 되면 아래 중 하나를 정한다.
+**DPADISK 의 일련번호 폴백.** `.35` 만 보면 6건 중 1건이라 불가로 보이지만
+`.68` 은 22건 중 12건이다. 일련번호가 없는 건은 전부 `sda NNN GB` 형태의
+리눅스 수집분이고 해당 장비는 디스크가 1개뿐이다.
 
-- 수집 한계로 기록하고 `DPADISK` 적재를 보류한다.
-- 노드 단위로 전량 삭제 후 재삽입한다. 자식 테이블이라 부모가 안정적이면
-  성립하지만 다른 테이블과 정책이 갈린다.
+`COALESCE(NULLIF(serial_no,''), 모델명)` 을 쓰면 `.68` 22/22, `.35` 6/6 으로
+노드 내 유일해진다. 이 폴백을 정식 규칙으로 채택할지 정한다.
+
+**DPACPU 의 슬롯 중복.** `.35` 는 43/43 유일이지만 `.68` 은 67건 중 65개만
+구별된다. 중복 2쌍은 수집 잔재다. `DESKTOP-P7KJHB7` 은 같은 소켓에 모델이 다른
+두 건(E5-2620 v3, E5-2650 v4)이, `itmsg-gpu1` 은 같은 모델의 정규화 차이 두 건이
+있다. 적재 전 중복 제거 규칙이 필요하다. 최신 것만 남길지, 건너뛰고 로그만
+남길지 정한다.
+
+**서버 한 대만 보고 판단하지 않는다.** 위 두 건 모두 한 서버만 봤을 때와
+양쪽을 봤을 때 결론이 달랐다.
 
 ## 처리 완료
 

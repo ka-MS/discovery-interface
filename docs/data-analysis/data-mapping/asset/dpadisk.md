@@ -4,8 +4,8 @@
 
 > Target: MAXIMO.DPADISK · ASSETCLASS: COMPUTER · 구현: DpaDiskIntegrate.java
 
-> 관측 2026-08-27 · Device42 192.168.1.35 · Maximo BLUDB
-> 본문의 원천 건수는 이 서버 기준이다. 192.168.2.68 은 파트·소프트웨어·마운트가 더 넓다.
+> 관측 2026-08-27 · Device42 **양쪽 서버** 192.168.2.68 / 192.168.1.35 · Maximo BLUDB
+> 원천 건수는 서버별로 병기한다. 표기는 `.68 / .35` 순이다.
 
 ## 1. 관계
 
@@ -42,15 +42,15 @@
 | CREATEDATE | 작성 날짜 | DATETIME(10) | N | 채번 | – | 적재 시각 |
 | DESCRIPTION | 설명 | ALN(256) | Y | 변환 | `view_part_v1.description` | 비어 있으면 `view_partmodel_v1.name` |
 | DISKID | 디스크 ID | BIGINT(19) | N | 채번 | – | `NEXT VALUE FOR MAXIMO.DPADISKSEQ`. 테이블 전역 연번이며 노드별이 아니다. INSERT 시에만 발번하고 MATCHED 시 유지한다 |
-| DISKINTERFACE | 디스크 인터페이스 | ALN(32) | Y | 직접 | `view_partmodel_v1.hddtype_name` | 관측 6건 중 1건(`SCSI`) 보유. 기존 수집분은 0/144 |
-| DISKTYPE | 디스크 유형 | ALN(32) | Y | 미결 | `view_partmodel_v1.media_type_name` | 원천 관측값은 `storage` 뿐이다. 기존 수집분은 `Hard`/`Floppy`/`CD_ROM` 을 쓴다. 값 대응 규칙 필요 |
+| DISKINTERFACE | 디스크 인터페이스 | ALN(32) | Y | 직접 | `view_partmodel_v1.hddtype_name` | .68 9/22 (`SCSI`, `IDE`, `SSD`) · .35 1/6. 기존 수집분은 0/144 |
+| DISKTYPE | 디스크 유형 | ALN(32) | Y | 원천없음 | – | 기존 수집분은 `Hard`/`Floppy`/`CD_ROM` 을 쓴다. `media_type_name` 은 .35 에서 전건 `storage`, .68 에서 전건 NULL 이라 대응값이 되지 못한다 |
 | EXTERNALDEVICE | 외부 디바이스 | YORN(1) | N | 상수 | – | 기존 수집분 전건 `0` |
 | HOTSWAPPABLE | 핫스왑 가능 | YORN(1) | N | 상수 | – | 기존 수집분 전건 `0` |
-| MAKEMODEL | 제조/모델 | ALN(128) | Y | 직접 | `view_partmodel_v1.name` | 예: `sda 300 GB`, `VMware Virtual disk SCSI Disk Device` |
-| MANUFACTURER | 제조업체 | ALN(128) | N | 직접 | `view_vendor_v1.name` | `view_partmodel_v1.vendor_fk` 조인. 관측 6건 중 0건 보유하여 사실상 `UNKNOWN`. DEFAULTVALUE=UNKNOWN |
+| MAKEMODEL | 제조/모델 | ALN(128) | Y | 직접 | `view_partmodel_v1.name` | .68 은 실제 모델명(`Samsung SSD 870 QVO 1TB`, `INTEL SSDPEKNW020T8`), .35 는 대부분 `sda NNN GB` 형태다 |
+| MANUFACTURER | 제조업체 | ALN(128) | N | 직접 | `view_vendor_v1.name` | `view_partmodel_v1.vendor_fk` 조인. 양쪽 서버 모두 전건 미보유라 사실상 `UNKNOWN` |
 | NODEID | 노드 ID | BIGINT(19) | N | 채번 | – | 부모 DEPLOYEDASSET.NODEID. `(SOURCEID, IMPORTSOURCE)` 로 조회 |
 | REMOVABLEMEDIA | 이동식 미디어 | YORN(1) | N | 상수 | – | 기존 수집분 전건 `0` |
-| SERIALNUMBER | 일련 번호 | ALN(64) | Y | 직접 | `view_part_v1.serial_no` | 관측 6건 중 1건 보유 |
+| SERIALNUMBER | 일련 번호 | ALN(64) | Y | 직접 | `view_part_v1.serial_no` | 스키마상 이 테이블의 자연키. .68 12/22 · .35 1/6. 비어 있는 건은 전부 `sda NNN GB` 형태의 리눅스 수집분이다. ISSUE-5 |
 | SIZEUNIT | 크기 단위 | ALN(16) | Y | 직접 | `view_partmodel_v1.hdsize_unit` | 관측값 `GB` |
 | SYSTEMNAME | 디바이스 | ALN(64) | Y | 원천없음 | – | 기존 수집분은 `1` 로 채워 이름이 아닌 플래그로 쓰인다. 용도 불명 |
 | TOTALSPACE | 총 공간 | DECIMAL(10,2) | Y | 직접 | `view_partmodel_v1.hdsize` | 소수 2자리 |
@@ -81,14 +81,10 @@ ORDER BY p.device_fk, pm.name
 
 ## 6. 미결
 
-- ISSUE-5 — 매칭 키는 `(NODEID, SERIALNUMBER)`. 스키마가 디스크 일련번호를 자연키로 둔다. Device42 가 이를 수집하지 못해(관측 6건 중 1건) 충족할 수 없다. ISSUE-5 의 유일한 미해결 대상이다.
-- **MERGE 매칭 키 미정. DPACPU 보다 어렵다.** `DISKID` 는 시퀀스로 발번하므로
-  재실행 시 같은 파트를 다시 찾아낼 키가 필요한데, 쓸 만한 원천 값이 없다.
-  관측 6건 중 `slot` 은 0건, `serial_no` 는 1건만 값을 가진다.
-  `(NODEID, MAKEMODEL)` 은 관측 6건 기준 유일하지만, 같은 모델 디스크를 여러 개
-  단 장비에서 충돌한다. 실제로 `sda 300 GB` 처럼 모델명이 용량만 담는 경우가
-  있어 충돌 가능성이 높다.
-- `DISKTYPE` 값 대응 규칙 미정. 원천 `media_type_name` 은 관측 전건 `storage`
-  하나뿐인데 기존 수집분은 `Hard`/`Floppy`/`CD_ROM` 을 쓴다.
-- `SYSTEMNAME` 은 기존 수집분이 `1` 로 채워 이름이 아닌 플래그로 쓰인다.
-  용도를 확인하기 전에는 채우지 않는다.
+- ISSUE-5 — 매칭 키는 `(NODEID, SERIALNUMBER)`. 스키마가 디스크 일련번호를 자연키로 둔다.
+  **.35 만 보면 1/6 이라 불가로 보이지만 .68 은 12/22 다.** 서버에 따라 수집률이 크게 다르다.
+  일련번호가 없는 건은 전부 `sda NNN GB` 형태의 리눅스 수집분이고, 해당 장비는 디스크가 1개뿐이다.
+  `COALESCE(NULLIF(serial_no,''), 모델명)` 폴백을 쓰면 .68 22/22, .35 6/6 으로 노드 내 유일해진다.
+  폴백을 정식 규칙으로 채택할지 정해야 한다.
+- `DISKTYPE` 은 양쪽 서버 모두 대응 원천이 없다. `media_type_name` 은 .35 전건 `storage`, .68 전건 NULL 이다.
+- `SYSTEMNAME` 은 기존 수집분이 `1` 로 채워 이름이 아닌 플래그로 쓰인다. 용도를 확인하기 전에는 채우지 않는다.

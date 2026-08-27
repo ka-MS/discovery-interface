@@ -4,8 +4,8 @@
 
 > Target: MAXIMO.DPACOMPUTER · ASSETCLASS: COMPUTER · 구현: DpaComputerIntegrate.java
 
-> 관측 2026-08-27 · Device42 192.168.1.35 · Maximo BLUDB
-> 본문의 원천 건수는 이 서버 기준이다. 192.168.2.68 은 파트·소프트웨어·마운트가 더 넓다.
+> 관측 2026-08-27 · Device42 **양쪽 서버** 192.168.2.68 / 192.168.1.35 · Maximo BLUDB
+> 원천 건수는 서버별로 병기한다. 표기는 `.68 / .35` 순이다.
 
 ## 1. 관계
 
@@ -38,10 +38,10 @@ MERGE 키는 `NODEID` 단독이다. 노드당 1행이므로 부모와 1:1 이다
 
 | Target 컬럼 | 한글명 | 타입 | Null | 구분 | Source | 변환·조건 |
 | --- | --- | --- | --- | --- | --- | --- |
-| BIOSDATE | BIOS 날짜 | DATETIME(10) | Y | 변환 | `view_device_v2`.bios_release_date | ISO_LOCAL_DATE 우선, 실패 시 `MM/dd/yyyy`. 둘 다 실패하면 NULL |
-| BIOSNAME | BIOS | ALN(64) | Y | 원천없음 | – | `view_device_v2`.bios_vendor_fk 가 있으나 관측 전건 NULL |
+| BIOSDATE | BIOS 날짜 | DATETIME(10) | Y | 변환 | `view_device_v2.bios_release_date` | ISO_LOCAL_DATE 우선, 실패 시 `MM/dd/yyyy`. 둘 다 실패하면 NULL. .68 은 53대 중 2대만 값이 있다 |
+| BIOSNAME | BIOS | ALN(64) | Y | 원천없음 | – | `view_device_v2.bios_vendor_fk` 가 있으나 .68 에서 53대 중 1대뿐이다 |
 | BIOSPNP | PNP | YORN(1) | N | 상수 | – | `0` |
-| BIOSVERSION | BIOS 버전 | ALN(32) | Y | 직접 | `view_device_v2`.bios_version |  |
+| BIOSVERSION | BIOS 버전 | ALN(32) | Y | 직접 | `view_device_v2.bios_version` | 수집률이 매우 낮다. .68 은 대상 53대 중 2대뿐이다 |
 | CAPACITYMODEL1 | 용량 모델 | ALN(128) | Y | 원천없음 | – | 메인프레임 용량 지표. 수집 대상이 아니다 |
 | CHANGEDATE | 변경 날짜 | DATETIME(10) | N | 채번 | – | 적재 시각 |
 | CREATEDATE | 작성 날짜 | DATETIME(10) | N | 채번 | – | 적재 시각 |
@@ -57,10 +57,10 @@ MERGE 키는 `NODEID` 단독이다. 노드당 1행이므로 부모와 1:1 이다
 | NODEID | 노드 ID | BIGINT(19) | N | 채번 | – | 부모 DEPLOYEDASSET.NODEID. `(SOURCEID, IMPORTSOURCE)` 로 조회. 교차키가 없으면 로그만 남기고 건너뛴다 |
 | NUMCORETOTAL | 총 코어 | INTEGER(12) | Y | 변환 | `view_device_v2`.total_cpus, .core_per_cpu | 두 값의 곱. 하나라도 NULL 이면 NULL |
 | NUMCPUCONFIG1 | 구성된 프로세서 수 | INTEGER(12) | Y | 원천없음 | – |  |
-| NUMCPUTOTAL1 | 총 프로세서 수 | INTEGER(12) | Y | 직접 | `view_device_v2`.total_cpus |  |
+| NUMCPUTOTAL1 | 총 프로세서 수 | INTEGER(12) | Y | 직접 | `view_device_v2.total_cpus` | .68 은 53대 중 20대만 값이 있다 |
 | PLANTCODE1 | 제조 공장 | ALN(32) | Y | 원천없음 | – |  |
 | RAMDESCRIPTION | RAM 설명 | ALN(256) | Y | 미결 | `view_partmodel_v1.name` | 예: `DRAM 16384 MB DIMM`. 슬롯 여러 개일 때 규칙 미정 |
-| RAMSIZE | RAM 크기 | DECIMAL(10,2) | Y | 변환 | `view_device_v2`.ram | 소수 2자리 반올림(HALF_UP) |
+| RAMSIZE | RAM 크기 | DECIMAL(10,2) | Y | 변환 | `view_device_v2.ram` | 소수 2자리 반올림(HALF_UP). .68 은 53대 중 20대만 값이 있다 |
 | RAMTOTALSLOTS | RAM 총 슬롯 | INTEGER(12) | Y | 미결 | `view_part_v1`(RAM) 건수 | 파트 건수로 유도 가능. 미장착 슬롯은 알 수 없다 |
 | RAMTYPE | RAM 유형 | ALN(32) | Y | 미결 | `view_partmodel_v1.ramtype` | RAM 파트 조인으로 얻을 수 있다. 슬롯이 여러 개일 때 대표값 선정 규칙 미정 |
 | RAMUNIT | RAM 단위 | ALN(16) | Y | 직접 | `view_device_v2`.ram_size_type |  |
@@ -106,4 +106,8 @@ ORDER BY d.device_pk
 ## 6. 미결
 
 - ISSUE-4 — 이 태스크의 조회 조건이 부모 DEPLOYEDASSET 의 조건과 달라, 부모가 없는 장비를 매 실행마다 조회하고 건너뛴다.
-- RAM 상세(`RAMTYPE`, `RAMDESCRIPTION`, `RAMTOTALSLOTS`)는 `view_part_v1`(RAM) 조인으로 얻을 수 있으나 슬롯이 여러 개일 때의 대표값 규칙이 정해지지 않았다.
+  Docker Container 기준 .68 25건, .35 12건이다.
+- **주요 원천의 수집률이 낮다.** .68 대상 53대 중 BIOS 버전·일자는 2대, RAM·CPU 수는 20대만 값이 있다.
+  적재해도 대부분 NULL 이 된다. 수집 설정으로 개선되는지 확인이 필요하다.
+- RAM 상세(`RAMTYPE`, `RAMDESCRIPTION`, `RAMTOTALSLOTS`)는 `view_part_v1`(RAM) 조인으로 얻을 수 있다.
+  .68 은 RAM 파트 35건/16대이며 슬롯 19/35, 제조사 3/35 다. 슬롯이 여러 개일 때의 대표값 규칙이 필요하다.
