@@ -8,11 +8,11 @@
 ## 1. 관계
 
 - 부모: MAXIMO.DEPLOYEDASSET (NODEID)
-- 카디널리티: DEPLOYEDASSET 1 : N DPAOS (기존 수집분 61노드/63행)
+- 카디널리티: DEPLOYEDASSET 1 : N DPAOS (PK 는 `OSID`. 관측 61노드/63행)
 - 선행: DEPLOYEDASSET
 
-`DPAOS_NDX1` 이 `(OSID, NODEID)` 유일이고 `NODEID` 단독 인덱스는 비유일이라
-노드당 여러 행이 허용된다. 다만 Device42 원천은 장비당 최대 1건이다.
+스키마는 노드당 다건을 허용하지만 Device42 원천은 장비당 최대 1건이다.
+판별 규칙은 `../knowledge/maximo/deployedasset-model.md` 참조.
 
 ## 2. 테이블 매핑
 
@@ -53,7 +53,7 @@ COMPUTER 대상 67장비 중 59장비/59행이다. 나머지 8장비는 OS 원�
 | MANUFACTURER | 제조업체 | ALN(128) | N | 직접 | `view_vendor_v1.name` | `view_os_v1.vendor_fk` 조인. 관측 5/59, 최대 9자. 없으면 `UNKNOWN`. DEFAULTVALUE=UNKNOWN |
 | NAME | 운영 체제 | ALN(256) | N | 직접 | `view_deviceos_v1.os_name` | 관측 59/59, 최대 151자. 없으면 `UNKNOWN`. DEFAULTVALUE=UNKNOWN |
 | NODEID | 노드 ID | BIGINT(19) | N | 채번 | – | 부모 DEPLOYEDASSET.NODEID. `(SOURCEID, IMPORTSOURCE)` 로 조회 |
-| OSID | 운영 체제 ID | BIGINT(19) | N | 채번 | – | 대리키. 원천 `deviceos_pk` 는 재수집 시 바뀌므로 쓰지 않는다 |
+| OSID | 운영 체제 ID | BIGINT(19) | N | 채번 | – | `NEXT VALUE FOR MAXIMO.DPAOSSEQ`. 테이블 전역 연번이며 노드별이 아니다. INSERT 시에만 발번하고 MATCHED 시 유지한다. 원천 `deviceos_pk` 는 재수집 시 바뀌므로 쓰지 않는다 |
 | SERIALNUMBER | 일련 번호 | ALN(64) | Y | 원천없음 | – | 대응 원천이 없다. `os_license_key` 계열은 관측 0/59이고 일련번호도 아니다 |
 | SERVICEPACK | 서비스 팩 | ALN(64) | Y | 원천없음 | – | 대응 원천이 없다 |
 | VERSION | 버전 | ALN(128) | Y | 직접 | `view_deviceos_v1.os_version` | 관측 9/59, 최대 7자 |
@@ -85,4 +85,6 @@ ORDER BY o.device_fk
 
 ## 6. 미결
 
-- ISSUE-5 — `OSID` 채번 범위와 재실행 시 키 유지 규칙이 미정이다.
+- ISSUE-5 — 1:N 자식의 MERGE 매칭 키 정책. 이 테이블은 `NODEID` 단독으로
+  충분하다. Device42 는 장비당 OS 가 최대 1건이라 노드 안에서 구분할 대상이
+  없다. 정책이 확정되면 그대로 따른다.

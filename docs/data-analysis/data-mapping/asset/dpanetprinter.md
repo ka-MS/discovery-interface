@@ -8,11 +8,13 @@
 ## 1. 관계
 
 - 부모: MAXIMO.DEPLOYEDASSET (NODEID)
-- 카디널리티: DEPLOYEDASSET 1 : 1 DPANETPRINTER (기존 수집분 4노드/4행)
+- 카디널리티: DEPLOYEDASSET 1 : 1 DPANETPRINTER (PK 가 `NODEID` 단독. 관측 4노드/4행)
 - 선행: DEPLOYEDASSET
 
-이 테이블만 기본키가 `NODEID` 다. 다른 `DPA*` 자식과 달리 대리키가 없어
-노드당 1행만 존재할 수 있고, ISSUE-5 의 채번 규칙 대상이 아니다.
+기본키가 `NODEID` 다. 대리키가 없어 노드당 1행만 존재할 수 있다.
+`DPANETPRINTERSEQ` 가 존재하지만 이 테이블은 쓰지 않고 부모에서 받은 `NODEID`
+를 그대로 쓴다. MERGE 매칭 키도 `NODEID` 하나로 끝나므로 ISSUE-5 대상이
+아니다. 근거는 `../knowledge/maximo/deployedasset-model.md` 참조.
 
 ## 2. 테이블 매핑
 

@@ -78,7 +78,7 @@ ORDER BY p.device_fk, pm.name
 
 ## 6. 미결
 
-- ISSUE-5 — 1:N 자식의 MERGE 매칭 키 정책. 이 테이블은 쓸 만한 안정값이 없어 미해결이다.
+- ISSUE-5 — 매칭 키는 `(NODEID, SERIALNUMBER)`. 스키마가 디스크 일련번호를 자연키로 둔다. Device42 가 이를 수집하지 못해(관측 6건 중 1건) 충족할 수 없다. ISSUE-5 의 유일한 미해결 대상이다.
 - **MERGE 매칭 키 미정. DPACPU 보다 어렵다.** `DISKID` 는 시퀀스로 발번하므로
   재실행 시 같은 파트를 다시 찾아낼 키가 필요한데, 쓸 만한 원천 값이 없다.
   관측 6건 중 `slot` 은 0건, `serial_no` 는 1건만 값을 가진다.

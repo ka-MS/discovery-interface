@@ -77,89 +77,66 @@ COMPUTER 가 된다. Maximo 에 PDU 용 ASSETCLASS 와 DPA 테이블이 없다.
 
 자식 태스크를 새로 만들 때 부모와 같은 필터를 쓰도록 맞춰야 한다.
 
-## ISSUE-5 DPA 자식 대리키 채번 규칙 미정
-
-**상태:** 구현 규칙 정의 대기.
-
-`DPACPU.CPUID`, `DPADISK.DISKID`, `DPALOGICALDRIVE.LOGICALDRIVEID`,
-`DPANETADAPTER.ADAPTERID`, `DPAMEDIAADAPTER.ADAPTERID`, `DPAOS.OSID`,
-`DPATCPIP.TCPIPID` 는 원천 pk 를 그대로 쓸 수 없다. Device42의 `part_pk`,
-`mountpoint_pk`, `netport_pk`, `deviceos_pk`, `ipaddress_pk` 는 재수집 시
-바뀌기 때문이다.
-
-각 타겟 테이블 내 전역 연번과 노드 내 연번 중 어떤 범위로 채번할지, 재실행 시
-동일 원천 행의 키를 어떻게 유지할지 구현 규칙을 정해야 한다.
-
-`DPANETPRINTER` 는 해당 없다. 이 테이블만 기본키가 `NODEID` 라 대리키가 없다.
-
-## ISSUE-6 1:1 자식에 원천이 복수일 때의 선택 규칙 미정
-
-**상태:** 구현 규칙 정의 대기.
-
-`DPANETPRINTER` 는 기본키가 `NODEID` 라 노드당 1행만 가능하다. 그런데 원천인
-프린터 장비는 포트와 IP 를 여러 개 가질 수 있다.
-
-관측 대상 1장비는 포트 2건 중 MAC 보유 1건, IP 1건이라 규칙 없이도 값이
-하나로 정해진다. `hwaddress` 가 빈 포트(`Loopback Interface`)를 제외하는
-조건까지가 현재 문서화된 규칙이다.
-
-MAC 또는 IP 가 2건 이상인 프린터가 들어오면 `NETMACADDR` 과
-`NETWORKADDRESS` 에 어느 값을 쓸지 정해야 한다. 원천 pk 순서에 의존하는
-선택은 쓸 수 없다.
-
-`DPATCPIP` 는 이 문제가 없다. `(TCPIPID, NODEID)` 유일 인덱스와 비유일
-`NODEID` 인덱스라 IP 1건당 1행을 적재하면 된다.
-
 ## ISSUE-5 1:N 자식 테이블의 MERGE 매칭 키
 
-**상태:** 정책 정의 대기.
+**상태:** 정책 정의 대기. 대상은 `DPADISK` 하나로 좁혀졌다.
 
 자체 ID 를 쓰는 10개 테이블은 ID 를 시퀀스로 발번한다. 발번은 해결됐지만
-재실행 멱등성에는 같은 원천 행을 다시 찾아낼 매칭 키가 따로 있어야 한다.
-없으면 실행할 때마다 행이 늘어난다.
+재실행 시 같은 원천 행을 다시 찾아낼 매칭 키가 따로 있어야 한다. 없으면
+실행할 때마다 행이 늘어난다.
 
-`DEPLOYEDASSET` 이 참고 형태다. `(SOURCEID, IMPORTSOURCE)` 로 매칭하고
-`NOT MATCHED` 분기에서만 시퀀스를 호출한다.
+### 스키마는 테이블마다 자연키 컬럼을 제공한다
 
-### 자연키가 이미 있는 테이블
+10개 테이블 모두 노드 내 식별자 컬럼을 갖고 있다. 별도 컨테이너가 필요하지
+않다.
 
-별도 조치가 필요 없다.
+| 테이블 | 자연키 컬럼 | 한글명 | 기존 수집분 채움 |
+| --- | --- | --- | --- |
+| DPANETADAPTER | `NETMACADDR1` | MAC 주소 1 | 61/61 |
+| DPALOGICALDRIVE | `MOUNT` | 드라이브 | 80/80 |
+| DPATCPIP | `TCPIPADDRESS` | TCP/IP 주소 | 53/53 |
+| DPAOS | `NAME` | 운영 체제 | 63/63 |
+| DPASWSUITE | `SUITEID` | 스위트 ID | 14/14 |
+| DPASOFTWARE | `TLOAMSOFTWAREID` | 소프트웨어 | 13031/13031 |
+| DPACPU | `CPUNUM` | 프로세서 ID | 0/57 |
+| DPADISK | `SERIALNUMBER` | 일련 번호 | 0/144 |
+| DPADISPLAY | `SERIALNUMBER` | 일련 번호 | 0/52 |
+| DPAMEDIAADAPTER | `SERIALNUMBER` | 일련 번호 | 0/39 |
 
-| 테이블 | 자연키 후보 |
-| --- | --- |
-| DPATCPIP | `TCPIPADDRESS` |
-| DPALOGICALDRIVE | `MOUNT` |
-| DPANETADAPTER | `NETMACADDR1` |
-| DPASOFTWARE | `TLOAMSOFTWAREID` (기존 수집분 13031/13031 채움) |
-| DPAOS | `NODEID` 단독으로 충분한지 확인 필요 |
+장비 고유 속성(MAC, 마운트 경로, IP, OS 이름)은 전건 채워져 있고, 하드웨어
+일련번호와 슬롯 번호는 전건 비어 있다. 스캐너가 읽지 못하는 값들이다.
 
-### 자연키가 없는 테이블
+`SERIALNUMBER` 는 디스크·모니터·미디어어댑터의 자연키다. 범용 컨테이너가
+아니다. CPU 는 일련번호가 없어 자연키 자리를 `CPUNUM` 으로 따로 둔다.
 
-DPACPU, DPADISK, DPAMEDIAADAPTER, DPADISPLAY.
+### 매칭 정책은 자연키 하나로 통일한다
 
-`SERIALNUMBER` 를 매칭 키 컨테이너로 쓰는 방안이 있다. 근거는 기존 수집분의
-`DPACPU` 다. 57/57 이 `Source ID: <n>` 형식이고 값이 전부 상이하다.
+자연키로 매칭하면 재수집이 UPDATE 가 된다. 원천 pk 를 키에 넣으면 재수집이
+INSERT 가 되어 행이 중복된다. 두 성격은 공존할 수 없으므로 자연키로 통일한다.
 
-다만 전례는 `DPACPU` 하나뿐이다. 같은 컬럼을 가진 다른 7개 테이블은 전건
-NULL 이다. `DPALOGICALDRIVE` 와 `DPATCPIP` 에는 컬럼 자체가 없다.
+기존 수집분의 `DPACPU` 는 `CPUNUM` 을 비우고 `SERIALNUMBER` 에
+`Source ID: <n>` 을 넣었다(57/57). 스키마 의도를 벗어난 우회이며 따르지 않는다.
 
-컨테이너를 정해도 담는 값이 불안정하면 문제가 남는다. Device42 `part_pk` 를
-넣으면 ISSUE-1 을 그대로 물려받는다. 재수집 시 값이 바뀌어 매칭이 깨진다.
-원천의 안정적 값을 직렬화해 넣어야 한다.
+### Device42 가 자연키를 댈 수 있는지
 
-| 테이블 | 안정값 후보 | 실측 |
-| --- | --- | --- |
-| DPACPU | `view_part_v1.slot` | 43/43 보유, `(device_fk, slot)` 43/43 유일 |
-| DPADISK | 없음 | `slot` 0/6, `serial_no` 1/6 |
-| DPAMEDIAADAPTER | 미조사 | |
-| DPADISPLAY | 원천 없음 | |
+| 테이블 | 자연키 | Device42 원천 | 가능 |
+| --- | --- | --- | --- |
+| DPACPU | `CPUNUM` | `view_part_v1.slot` (43/43, `(device_fk, slot)` 유일) | 가능 |
+| DPANETADAPTER | `NETMACADDR1` | `view_netport_v1.hwaddress` | 가능 |
+| DPALOGICALDRIVE | `MOUNT` | `view_mountpoint_v1.mountpoint` | 가능 |
+| DPATCPIP | `TCPIPADDRESS` | `view_ipaddress_v1.ip_address` | 가능 |
+| DPAOS | `NAME` | `view_os_v1.name` | 가능 |
+| DPADISK | `SERIALNUMBER` | `view_part_v1.serial_no` (1/6) | **불가** |
+| DPAMEDIAADAPTER | `SERIALNUMBER` | `view_part_v1.serial_no` (GPU 파트) | 미조사 |
 
-`DPADISK` 가 미해결이다. `(NODEID, MAKEMODEL)` 은 관측 6건에서 유일하지만
-모델명이 `sda 300 GB` 처럼 용량만 담는 경우가 있어 같은 디스크를 여러 개 단
-장비에서 충돌한다.
+### 남은 결정
 
-`SERIALNUMBER` 는 한글명이 "일련 번호" 다. 매칭 키를 넣으면 의미가 어긋난다.
-전용 컬럼을 쓸지, 기존 `DPACPU` 관례를 따를지 정해야 한다.
+`DPADISK` 는 Device42 가 디스크 일련번호를 수집하지 못해 자연키를 채울 수 없다.
+수집 설정으로 해결되는지 확인하고, 안 되면 아래 중 하나를 정한다.
+
+- 수집 한계로 기록하고 `DPADISK` 적재를 보류한다.
+- 노드 단위로 전량 삭제 후 재삽입한다. 자식 테이블이라 부모가 안정적이면
+  성립하지만 다른 테이블과 정책이 갈린다.
 
 ## 처리 완료
 

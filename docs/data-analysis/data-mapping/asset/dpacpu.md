@@ -36,7 +36,7 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | CHANGEDATE | 변경 날짜 | DATETIME(10) | N | 채번 | – | 적재 시각 |
 | CPUID | CPU ID | BIGINT(19) | N | 채번 | – | `NEXT VALUE FOR MAXIMO.DPACPUSEQ`. 테이블 전역 연번이며 노드별이 아니다. INSERT 시에만 발번하고 MATCHED 시 유지한다 |
-| CPUNUM | 프로세서 ID | ALN(64) | Y | 직접 | `view_part_v1.slot` | 예: `CPU.Socket.1`. 기존 수집분은 0/57 미사용 |
+| CPUNUM | 프로세서 ID | ALN(64) | Y | 직접 | `view_part_v1.slot` | 예: `CPU.Socket.1`. 스키마상 이 테이블의 자연키이며 MERGE 매칭에 쓴다. ISSUE-5 |
 | CREATEDATE | 작성 날짜 | DATETIME(10) | N | 채번 | – | 적재 시각 |
 | CURRSPEED | 현재 속도 | DECIMAL(10,2) | Y | 원천없음 | – | Device42 는 정격 속도만 제공한다. 기존 수집분은 `0.00` 으로 채움 |
 | DESCRIPTION | 설명 | ALN(256) | Y | 변환 | `view_part_v1.description` | 비어 있으면 `view_partmodel_v1.name` |
@@ -77,7 +77,7 @@ ORDER BY p.device_fk, p.slot
 
 ## 6. 미결
 
-- ISSUE-5 — 1:N 자식의 MERGE 매칭 키 정책. 이 테이블 후보는 `(NODEID, CPUNUM)` 이며 원천 `slot` 이 43/43 유일하다.
+- ISSUE-5 — 매칭 키는 `(NODEID, CPUNUM)`. 스키마가 `CPUNUM`(프로세서 ID)을 자연키로 둔다. 원천 `view_part_v1.slot` 이 43/43 이고 `(device_fk, slot)` 도 유일해 충족 가능하다. 기존 수집분은 `CPUNUM` 이 비어 있고 `SERIALNUMBER` 에 `Source ID:` 를 넣었으나 따르지 않는다.
 - **MERGE 매칭 키 미정.** `CPUID` 는 시퀀스로 발번하므로 재실행 시 같은 파트를
   다시 찾아낼 키가 따로 있어야 한다. 없으면 실행할 때마다 행이 늘어난다.
   후보는 `(NODEID, CPUNUM)` 이다. 원천 `view_part_v1.slot` 이 관측 43건 전부
