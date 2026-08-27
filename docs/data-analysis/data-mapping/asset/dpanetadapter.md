@@ -10,6 +10,7 @@
 - 부모: MAXIMO.DEPLOYEDASSET (NODEID)
 - 카디널리티: DEPLOYEDASSET 1 : N DPANETADAPTER (PK 는 `ADAPTERID`. 관측 39노드/61행)
 - 선행: DEPLOYEDASSET
+- 동기화 ID: `SOURCE_TARGET_MAP`의 `view_netport_v1.netport_pk`
 
 ## 2. 테이블 매핑
 
@@ -33,7 +34,7 @@
 | 조건 | 식 | 사유 |
 | --- | --- | --- |
 | 부모 적재 대상 | `d.type IN ('virtual','physical') AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)` | DEPLOYEDASSET 필터와 일치시킨다 |
-| COMPUTER만 | `(d.network_device = false OR d.network_device IS NULL) AND (d.physicalsubtype IS NULL OR d.physicalsubtype <> 'Network Printer')` | 다른 ASSETCLASS의 자식을 만들지 않는다 |
+| COMPUTER만 | `(d.network_device = false OR d.network_device IS NULL) AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer','PDU'))` | 다른 ASSETCLASS와 PDU의 자식을 만들지 않는다 |
 | 부모 존재 | 교차키 조회 결과가 있는 것만 | 부모가 없으면 적재할 수 없다 |
 
 ## 4. 컬럼 매핑
@@ -66,6 +67,7 @@
 
 ```sql
 SELECT
+    n.netport_pk,
     n.device_fk,
     n.port,
     n.description,
@@ -80,10 +82,10 @@ LEFT JOIN view_vendor_v1 v ON v.vendor_pk = n.vendor_fk
 WHERE d.type IN ('virtual', 'physical')
   AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)
   AND (d.network_device = false OR d.network_device IS NULL)
-  AND (d.physicalsubtype IS NULL OR d.physicalsubtype <> 'Network Printer')
+  AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer', 'PDU'))
 ORDER BY n.device_fk, n.netport_pk
 ```
 
 ## 6. 미결
 
-- ISSUE-5 — `ADAPTERID` 시퀀스 발번은 확정. 재실행 시 같은 원천 행을 찾는 MERGE 매칭 키 정책만 남았다.
+없음.

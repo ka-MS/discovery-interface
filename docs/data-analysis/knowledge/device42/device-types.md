@@ -15,9 +15,8 @@
 | 14 | Hyper-V |
 | 15 | Docker Container |
 
-현행 필터는 `type IN ('virtual', 'physical') AND (virtualsubtype_id IS NULL OR
-virtualsubtype_id <> 15)` 다. `type` 절에서 `cluster`·`unknown` 이 제외되고,
-`virtualsubtype_id` 조건에서 Docker Container 가 제외된다.
+현행 필터는 `type IN ('virtual', 'physical')`, Docker Container 제외, PDU 제외다.
+`type` 절에서 `cluster`·`unknown` 이 제외된다.
 근거: `DeployedAssetIntegrate.java` `DEVICE_FILTER`
 
 ## 분포
@@ -48,4 +47,5 @@ virtualsubtype_id <> 15)` 다. `type` 절에서 `cluster`·`unknown` 이 제외�
 | 3 | 그 외 | COMPUTER |
 
 `type` 과 `virtualsubtype` 은 판정에 쓰이지 않는다. VMWare, Amazon EC2,
-Hyper-V, physical Generic 이 모두 COMPUTER 로 합쳐진다.
+Hyper-V, physical Generic 이 모두 COMPUTER 로 합쳐진다. PDU 는 판정 전에
+조회 대상에서 제외된다.

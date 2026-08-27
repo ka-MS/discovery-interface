@@ -34,6 +34,7 @@
 
 `DEPLOYEDASSET.ASSETCLASS` 가 적재 대상 자식 테이블을 결정한다.
 판별자 구조는 `../knowledge/maximo/deployedasset-model.md` 참조.
+PDU 는 `DEPLOYEDASSET` 과 모든 자식의 조회 대상에서 제외한다.
 
 | ASSETCLASS | 자식 테이블 |
 | --- | --- |

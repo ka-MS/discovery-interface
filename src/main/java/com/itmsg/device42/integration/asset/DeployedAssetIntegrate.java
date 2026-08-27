@@ -252,6 +252,10 @@ public class DeployedAssetIntegrate implements AssetIntegrationTask {
                 d.virtualsubtype_id IS NULL
                 OR d.virtualsubtype_id <> 15
             )
+            AND (
+                d.physicalsubtype IS NULL
+                OR d.physicalsubtype <> 'PDU'
+            )
             """;
 
     private static final String DEVICE_TOTAL_COUNT_QUERY = """

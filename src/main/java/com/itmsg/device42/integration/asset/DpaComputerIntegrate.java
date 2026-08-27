@@ -276,11 +276,16 @@ public class DpaComputerIntegrate implements AssetIntegrationTask {
     }
 
     private static final String DEVICE_FILTER = """
-            (d.network_device = false OR d.network_device IS NULL)
-            AND (d.physicalsubtype IS NULL OR d.physicalsubtype <> 'Network Printer')
-            AND d.type IS NOT NULL
-            AND TRIM(d.type) <> ''
-            AND LOWER(TRIM(d.type)) <> 'unknown'
+            d.type IN ('virtual', 'physical')
+            AND (
+                d.virtualsubtype_id IS NULL
+                OR d.virtualsubtype_id <> 15
+            )
+            AND (d.network_device = false OR d.network_device IS NULL)
+            AND (
+                d.physicalsubtype IS NULL
+                OR d.physicalsubtype NOT IN ('Network Printer', 'PDU')
+            )
             """;
 
     private static final String DEVICE_TOTAL_COUNT_QUERY = """

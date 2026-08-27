@@ -10,6 +10,7 @@
 - 부모: MAXIMO.DEPLOYEDASSET (NODEID)
 - 카디널리티: DEPLOYEDASSET 1 : N DPATCPIP (PK 는 `TCPIPID`. 관측은 53노드/53행이나 스키마는 다건을 허용한다)
 - 선행: DEPLOYEDASSET
+- 동기화 ID: `SOURCE_TARGET_MAP`의 `view_ipaddress_v1.ipaddress_pk`
 
 기존 수집분은 노드당 1행이지만 스키마는 N을 허용한다. Device42 는 장비당
 IP 가 여럿이므로 IP 1건당 1행을 적재한다. 1행으로 줄이기 위한 대표 IP 선택
@@ -44,7 +45,7 @@ IP 가 여럿이므로 IP 1건당 1행을 적재한다. 1행으로 줄이기 위
 | 조건 | 식 | 사유 |
 | --- | --- | --- |
 | 부모 적재 대상 | `d.type IN ('virtual','physical') AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)` | DEPLOYEDASSET 필터와 일치시킨다 |
-| COMPUTER만 | `(d.network_device = false OR d.network_device IS NULL) AND (d.physicalsubtype IS NULL OR d.physicalsubtype <> 'Network Printer')` | 다른 ASSETCLASS의 자식을 만들지 않는다 |
+| COMPUTER만 | `(d.network_device = false OR d.network_device IS NULL) AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer','PDU'))` | 다른 ASSETCLASS와 PDU의 자식을 만들지 않는다 |
 | 부모 존재 | 교차키 조회 결과가 있는 것만 | 부모가 없으면 적재할 수 없다 |
 
 ## 4. 컬럼 매핑
@@ -64,7 +65,7 @@ IP 가 여럿이므로 IP 1건당 1행을 적재한다. 1행으로 줄이기 위
 | SECONDARYWINS | 보조 WINS | ALN(32) | Y | 원천없음 | – | 대응 원천이 없다 |
 | TCPIPADDRESS | TCP/IP 주소 | ALN(39) | N | 변환 | `view_ipaddress_v1.ip_address` | `HOST(ip_address)`. inet 타입이라 그냥 캐스팅하면 `/32` 접미가 붙는다. 관측 71/71 · 45/45, 접미 포함 최대 18자. IPv6 는 양쪽 0건 |
 | TCPIPDOMAIN | TCP/IP 도메인 | ALN(256) | Y | 원천없음 | – | 대응 원천이 없다. 장비명에 FQDN 이 섞여 있으나 도메인 컬럼이 아니다 |
-| TCPIPID | TcpIp ID | BIGINT(19) | N | 채번 | – | `NEXT VALUE FOR MAXIMO.DPATCPIPSEQ`. 테이블 전역 연번이며 노드별이 아니다. INSERT 시에만 발번하고 MATCHED 시 유지한다. 원천 `ipaddress_pk` 는 재수집 시 바뀌므로 쓰지 않는다 |
+| TCPIPID | TcpIp ID | BIGINT(19) | N | 채번 | – | `NEXT VALUE FOR MAXIMO.DPATCPIPSEQ`. INSERT 시에만 발번하고 `SOURCE_TARGET_MAP`으로 유지한다 |
 | TCPIPNETMASK | 네트워크 마스크 | ALN(32) | Y | 변환 | `view_subnet_v1.mask_bits` | 비트 수를 점 표기 넷마스크로 변환한다(`24` → `255.255.255.0`). `mask_bits = 0` 은 catch-all 서브넷이므로 NULL |
 
 구분 허용값: 직접 / 변환 / 상수 / 채번 / 원천없음 / 미결
@@ -86,6 +87,7 @@ IP 가 여럿이므로 IP 1건당 1행을 적재한다. 1행으로 줄이기 위
 
 ```sql
 SELECT
+    i.ipaddress_pk,
     i.device_fk,
     d.name AS device_name,
     HOST(i.ip_address) AS ip_address,
@@ -97,12 +99,10 @@ LEFT JOIN view_subnet_v1 b ON b.subnet_pk = i.subnet_fk
 WHERE d.type IN ('virtual', 'physical')
   AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)
   AND (d.network_device = false OR d.network_device IS NULL)
-  AND (d.physicalsubtype IS NULL OR d.physicalsubtype <> 'Network Printer')
+  AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer', 'PDU'))
 ORDER BY i.device_fk, i.ip_address
 ```
 
 ## 6. 미결
 
-- ISSUE-5 — 1:N 자식의 MERGE 매칭 키 정책. 이 테이블 후보는
-  `(NODEID, TCPIPADDRESS)` 이며 원천 `(device_fk, ip_address)` 가 두 서버
-  모두 전건 유일하다(1.35 71/71, 2.68 45/45). 별도 컨테이너 컬럼이 필요 없다.
+없음.

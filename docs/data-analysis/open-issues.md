@@ -1,207 +1,99 @@
 # 미결 사항
 
 판단과 의견은 이 문서에만 둔다. 다른 문서는 관측된 값과 매핑 규칙만 기술한다.
-
-## ISSUE-1 SOURCEID 가 서버 간 불일치
-
-**상태:** 정책 정의 대기. 기록만 한다.
-
-`DEPLOYEDASSET` 의 MERGE 키는 `(SOURCEID, IMPORTSOURCE)` 이고 `SOURCEID` 에는
-Device42 `device_pk` 가 들어간다. `device_pk` 는 수집 서버가 다르거나
-재수집하면 값이 바뀐다. 동일 장비가 서버에 따라 다른 `SOURCEID` 로 적재된다.
-
-동일 장비 확인 근거는 `serial_no` 와 `uuid` 다. 두 값은 서버가 달라도 같다.
-
-`DEPLOYEDASSET.TLOAMNRSUUID` 에 Device42 `uuid` 가 이미 적재된다. 다만
-`uuid` 는 전건 존재하지 않는다. 충전율은
-`knowledge/device42/servers.md` 의 식별자 충전율 표를 참조한다.
+종료된 사항은 `close-issues.md` 에 둔다.
 
 ## ISSUE-2 스위치가 두 레코드로 분리됨
 
-**상태:** 연결 수단은 해결. 다중 멤버 스택의 값 귀속 규칙은 미결.
+**상태:** 해결.
 
 네트워크 장비가 Device42 에서 두 레코드로 나뉜다.
 
 | 레코드 | 보유 | 미보유 |
 | --- | --- | --- |
 | `type = 'cluster'` | netport, MAC, 관리 IP | serial_no, OS |
-| `type = 'physical'`, 이름에 ` - Switch N` 접미 | serial_no, OS, hardware_fk | netport, IP |
+| `type = 'physical'` (` - Switch N` 접미) | serial_no, OS, hardware_fk | netport, IP |
 
-부모 DEPLOYEDASSET 은 `type IN ('virtual','physical')` 이므로 physical 쪽만
-적재한다. 그런데 포트·MAC·IP 는 cluster 쪽에 있다.
+부모 DEPLOYEDASSET 은 `physical` 만 적재하는데 네트워크 정보는 cluster 에 있다.
+장비 레벨 FK(`host_chassis_device_fk`, `virtual_host_device_fk`,
+`vm_manager_device_fk`, `chassisslot_fk`)는 네 레코드 모두 비어 있다.
 
-**두 레코드는 `view_netport_v1.second_device_fk` 로 이어진다.** cluster 소속
-포트의 `second_device_fk` 가 물리 레코드를 가리킨다.
+연결은 포트 레벨에 있다. cluster 소속 포트의 `second_device_fk` 가 물리
+레코드를 가리킨다.
 
 ```sql
 SELECT DISTINCT device_fk AS cluster_pk, second_device_fk AS physical_pk
 FROM view_netport_v1 WHERE second_device_fk IS NOT NULL
 ```
 
-양쪽 서버에서 1:1 로 성립하며 결과가 일치한다.
+`second_device_fk` 가 채워진 포트는 cluster → physical 방향뿐이며 양쪽 서버에서
+결과가 일치한다(`.68` 11→13, 12→108 · `.35` 282→284, 281→283).
 
-| 서버 | cluster → physical | 연결 포트 수 |
-| --- | --- | --- |
-| .68 | 11 → 13, 12 → 108 | 28, 26 |
-| .35 | 282 → 284, 281 → 283 | 28, 26 |
+### 결정
 
-장비 레벨 FK(`host_chassis_device_fk`, `virtual_host_device_fk`,
-`vm_manager_device_fk`, `chassisslot_fk`)는 네 레코드 모두 비어 있다. 연결은
-포트 레벨에만 있다. 이전 기록은 장비 레벨만 확인하고 연결 수단이 없다고
-판단한 것이며 사실과 다르다.
-
-관리 IP 는 cluster 의 `Vlan1` 인터페이스에 붙어 있고 그 포트의
-`second_device_fk` 는 비어 있다. 따라서 IP 는 포트 경유가 아니라 위 대응표로
-cluster 를 특정한 뒤 조회한다.
-
-MAC 은 cluster 포트 중 포트 이름이 MAC 과 같은 항목이 장비 베이스 MAC 이다.
-포트와 MAC 은 1:1 이며 물리 포트 MAC 은 연속 블록이다. 다만 베이스와 포트
-블록의 위치 관계는 일정하지 않아 산술로 유도할 수 없다. `ITMSG_L3_SW1` 은
-베이스가 블록 바로 아래(`…db80` / `…db81`~`…db9c`)지만 `ITMSG_L2_SW1` 은
-블록보다 위다(`…52c0` / `…5281`~`…529a`).
-
-**다만 베이스 MAC 포트는 `second_device_fk` 가 비어 있어 물리 멤버로 연결되지
-않는다.** cluster 귀속 값이다. cluster 는 Cisco 스택이라 물리 멤버를 여러 개
-가질 수 있다. 이름의 ` - Switch N` 이 멤버 번호다.
-
-`DPANETDEVICE.NETMACADDR` 과 `NETWORKADDRESS` 는 단수 컬럼이므로 멤버 행에
-무엇을 넣을지 정해야 한다. 스택 대표값(베이스 MAC, 공유 관리 IP)과 멤버
-고유값(자기 포트 MAC 최솟값) 중 선택이다.
-
-**멤버 여럿이 같은 값을 갖는 것 자체는 문제가 아니다.** 스택이 IP 와 베이스
-MAC 을 공유하는 것이 물리적 사실이며 스키마도 막지 않는다. `DPANETDEVICE` 는
-PK 가 `NODEID` 라 멤버마다 자기 행을 갖고, `DEPLOYEDASSET` 의 유니크 인덱스는
-`(NODENAME, DOMAINNAME, ASSETCLASS, TLOAMHASH)` 이며 `NODENAME` 은 멤버마다
-다르다. 자산 식별은 `SERIALNUMBER` 로 하며 IP·MAC 은 식별자가 아니다.
-
-`MAXATTRIBUTE` 의 컬럼 설명은 "네트워크 MAC 주소" 뿐이라 범위를 규정하지
-않는다. 기존 수집분 34건은 MAC·IP 중복이 없으나 전부 단독 장비라 정책의
-근거가 되지 못한다.
-
-관측 시점에는 양쪽 서버 모두 cluster 당 멤버가 1개, IP 도 1개라 1:N 동작을
-실측하지 못했다.
+- **MAC** — 위 대응으로 묶은 포트들의 `hwaddress` 최솟값. 멤버 고유값이라 스택
+  멤버가 늘어도 겹치지 않는다. 베이스 MAC 포트는 `second_device_fk` 가 비어
+  자동 제외된다.
+- **IP** — cluster 의 `device_pk` 로 `view_ipaddress_v1` 직접 조회. 관리 IP 가
+  `Vlan1` 논리 인터페이스에 붙어 있고 그 포트는 `second_device_fk` 가 비어
+  포트 경유가 안 된다. 스택은 IP 를 공유하므로 멤버가 여럿이면 여러 행이 같은
+  값을 갖는다.
 
 적용은 `data-mapping/asset/dpanetdevice.md` 참조.
 
-## ISSUE-3 PDU 가 COMPUTER 로 분류됨
+### 잔여
 
-**상태:** 수집 정책에 반영.
-
-`physicalsubtype = 'PDU'` 인 장비가 현행 판정 순서에서 3번 분기로 떨어져
-COMPUTER 가 된다. Maximo 에 PDU 용 ASSETCLASS 와 DPA 테이블이 없다.
-수집 대상에서 제외하는 방향으로 정책에 반영한다.
-
-판정 순서는 `knowledge/device42/device-types.md` 참조.
-
-## ISSUE-4 자식 태스크의 조회 조건이 부모와 다르다
-
-**상태:** 기록만 한다.
-
-`DeployedAssetIntegrate` 와 `DpaComputerIntegrate` 의 원천 조회 조건이 서로 다르다.
-
-| 태스크 | 조건 |
-| --- | --- |
-| DeployedAssetIntegrate | `type IN ('virtual','physical')` AND `virtualsubtype_id IS NULL OR <> 15` |
-| DpaComputerIntegrate | `network_device` 거짓 AND `physicalsubtype <> 'Network Printer'` AND `type` 이 `unknown` 아님 |
-
-두 조건의 차이를 관측 기준으로 대조한 결과다.
-
-| 부모 | 자식 | 대상 | 건수 |
-| --- | --- | --- | --- |
-| 제외 | 포함 | virtual / Docker Container | 12 |
-| 포함 | 제외 | physical / Generic (network_device) | 2 |
-| 포함 | 제외 | physical / Network Printer | 1 |
-
-`포함/제외` 3건은 정상이다. NETDEVICE·NETPRINTER 로 분류된 자산이라 DPACOMPUTER 대상이 아니다.
-
-`제외/포함` 12건이 문제다. 부모가 적재하지 않은 Docker Container 를 자식이 대상으로 잡아, 매 실행마다 교차키 조회에 실패하고 경고 로그만 남긴다. 데이터가 잘못 들어가지는 않지만 불필요한 조회와 로그가 발생한다.
-
-자식 태스크를 새로 만들 때 부모와 같은 필터를 쓰도록 맞춰야 한다.
+관측 시점에 cluster 당 물리 멤버가 1개뿐이라 1:N 동작을 실측하지 못했다.
+멤버가 둘 이상인 스택이 생기면 재확인한다.
 
 ## ISSUE-5 1:N 자식 테이블의 MERGE 매칭 키
 
-**상태:** 정책 정의 대기. 남은 대상은 `DPADISK` 다.
+**상태:** 적재 정책 확정. 삭제 정책 논의 필요.
 
-자체 ID 를 쓰는 10개 테이블은 ID 를 시퀀스로 발번한다. 발번은 해결됐지만
-재실행 시 같은 원천 행을 다시 찾아낼 매칭 키가 따로 있어야 한다. 없으면
-실행할 때마다 행이 늘어난다.
+자식 테이블의 자체 ID 는 Maximo 시퀀스로 발번한다. 재실행 시 같은 원천 행을
+찾기 위해 `SOURCE_TARGET_MAP` 을 신설한다.
 
-### 스키마는 테이블마다 자연키 컬럼을 제공한다
+| 컬럼 | 값 |
+| --- | --- |
+| `SOURCE_SYSTEM` | `DEVICE42` |
+| `SOURCE_OBJECT` | Device42 원천 뷰 |
+| `SOURCE_ID` | 원천 레코드 PK |
+| `SOURCE_PARENT_ID` | `device_pk` |
+| `TARGET_SYSTEM` | `MAXIMO` |
+| `TARGET_OBJECT` | Maximo 대상 테이블 |
+| `TARGET_ID` | 대상 테이블 시퀀스 ID |
+| `TARGET_PARENT_ID` | `NODEID` |
+| `CREATED_DATE` | 매핑 생성 일시 |
+| `UPDATED_DATE` | 매핑 변경 일시 |
 
-10개 테이블 모두 노드 내 식별자 컬럼을 갖고 있다. 별도 컨테이너가 필요하지
-않다.
+원천 매칭 키는 `(SOURCE_SYSTEM, SOURCE_OBJECT, SOURCE_ID)` 다. 대상에는
+`(TARGET_SYSTEM, TARGET_OBJECT, TARGET_ID)` 유일 제약을 둔다. 서버 주소는
+식별자에 포함하지 않는다.
 
-| 테이블 | 자연키 컬럼 | 한글명 | 기존 수집분 채움 |
-| --- | --- | --- | --- |
-| DPANETADAPTER | `NETMACADDR1` | MAC 주소 1 | 61/61 |
-| DPALOGICALDRIVE | `MOUNT` | 드라이브 | 80/80 |
-| DPATCPIP | `TCPIPADDRESS` | TCP/IP 주소 | 53/53 |
-| DPAOS | `NAME` | 운영 체제 | 63/63 |
-| DPASWSUITE | `SUITEID` | 스위트 ID | 14/14 |
-| DPASOFTWARE | `SOFTWARENAME`+`VERSION`+`INSTALLPATH` | 애플리케이션·버전·설치 경로 | 13031/13031 유일 |
-| DPACPU | `CPUNUM` | 프로세서 ID | 0/57 |
-| DPADISK | `SERIALNUMBER` | 일련 번호 | 0/144 |
-| DPADISPLAY | `SERIALNUMBER` | 일련 번호 | 0/52 |
-| DPAMEDIAADAPTER | `SERIALNUMBER` | 일련 번호 | 0/39 |
+| 대상 | 대상 ID·시퀀스 | 원천 ID |
+| --- | --- | --- |
+| `DPACPU` | `CPUID` · `DPACPUSEQ` | `view_part_v1.part_pk` |
+| `DPADISK` | `DISKID` · `DPADISKSEQ` | `view_part_v1.part_pk` |
+| `DPADISPLAY` | `DISPLAYID` · `DPADISPLAYSEQ` | 원천 없음 |
+| `DPALOGICALDRIVE` | `LOGICALDRIVEID` · `DPALOGICALDRIVESEQ` | `view_mountpoint_v1.mountpoint_pk` |
+| `DPAMEDIAADAPTER` | `ADAPTERID` · `DPAMEDIAADAPTERSEQ` | `view_part_v1.part_pk` |
+| `DPANETADAPTER` | `ADAPTERID` · `DPANETADAPTERSEQ` | `view_netport_v1.netport_pk` |
+| `DPAOS` | `OSID` · `DPAOSSEQ` | `view_deviceos_v1.deviceos_pk` |
+| `DPASOFTWARE` | `SOFTWAREID` · `DPASOFTWARESEQ` | `view_softwareinuse_v1.softwareinuse_pk` |
+| `DPASWSUITE` | `DPASWSUITEID` · `DPASWSUITESEQ` | 원천 없음 |
+| `DPATCPIP` | `TCPIPID` · `DPATCPIPSEQ` | `view_ipaddress_v1.ipaddress_pk` |
 
-장비 고유 속성(MAC, 마운트 경로, IP, OS 이름)은 전건 채워져 있고, 하드웨어
-일련번호와 슬롯 번호는 전건 비어 있다. 스캐너가 읽지 못하는 값들이다.
+`DPACOMPUTER`, `DPANETDEVICE`, `DPANETPRINTER`는 `NODEID`가 기본키인 1:1
+테이블이므로 이 정책을 적용하지 않는다. 원천이 없는 테이블은 행과 매핑을
+생성하지 않는다.
 
-`SERIALNUMBER` 는 디스크·모니터·미디어어댑터의 자연키다. 범용 컨테이너가
-아니다. CPU 는 일련번호가 없어 자연키 자리를 `CPUNUM` 으로 따로 둔다.
+매핑이 있으면 `TARGET_ID` 로 대상 행을 갱신한다. 매핑이 없으면 Maximo 시퀀스로
+대상 행을 삽입한 뒤 매핑을 삽입한다. 대상 쓰기와 매핑 쓰기는 같은 Db2에서
+원천 행 하나 단위의 트랜잭션으로 처리한다. 실패한 행만 롤백하고 다음 행을
+계속 처리한다.
 
-### 매칭 정책은 자연키 하나로 통일한다
-
-자연키로 매칭하면 재수집이 UPDATE 가 된다. 원천 pk 를 키에 넣으면 재수집이
-INSERT 가 되어 행이 중복된다. 두 성격은 공존할 수 없으므로 자연키로 통일한다.
-
-기존 수집분의 `DPACPU` 는 `CPUNUM` 을 비우고 `SERIALNUMBER` 에
-`Source ID: <n>` 을 넣었다(57/57). 스키마 의도를 벗어난 우회이며 따르지 않는다.
-
-### Device42 가 자연키를 댈 수 있는지
-
-| 테이블 | 자연키 | Device42 원천 | 가능 |
-| --- | --- | --- | --- |
-| DPACPU | `CPUNUM` | `view_part_v1.slot` (43/43, `(device_fk, slot)` 유일) | 가능 |
-| DPANETADAPTER | `NETMACADDR1` | `view_netport_v1.hwaddress` | 가능 |
-| DPALOGICALDRIVE | `MOUNT` | `view_mountpoint_v1.mountpoint` | 가능 |
-| DPATCPIP | `TCPIPADDRESS` | `view_ipaddress_v1.ip_address` | 가능 |
-| DPAOS | `NAME` | `view_os_v1.name` | 가능 |
-| DPADISK | `SERIALNUMBER` | `view_part_v1.serial_no` (.68 12/22 · .35 1/6) | 폴백 필요 |
-| DPAMEDIAADAPTER | `SERIALNUMBER` | `view_part_v1.serial_no` (GPU 파트) | 미조사 |
-| DPASOFTWARE | `SOFTWARENAME`+`VERSION`+`INSTALLPATH` | `view_software_v1.name`, `view_softwareinuse_v1.version`, `.install_path` | 가능 (중복 제거 필요) |
-
-### 남은 결정
-
-**DPADISK 의 일련번호 폴백.** `.35` 만 보면 6건 중 1건이라 불가로 보이지만
-`.68` 은 22건 중 12건이다. 일련번호가 없는 건은 전부 `sda NNN GB` 형태의
-리눅스 수집분이고 해당 장비는 디스크가 1개뿐이다.
-
-`COALESCE(NULLIF(serial_no,''), 모델명)` 을 쓰면 `.68` 22/22, `.35` 6/6 으로
-노드 내 유일해진다. 이 폴백을 정식 규칙으로 채택할지 정한다.
-
-**DPACPU 의 슬롯 중복.** `.35` 는 43/43 유일이지만 `.68` 은 67건 중 65개만
-구별된다. 중복 2쌍은 수집 잔재다. `DESKTOP-P7KJHB7` 은 같은 소켓에 모델이 다른
-두 건(E5-2620 v3, E5-2650 v4)이, `itmsg-gpu1` 은 같은 모델의 정규화 차이 두 건이
-있다. 적재 전 중복 제거 규칙이 필요하다. 최신 것만 남길지, 건너뛰고 로그만
-남길지 정한다.
-
-**DPASOFTWARE 원천의 중복 제거.** 자연키는
-`(NODEID, SOFTWARENAME, VERSION, INSTALLPATH)` 로 확정됐다. 타겟 13031행이
-전건 유일하다. `INSTALLPATH` 가 없으면 6221키로 줄어드는데, 한 노드에 같은
-이름·버전이 최대 219건 있기 때문이다(노드 8 의 `MKS Toolkit 8` 이 219개 경로).
-
-Device42 는 `install_path` 가 거의 비어 있다(`.68` 72/4900, `.35` 3/485).
-대신 원천 자체에 중복이 거의 없다. `(device, name, version)` 기준으로 `.35` 는
-485/485 유일이고 `.68` 은 4859키/4900행이다. `.68` 의 41행에 대해 적재 전
-중복 제거 규칙이 필요하다. DPACPU 와 같은 결정이다.
-
-`TLOAMSOFTWAREID` 는 쓰지 않는다. Maximo 가 `TLOAMSOFTWARESEQ` 로 자체
-발번하는 값이라 Device42 가 댈 수 없고, `DPAMSOFTWARE.SOFTWAREID` 를 가리키지도
-않는다(13031 중 1건만 우연히 일치).
-
-**서버 한 대만 보고 판단하지 않는다.** 위 두 건 모두 한 서버만 봤을 때와
-양쪽을 봤을 때 결론이 달랐다.
+원천 PK 가 변경되면 새 레코드로 삽입한다. 더 이상 조회되지 않는 원천과 기존
+대상·매핑의 삭제 또는 비활성화 정책은 별도로 논의한다.
 
 ## ISSUE-6 DPA 마스터 데이터 등록
 
@@ -258,9 +150,3 @@ Maximo 는 자식 테이블에 이름을 넣기 전에 정규화하는 계층을
 
 Device42 원천도 있다. `view_softwareinuse_v1.alias_name`(관측 674/4900)이
 변형 테이블과 같은 개념이다.
-
-## 처리 완료
-
-| 항목 | 결론 |
-| --- | --- |
-| 가상 장비 vendor 없음 | 이슈 아님. `MAXATTRIBUTE.DEFAULTVALUE` 가 `UNKNOWN` 으로 정의되어 있어 정상 결과다 |

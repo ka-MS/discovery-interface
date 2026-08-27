@@ -10,6 +10,7 @@
 - 부모: MAXIMO.DEPLOYEDASSET (NODEID)
 - 카디널리티: DEPLOYEDASSET 1 : N DPALOGICALDRIVE (PK 는 `LOGICALDRIVEID`. 관측 49노드/80행)
 - 선행: DEPLOYEDASSET
+- 동기화 ID: `SOURCE_TARGET_MAP`의 `view_mountpoint_v1.mountpoint_pk`
 
 ## 2. 테이블 매핑
 
@@ -32,7 +33,7 @@
 | 조건 | 식 | 사유 |
 | --- | --- | --- |
 | 부모 적재 대상 | `d.type IN ('virtual','physical') AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)` | DEPLOYEDASSET 필터와 일치시킨다 |
-| COMPUTER만 | `(d.network_device = false OR d.network_device IS NULL) AND (d.physicalsubtype IS NULL OR d.physicalsubtype <> 'Network Printer')` | 다른 ASSETCLASS의 자식을 만들지 않는다 |
+| COMPUTER만 | `(d.network_device = false OR d.network_device IS NULL) AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer','PDU'))` | 다른 ASSETCLASS와 PDU의 자식을 만들지 않는다 |
 | 의사 파일시스템 제외 | `LOWER(COALESCE(m.fstype_name,'')) NOT IN ('overlay','devtmpfs','efivarfs')` | 컨테이너 overlay, `/dev`, EFI 변수 의사 파일시스템은 논리 드라이브가 아니다 |
 | 부모 존재 | 교차키 조회 결과가 있는 것만 | 부모가 없으면 적재할 수 없다 |
 
@@ -64,6 +65,7 @@
 
 ```sql
 SELECT
+    m.mountpoint_pk,
     m.device_fk,
     m.mountpoint,
     m.filesystem,
@@ -76,11 +78,11 @@ JOIN view_device_v2 d ON d.device_pk = m.device_fk
 WHERE d.type IN ('virtual', 'physical')
   AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)
   AND (d.network_device = false OR d.network_device IS NULL)
-  AND (d.physicalsubtype IS NULL OR d.physicalsubtype <> 'Network Printer')
+  AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer', 'PDU'))
   AND LOWER(COALESCE(m.fstype_name, '')) NOT IN ('overlay', 'devtmpfs', 'efivarfs')
 ORDER BY m.device_fk, m.mountpoint
 ```
 
 ## 6. 미결
 
-- ISSUE-5 — `LOGICALDRIVEID` 시퀀스 발번은 확정. 재실행 시 같은 원천 행을 찾는 MERGE 매칭 키 정책만 남았다.
+없음.

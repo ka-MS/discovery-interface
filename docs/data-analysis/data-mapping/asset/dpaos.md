@@ -10,6 +10,7 @@
 - 부모: MAXIMO.DEPLOYEDASSET (NODEID)
 - 카디널리티: DEPLOYEDASSET 1 : N DPAOS (PK 는 `OSID`. 관측 61노드/63행)
 - 선행: DEPLOYEDASSET
+- 동기화 ID: `SOURCE_TARGET_MAP`의 `view_deviceos_v1.deviceos_pk`
 
 스키마는 노드당 다건을 허용하지만 Device42 원천은 장비당 최대 1건이다.
 판별 규칙은 `../knowledge/maximo/deployedasset-model.md` 참조.
@@ -43,7 +44,7 @@
 | 조건 | 식 | 사유 |
 | --- | --- | --- |
 | 부모 적재 대상 | `d.type IN ('virtual','physical') AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)` | DEPLOYEDASSET 필터와 일치시킨다 |
-| COMPUTER만 | `(d.network_device = false OR d.network_device IS NULL) AND (d.physicalsubtype IS NULL OR d.physicalsubtype <> 'Network Printer')` | 다른 ASSETCLASS의 자식을 만들지 않는다 |
+| COMPUTER만 | `(d.network_device = false OR d.network_device IS NULL) AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer','PDU'))` | 다른 ASSETCLASS와 PDU의 자식을 만들지 않는다 |
 | 부모 존재 | 교차키 조회 결과가 있는 것만 | 부모가 없으면 적재할 수 없다 |
 
 ## 4. 컬럼 매핑
@@ -61,7 +62,7 @@
 | MANUFACTURER | 제조업체 | ALN(128) | N | 직접 | `view_vendor_v1.name` | `view_os_v1.vendor_fk` 조인. 관측 5/59 · 18/20, 최대 9자. 없으면 `UNKNOWN`. DEFAULTVALUE=UNKNOWN |
 | NAME | 운영 체제 | ALN(256) | N | 직접 | `view_deviceos_v1.os_name` | 관측 59/59 · 20/20, 최대 151자. 없으면 `UNKNOWN`. DEFAULTVALUE=UNKNOWN |
 | NODEID | 노드 ID | BIGINT(19) | N | 채번 | – | 부모 DEPLOYEDASSET.NODEID. `(SOURCEID, IMPORTSOURCE)` 로 조회 |
-| OSID | 운영 체제 ID | BIGINT(19) | N | 채번 | – | `NEXT VALUE FOR MAXIMO.DPAOSSEQ`. 테이블 전역 연번이며 노드별이 아니다. INSERT 시에만 발번하고 MATCHED 시 유지한다. 원천 `deviceos_pk` 는 재수집 시 바뀌므로 쓰지 않는다 |
+| OSID | 운영 체제 ID | BIGINT(19) | N | 채번 | – | `NEXT VALUE FOR MAXIMO.DPAOSSEQ`. INSERT 시에만 발번하고 `SOURCE_TARGET_MAP`으로 유지한다 |
 | SERIALNUMBER | 일련 번호 | ALN(64) | Y | 원천없음 | – | 대응 원천이 없다. `os_license_key` 계열은 양쪽 서버 전건 0이고 일련번호도 아니다 |
 | SERVICEPACK | 서비스 팩 | ALN(64) | Y | 원천없음 | – | 대응 원천이 없다 |
 | VERSION | 버전 | ALN(128) | Y | 직접 | `view_deviceos_v1.os_version` | 관측 9/59 · 15/20, 최대 7자 |
@@ -75,6 +76,7 @@
 
 ```sql
 SELECT
+    o.deviceos_pk,
     o.device_fk,
     o.os_name,
     o.os_version,
@@ -87,13 +89,10 @@ LEFT JOIN view_vendor_v1 v ON v.vendor_pk = s.vendor_fk
 WHERE d.type IN ('virtual', 'physical')
   AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)
   AND (d.network_device = false OR d.network_device IS NULL)
-  AND (d.physicalsubtype IS NULL OR d.physicalsubtype <> 'Network Printer')
+  AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer', 'PDU'))
 ORDER BY o.device_fk
 ```
 
 ## 6. 미결
 
-- ISSUE-5 — 1:N 자식의 MERGE 매칭 키 정책. 이 테이블 자연키는 `NAME` 이고
-  원천 `os_name` 이 두 서버 전건 채워져 있어(59/59 · 20/20) 그대로 댈 수 있다.
-  장비당 OS 가 최대 1건이라 `NODEID` 단독으로도 충분하지만, 정책이 자연키
-  통일이므로 `(NODEID, NAME)` 을 따른다.
+없음.

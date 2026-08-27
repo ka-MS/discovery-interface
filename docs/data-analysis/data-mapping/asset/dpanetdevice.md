@@ -46,7 +46,7 @@
 | CREATEDATE | 작성 날짜 | DATETIME(10) | N | 채번 | – | 적재 시각 |
 | DESCRIPTION1 | 설명 | ALN(128) | Y | 원천없음 | – | 기존 수집분도 0/34. `os_name` 이 후보이나 컬럼 용도 미확인 |
 | FIRMWAREVERSION | 펌웨어 버전 | ALN(128) | Y | 원천없음 | – | `bios_version`·`bios_revision`·`bios_fw_revision` 이 스위치 레코드에서 전건 비어 있다. 기존 수집분도 0/34 |
-| NETMACADDR | MAC 주소 | ALN(17) | Y | 미결 | `view_netport_v1.hwaddress` | 단수 컬럼이라 포트 28개 중 하나를 골라야 한다. 스택 대표값(베이스 MAC)과 멤버 고유값(자기 포트 MAC 최솟값) 중 선택이며 둘 다 유효하다. 2절 참조 |
+| NETMACADDR | MAC 주소 | ALN(17) | Y | 변환 | `view_netport_v1.hwaddress` | cluster 대응 후 그 스위치 포트들의 최솟값. 베이스 MAC 은 `second_device_fk` 가 비어 자동 제외된다. 5절 절차 3 |
 | NETSOURCEID1 | 네트워크 소스 ID | ALN(128) | Y | 원천없음 | – | 기존 수집분도 0/34 |
 | NETWORKADDRESS | 네트워크 주소 | ALN(39) | Y | 변환 | `view_ipaddress_v1.ip_address` | cluster 대응 후 관리 IP. 관측 2/2 · 2/2, cluster 당 IP 1개. 다중 멤버 시 여러 행이 같은 값을 갖는다. 기존 수집분 29/34 |
 | NODEID | 노드 ID | BIGINT(19) | N | 채번 | – | 부모 DEPLOYEDASSET.NODEID. `(SOURCEID, IMPORTSOURCE)` 로 조회 |
@@ -107,16 +107,7 @@ ORDER BY t.device_pk
 
 ## 6. 미결
 
-- **`NETMACADDR` 선정 규칙 미결.** 스택 대표값(베이스 MAC)과 멤버 고유값(자기
-  포트 MAC 최솟값) 중 무엇을 넣을지 정해야 한다. 두 값은 1 차이다.
-  멤버 여럿이 같은 값을 갖는 것은 스택 구조상 정상이며 위험하지 않다.
-  선택은 의미의 문제다. 기존 수집분의 34건이 베이스인지 첫 포트인지는
-  원천이 없어 대조할 수 없다.
-- **다중 멤버 스택 미검증.** 관측 시점에 cluster 당 물리 멤버가 1개뿐이라
-  1:N 동작을 실측하지 못했다. 멤버가 둘 이상인 스택이 생기면 재확인이 필요하다.
-- ISSUE-1 — 동일 스위치가 서버에 따라 다른 `device_pk` 를 갖는다. `.68` 은 13·108,
-  `.35` 는 284·283 이고 시리얼(`JAE24461ECG`, `CAT1040RGWU`)은 같다.
-- `DESCRIPTION1` 은 원천 후보로 `os_name` 이 있으나 컬럼 용도가 확인되지 않았다.
-  기존 수집분은 0/34 다. 채우지 않는다.
+- 다중 멤버 스택을 실측하지 못했다. 관측 시점에 cluster 당 물리 멤버가 1개뿐이다.
+  멤버가 둘 이상인 스택이 생기면 재확인한다. ISSUE-2 참조.
 - `RAMSIZE`·`RAMUNIT` 은 기존 수집분이 `0.00`·`KB` 로 전건 채워져 있으나 실측값이
-  아닌 자리표시다. 같은 방식으로 채울지, NULL 로 둘지 정해야 한다.
+  아닌 자리표시다. 같은 방식으로 채울지 NULL 로 둘지 정해야 한다.

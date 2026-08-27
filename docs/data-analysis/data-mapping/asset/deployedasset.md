@@ -29,16 +29,15 @@ MERGE 키는 `(SOURCEID, IMPORTSOURCE)` 다. 재실행해도 멱등하다.
 | --- | --- | --- |
 | 타입 한정 | `d.type IN ('virtual','physical')` | `cluster`, `unknown` 은 적재 대상이 아니다 |
 | 컨테이너 제외 | `d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15` | Docker Container 는 자산으로 관리하지 않는다 |
+| PDU 제외 | `d.physicalsubtype IS NULL OR d.physicalsubtype <> 'PDU'` | 대응 ASSETCLASS 와 DPA 테이블이 없다 |
 
 근거: `DeployedAssetIntegrate.java` `DEVICE_FILTER`.
-
-`physicalsubtype = 'PDU'` 인 장비가 이 조건을 통과해 COMPUTER 로 분류된다. ISSUE-3 참조.
 
 ## 4. 컬럼 매핑
 
 | Target 컬럼 | 한글명 | 타입 | Null | 구분 | Source | 변환·조건 |
 | --- | --- | --- | --- | --- | --- | --- |
-| ASSETCLASS | 자산 클래스 | ALN(32) | N | 변환 | `view_device_v2`.network_device, .physicalsubtype | network_device 면 NETDEVICE, physicalsubtype=Network Printer 면 NETPRINTER, 그 외 COMPUTER. PDU 오분류는 ISSUE-3 |
+| ASSETCLASS | 자산 클래스 | ALN(32) | N | 변환 | `view_device_v2`.network_device, .physicalsubtype | network_device 면 NETDEVICE, physicalsubtype=Network Printer 면 NETPRINTER, 그 외 COMPUTER. PDU 는 조회 대상에서 제외 |
 | ASSETTAG | 자산 태그 | ALN(64) | Y | 직접 | `view_device_v2`.asset_no |  |
 | CHANGEDATE | 변경 날짜 | DATETIME(10) | N | 채번 | – | 적재 시각 |
 | CREATEDATE | 작성 날짜 | DATETIME(10) | N | 채번 | – | 적재 시각. MERGE MATCHED 시 갱신하지 않는다 |
@@ -57,7 +56,7 @@ MERGE 키는 `(SOURCEID, IMPORTSOURCE)` 다. 재실행해도 멱등하다.
 | PLUSPCUSTOMER | 고객 | UPPER(12) | Y | 원천없음 | – |  |
 | SERIALNUMBER | 일련 번호 | ALN(64) | Y | 직접 | `view_device_v2.serial_no` | .68 VMWare 17/18, EC2 0/8 · .35 전체 13/70 |
 | SITEID | 사이트 | UPPER(8) | Y | 원천없음 | – | Maximo 조직 체계 값. 수집 원천이 아니다 |
-| SOURCEID | 소스 | ALN(128) | Y | 변환 | `view_device_v2`.device_pk | 문자열로 변환. MERGE 키의 일부. pk 불안정 문제는 ISSUE-1 |
+| SOURCEID | 소스 | ALN(128) | Y | 변환 | `view_device_v2`.device_pk | 문자열로 변환. MERGE 키의 일부 |
 | SOURCEID2 | Source2 | ALN(128) | Y | 원천없음 | – | 보조 키 컬럼. 현행 적재는 사용하지 않는다 |
 | SUPPORTSSNMP | SNMP 지원 | YORN(1) | N | 상수 | – | `0` |
 | SYSTEMROLE | 역할 | ALN(32) | Y | 미결 | `view_device_v2`.type, .virtualsubtype, .physicalsubtype | 기존 수집분은 13종(Server, Network PC, Unix Box 등)을 쓴다. D42 타입 체계를 여기에 대응시킬 자리이나 값 대응 규칙 미정 |
@@ -74,7 +73,7 @@ MERGE 키는 `(SOURCEID, IMPORTSOURCE)` 다. 재실행해도 멱등하다.
 | TLOAMNRSSERIALNUMBER | NRS 일련 번호 | ALN(128) | Y | 미결 | `view_device_v2`.serial_no | SERIALNUMBER 와 동일 원천. 중복 적재 여부 미정 |
 | TLOAMNRSSIGNATURE | NRS 특성 | ALN(128) | Y | 원천없음 | – |  |
 | TLOAMNRSSYSTEMBOARDUUID | NRS 시스템 보드 UUID | ALN(64) | Y | 원천없음 | – |  |
-| TLOAMNRSUUID | NRS 가상 머신 UUID | ALN(64) | Y | 직접 | `view_device_v2.uuid` | 장비 식별의 안정 키 후보. 단 .68 의 EC2 8대는 uuid·serial 모두 없다. ISSUE-1 참조 |
+| TLOAMNRSUUID | NRS 가상 머신 UUID | ALN(64) | Y | 직접 | `view_device_v2.uuid` | .68 의 EC2 8대는 값이 없다 |
 | TLOAMNRSVMID | NRS VMID | ALN(128) | Y | 원천없음 | – |  |
 | TLOAMSTATUS | 상태 | UPPER(20) | Y | 변환 | `view_device_v2`.in_service | 참이면 `ACTIVE`, 거짓이면 `INACTIVE` |
 
@@ -93,6 +92,7 @@ LEFT JOIN view_hardware_v1 h ON d.hardware_fk = h.hardware_pk
 LEFT JOIN view_vendor_v1 v ON h.vendor_fk = v.vendor_pk
 WHERE d.type IN ('virtual', 'physical')
   AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)
+  AND (d.physicalsubtype IS NULL OR d.physicalsubtype <> 'PDU')
 ORDER BY d.device_pk
 ```
 
@@ -100,8 +100,5 @@ ORDER BY d.device_pk
 
 ## 6. 미결
 
-- ISSUE-1 — `SOURCEID` 에 넣는 `device_pk` 가 수집 서버·재수집에 따라 바뀌어 동일 장비가 중복 적재된다.
-  대안으로 거론되는 `uuid` 도 .68 의 Amazon EC2 8대는 `uuid` 와 `serial_no` 가 모두 없어 키가 되지 못한다.
-- ISSUE-3 — `physicalsubtype = 'PDU'` 장비가 COMPUTER 로 분류된다. .35 에서만 관측되며 .68 에는 PDU 장비가 없다.
 - 적재 대상 규모가 서버별로 크게 다르다. .68 은 31대(COMPUTER 28 / NETDEVICE 2 / NETPRINTER 1),
   .35 는 70대(COMPUTER 67 / NETDEVICE 2 / NETPRINTER 1)다.

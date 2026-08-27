@@ -26,13 +26,12 @@ MERGE 키는 `NODEID` 단독이다. 노드당 1행이므로 부모와 1:1 이다
 
 | 조건 | 식 | 사유 |
 | --- | --- | --- |
+| 타입 한정 | `d.type IN ('virtual','physical')` | 부모와 같은 대상만 조회한다 |
+| 컨테이너 제외 | `d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15` | 부모와 같이 Docker Container 를 제외한다 |
 | 네트워크 장비 제외 | `d.network_device = false OR d.network_device IS NULL` | NETDEVICE 는 DPANETDEVICE 로 간다 |
-| 프린터 제외 | `d.physicalsubtype IS NULL OR d.physicalsubtype <> 'Network Printer'` | NETPRINTER 는 DPANETPRINTER 로 간다 |
-| 타입 미상 제외 | `d.type IS NOT NULL AND TRIM(d.type) <> '' AND LOWER(TRIM(d.type)) <> 'unknown'` | |
+| 프린터·PDU 제외 | `d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer','PDU')` | 프린터는 DPANETPRINTER 로 가고 PDU 는 수집하지 않는다 |
 
 근거: `DpaComputerIntegrate.java` `DEVICE_FILTER`.
-
-**이 조건은 부모의 조건과 일치하지 않는다.** 부모가 제외하는 Docker Container 를 여기서는 제외하지 않아, 관측 기준 12건이 대상으로 잡히고 전부 교차키 조회에 실패해 경고 로그만 남긴다. ISSUE-4 참조.
 
 ## 4. 컬럼 매핑
 
@@ -95,18 +94,15 @@ SELECT
     d.total_cpus,
     d.core_per_cpu
 FROM view_device_v2 d
-WHERE (d.network_device = false OR d.network_device IS NULL)
-  AND (d.physicalsubtype IS NULL OR d.physicalsubtype <> 'Network Printer')
-  AND d.type IS NOT NULL
-  AND TRIM(d.type) <> ''
-  AND LOWER(TRIM(d.type)) <> 'unknown'
+WHERE d.type IN ('virtual', 'physical')
+  AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)
+  AND (d.network_device = false OR d.network_device IS NULL)
+  AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer', 'PDU'))
 ORDER BY d.device_pk
 ```
 
 ## 6. 미결
 
-- ISSUE-4 — 이 태스크의 조회 조건이 부모 DEPLOYEDASSET 의 조건과 달라, 부모가 없는 장비를 매 실행마다 조회하고 건너뛴다.
-  Docker Container 기준 .68 25건, .35 12건이다.
 - **주요 원천의 수집률이 낮다.** .68 대상 53대 중 BIOS 버전·일자는 2대, RAM·CPU 수는 20대만 값이 있다.
   적재해도 대부분 NULL 이 된다. 수집 설정으로 개선되는지 확인이 필요하다.
 - RAM 상세(`RAMTYPE`, `RAMDESCRIPTION`, `RAMTOTALSLOTS`)는 `view_part_v1`(RAM) 조인으로 얻을 수 있다.

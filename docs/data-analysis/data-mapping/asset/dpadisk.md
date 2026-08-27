@@ -12,6 +12,7 @@
 - 부모: MAXIMO.DEPLOYEDASSET (NODEID)
 - 카디널리티: DEPLOYEDASSET 1 : N DPADISK (PK 는 `DISKID`. 관측 61노드/144행)
 - 선행: DEPLOYEDASSET
+- 동기화 ID: `SOURCE_TARGET_MAP`의 `view_part_v1.part_pk`
 
 ## 2. 테이블 매핑
 
@@ -20,6 +21,7 @@
 | `view_part_v1` | MAXIMO.DPADISK | – | 1:1 (파트 1건 = 행 1건) |
 | `view_partmodel_v1` | (보강) | `view_part_v1.partmodel_fk = partmodel_pk` | N:1 |
 | `view_vendor_v1` | (보강) | `view_partmodel_v1.vendor_fk = vendor_pk` | N:1 |
+| `view_device_v2` | (대상 판정) | `view_part_v1.device_fk = device_pk` | N:1 |
 | MAXIMO.DEPLOYEDASSET | (교차키) | `SOURCEID = view_part_v1.device_fk AND IMPORTSOURCE = 'Device42'` → `NODEID` | N:1 |
 
 관측 6파트/6장비로 장비당 1건이지만, 물리 디스크가 여러 개인 장비에서는 N 이 된다.
@@ -29,6 +31,8 @@
 | 조건 | 식 | 사유 |
 | --- | --- | --- |
 | 디스크 파트만 | `pm.type_name = 'Hard Disk'` | `view_part_v1` 은 여러 파트 종류를 한 테이블에 담는다 |
+| 부모 적재 대상 | `d.type IN ('virtual','physical') AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)` | DEPLOYEDASSET 필터와 일치시킨다 |
+| COMPUTER만 | `(d.network_device = false OR d.network_device IS NULL) AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer','PDU'))` | 다른 ASSETCLASS와 PDU의 자식을 만들지 않는다 |
 | 부모 존재 | 교차키 조회 결과가 있는 것만 | 부모가 없으면 적재할 수 없다 |
 
 `view_mountpoint_v1` 은 논리 드라이브 원천이며 DPALOGICALDRIVE 로 간다. 물리 디스크와 혼동하지 않는다.
@@ -50,7 +54,7 @@
 | MANUFACTURER | 제조업체 | ALN(128) | N | 직접 | `view_vendor_v1.name` | `view_partmodel_v1.vendor_fk` 조인. 양쪽 서버 모두 전건 미보유라 사실상 `UNKNOWN` |
 | NODEID | 노드 ID | BIGINT(19) | N | 채번 | – | 부모 DEPLOYEDASSET.NODEID. `(SOURCEID, IMPORTSOURCE)` 로 조회 |
 | REMOVABLEMEDIA | 이동식 미디어 | YORN(1) | N | 상수 | – | 기존 수집분 전건 `0` |
-| SERIALNUMBER | 일련 번호 | ALN(64) | Y | 직접 | `view_part_v1.serial_no` | 스키마상 이 테이블의 자연키. .68 12/22 · .35 1/6. 비어 있는 건은 전부 `sda NNN GB` 형태의 리눅스 수집분이다. ISSUE-5 |
+| SERIALNUMBER | 일련 번호 | ALN(64) | Y | 직접 | `view_part_v1.serial_no` | .68 12/22 · .35 1/6. MERGE 매칭에는 사용하지 않는다 |
 | SIZEUNIT | 크기 단위 | ALN(16) | Y | 직접 | `view_partmodel_v1.hdsize_unit` | 관측값 `GB` |
 | SYSTEMNAME | 디바이스 | ALN(64) | Y | 원천없음 | – | 기존 수집분은 `1` 로 채워 이름이 아닌 플래그로 쓰인다. 용도 불명 |
 | TOTALSPACE | 총 공간 | DECIMAL(10,2) | Y | 직접 | `view_partmodel_v1.hdsize` | 소수 2자리 |
@@ -63,6 +67,7 @@
 
 ```sql
 SELECT
+    p.part_pk,
     p.device_fk,
     p.serial_no,
     p.description,
@@ -74,17 +79,17 @@ SELECT
     v.name              AS vendor_name
 FROM view_part_v1 p
 JOIN view_partmodel_v1 pm ON pm.partmodel_pk = p.partmodel_fk
+JOIN view_device_v2 d ON d.device_pk = p.device_fk
 LEFT JOIN view_vendor_v1 v ON v.vendor_pk = pm.vendor_fk
 WHERE pm.type_name = 'Hard Disk'
+  AND d.type IN ('virtual', 'physical')
+  AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)
+  AND (d.network_device = false OR d.network_device IS NULL)
+  AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer', 'PDU'))
 ORDER BY p.device_fk, pm.name
 ```
 
 ## 6. 미결
 
-- ISSUE-5 — 매칭 키는 `(NODEID, SERIALNUMBER)`. 스키마가 디스크 일련번호를 자연키로 둔다.
-  **.35 만 보면 1/6 이라 불가로 보이지만 .68 은 12/22 다.** 서버에 따라 수집률이 크게 다르다.
-  일련번호가 없는 건은 전부 `sda NNN GB` 형태의 리눅스 수집분이고, 해당 장비는 디스크가 1개뿐이다.
-  `COALESCE(NULLIF(serial_no,''), 모델명)` 폴백을 쓰면 .68 22/22, .35 6/6 으로 노드 내 유일해진다.
-  폴백을 정식 규칙으로 채택할지 정해야 한다.
 - `DISKTYPE` 은 양쪽 서버 모두 대응 원천이 없다. `media_type_name` 은 .35 전건 `storage`, .68 전건 NULL 이다.
 - `SYSTEMNAME` 은 기존 수집분이 `1` 로 채워 이름이 아닌 플래그로 쓰인다. 용도를 확인하기 전에는 채우지 않는다.

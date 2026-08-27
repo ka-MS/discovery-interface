@@ -12,6 +12,7 @@
 - 부모: MAXIMO.DEPLOYEDASSET (NODEID)
 - 카디널리티: DEPLOYEDASSET 1 : N DPACPU (PK 는 `CPUID`. 관측 49노드/57행)
 - 선행: DEPLOYEDASSET
+- 동기화 ID: `SOURCE_TARGET_MAP`의 `view_part_v1.part_pk`
 
 ## 2. 테이블 매핑
 
@@ -20,6 +21,7 @@
 | `view_part_v1` | MAXIMO.DPACPU | – | 1:1 (파트 1건 = 행 1건) |
 | `view_partmodel_v1` | (보강) | `view_part_v1.partmodel_fk = partmodel_pk` | N:1 |
 | `view_vendor_v1` | (보강) | `view_partmodel_v1.vendor_fk = vendor_pk` | N:1 |
+| `view_device_v2` | (대상 판정) | `view_part_v1.device_fk = device_pk` | N:1 |
 | MAXIMO.DEPLOYEDASSET | (교차키) | `SOURCEID = view_part_v1.device_fk AND IMPORTSOURCE = 'Device42'` → `NODEID` | N:1 |
 
 파트 1건이 행 1건이 되므로 소켓 수만큼 행이 생긴다. 관측 43파트/11장비.
@@ -29,9 +31,9 @@
 | 조건 | 식 | 사유 |
 | --- | --- | --- |
 | CPU 파트만 | `pm.type_name = 'CPU'` | `view_part_v1` 은 CPU·RAM·Hard Disk·GPU·PCI 를 한 테이블에 담는다 |
+| 부모 적재 대상 | `d.type IN ('virtual','physical') AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)` | DEPLOYEDASSET 필터와 일치시킨다 |
+| COMPUTER만 | `(d.network_device = false OR d.network_device IS NULL) AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer','PDU'))` | 다른 ASSETCLASS와 PDU의 자식을 만들지 않는다 |
 | 부모 존재 | 교차키 조회 결과가 있는 것만 | 부모가 없으면 적재할 수 없다 |
-
-부모 필터(`type IN ('virtual','physical')` 등)와 일치시켜야 교차키 실패가 생기지 않는다. DPACOMPUTER 의 ISSUE-4 와 같은 문제를 반복하지 않도록 주의한다.
 
 ## 4. 컬럼 매핑
 
@@ -39,7 +41,7 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | CHANGEDATE | 변경 날짜 | DATETIME(10) | N | 채번 | – | 적재 시각 |
 | CPUID | CPU ID | BIGINT(19) | N | 채번 | – | `NEXT VALUE FOR MAXIMO.DPACPUSEQ`. 테이블 전역 연번이며 노드별이 아니다. INSERT 시에만 발번하고 MATCHED 시 유지한다 |
-| CPUNUM | 프로세서 ID | ALN(64) | Y | 직접 | `view_part_v1.slot` | 예: `CPU.Socket.1`. 스키마상 이 테이블의 자연키이며 MERGE 매칭에 쓴다. 다만 .68 에서 중복이 있다. ISSUE-5 |
+| CPUNUM | 프로세서 ID | ALN(64) | Y | 직접 | `view_part_v1.slot` | 예: `CPU.Socket.1`. MERGE 매칭에는 사용하지 않는다 |
 | CREATEDATE | 작성 날짜 | DATETIME(10) | N | 채번 | – | 적재 시각 |
 | CURRSPEED | 현재 속도 | DECIMAL(10,2) | Y | 원천없음 | – | Device42 는 정격 속도만 제공한다. 기존 수집분은 `0.00` 으로 채움 |
 | DESCRIPTION | 설명 | ALN(256) | Y | 변환 | `view_part_v1.description` | 비어 있으면 `view_partmodel_v1.name`. .68 은 전건 비어 있다 |
@@ -63,6 +65,7 @@
 
 ```sql
 SELECT
+    p.part_pk,
     p.device_fk,
     p.slot,
     p.description,
@@ -73,16 +76,16 @@ SELECT
     v.name         AS vendor_name
 FROM view_part_v1 p
 JOIN view_partmodel_v1 pm ON pm.partmodel_pk = p.partmodel_fk
+JOIN view_device_v2 d ON d.device_pk = p.device_fk
 LEFT JOIN view_vendor_v1 v ON v.vendor_pk = pm.vendor_fk
 WHERE pm.type_name = 'CPU'
+  AND d.type IN ('virtual', 'physical')
+  AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)
+  AND (d.network_device = false OR d.network_device IS NULL)
+  AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer', 'PDU'))
 ORDER BY p.device_fk, p.slot
 ```
 
 ## 6. 미결
 
-- ISSUE-5 — 매칭 키는 `(NODEID, CPUNUM)`. 스키마가 `CPUNUM`(프로세서 ID)을 자연키로 둔다.
-  **.35 에서는 43/43 유일하지만 .68 에서는 67건 중 65개만 구별된다.** 중복 2쌍은 수집 잔재로 보인다.
-  `DESKTOP-P7KJHB7` 은 `CPU.Socket.0` 에 모델이 다른 두 건(E5-2620 v3, E5-2650 v4)이,
-  `itmsg-gpu1` 은 같은 모델의 정규화 차이 두 건이 있다.
-  적재 전에 `(device_fk, slot)` 중복을 제거하는 규칙이 필요하다. 최신 것을 남길지, 건너뛰고 로그만 남길지 정한다.
 - `DESCRIPTION` 은 .68 에서 전건 비어 있다. 모델명으로 대체할지 NULL 로 둘지 정해야 한다.

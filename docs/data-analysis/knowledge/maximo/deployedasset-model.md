@@ -62,9 +62,8 @@ ID 는 노드별 연번이 아니라 테이블 전역 연번이다.
 도 존재하지만 세 테이블은 PK 가 `NODEID` 라 자기 시퀀스를 쓰지 않는다. 부모에서
 받은 `NODEID` 를 그대로 쓴다.
 
-시퀀스는 ID 발번만 해결한다. 재실행 멱등성은 MERGE 의 매칭 키가 따로 있어야
-성립한다. `DEPLOYEDASSET` 이 그 형태다. `(SOURCEID, IMPORTSOURCE)` 로 매칭하고
-`NOT MATCHED` 분기에서만 `NEXT VALUE FOR MAXIMO.DEPLOYEDASSETSEQ` 를 호출한다.
+시퀀스는 ID 발번에 사용한다. 1:N 자식의 재실행 매칭은
+`SOURCE_TARGET_MAP`의 원천 ID와 대상 ID 대응으로 처리한다.
 
 재조회: `SYSCAT.SEQUENCES` 에서 `SEQSCHEMA = 'MAXIMO'`.
 
@@ -106,5 +105,4 @@ ID 는 노드별 연번이 아니라 테이블 전역 연번이다.
 - `NODEID` 는 `MAXIMO.DEPLOYEDASSETSEQ` 시퀀스로 발번된다.
 - 현행 적재의 MERGE 키는 `(SOURCEID, IMPORTSOURCE)` 다.
   근거: `DeployedAssetIntegrate.java` `MERGE_DEPLOYED_ASSET_QUERY`
-- `SOURCEID` 에는 Device42 `device_pk` 가 들어간다. 관련 미결 사항은
-  `../../open-issues.md` 참조.
+- `SOURCEID` 에는 Device42 `device_pk` 가 들어간다.
