@@ -39,12 +39,23 @@ FROM view_netport_v1 WHERE second_device_fk IS NOT NULL
 ` - Switch N` 접미가 멤버 번호다. 관측 시점에는 양쪽 서버 모두 cluster 당
 멤버가 1개지만 구조상 1:N 이다. 멤버가 늘어나는 경우를 전제로 매핑한다.
 
-`NETMACADDR` 선정 규칙은 미결이다. 후보가 둘이고 성격이 다르다.
+`NETMACADDR` 선정 규칙은 미결이다. 단수 컬럼이라 포트 28개 중 하나를 골라야
+한다. 후보가 둘이고 의미가 다르다.
 
-| 후보 | 값 | 귀속 | 다중 멤버 시 |
+| 후보 | 값 | 귀속 | 관점 |
 | --- | --- | --- | --- |
-| 베이스 MAC (포트 이름 = MAC 인 항목) | `549fc6badb80` | cluster. `second_device_fk` 가 비어 있어 물리 멤버로 연결되지 않는다 | 멤버 전원이 같은 값을 받는다. 부적합 |
-| 멤버 자신의 포트 MAC 최솟값 | `549fc6badb81` | 물리 멤버 | 멤버마다 다른 값. 적합 |
+| 베이스 MAC (포트 이름 = MAC 인 항목) | `549fc6badb80` | cluster. `second_device_fk` 가 비어 있어 물리 멤버로 연결되지 않는다 | 이 장비에 접속하는 주소. 운영 관점 |
+| 멤버 자신의 포트 MAC 최솟값 | `549fc6badb81` | 물리 멤버 | 이 물리 유닛의 MAC. 자산 관점 |
+
+**멤버 여럿이 같은 값을 갖는 것 자체는 문제가 아니다.** 스택은 관리 IP 와
+베이스 MAC 을 공유하므로 그것이 물리적 사실이다. 스키마도 막지 않는다.
+`DPANETDEVICE` 는 PK 가 `NODEID` 라 멤버마다 자기 행을 갖고, `DEPLOYEDASSET`
+의 유니크 인덱스는 `(NODENAME, DOMAINNAME, ASSETCLASS, TLOAMHASH)` 이며
+`NODENAME` 은 멤버마다 다르다.
+
+`MAXATTRIBUTE` 의 컬럼 설명은 "네트워크 MAC 주소" 뿐이라 범위를 규정하지
+않는다. 기존 수집분 34건은 MAC·IP 중복이 없으나 전부 단독 장비라 정책의
+근거가 되지 못한다.
 
 두 값은 1 차이다. 물리 포트 MAC 은 베이스 바로 위에서 증가한다.
 예: 베이스 `549fc6badb80`, 포트 `549fc6badb81`~`549fc6badb9c`.
@@ -55,7 +66,8 @@ FROM view_netport_v1 WHERE second_device_fk IS NOT NULL
 cluster 를 찾아 조회한다. 관측 기준 cluster 당 IP 는 1개다.
 
 스택은 관리 IP 를 공유하므로 멤버가 여럿이면 여러 행이 같은
-`NETWORKADDRESS` 를 갖는다. 스택 구조상 정상이지만 자산 식별에는 쓸 수 없다.
+`NETWORKADDRESS` 를 갖는다. 물리적 사실이며 문제가 아니다. 자산 식별은
+`DEPLOYEDASSET.SERIALNUMBER` 로 하며 IP·MAC 은 식별자가 아니다.
 
 ## 3. 조회 조건
 
@@ -79,7 +91,7 @@ cluster 를 찾아 조회한다. 관측 기준 cluster 당 IP 는 1개다.
 | CREATEDATE | 작성 날짜 | DATETIME(10) | N | 채번 | – | 적재 시각 |
 | DESCRIPTION1 | 설명 | ALN(128) | Y | 원천없음 | – | 기존 수집분도 0/34. `os_name` 이 후보이나 컬럼 용도 미확인 |
 | FIRMWAREVERSION | 펌웨어 버전 | ALN(128) | Y | 원천없음 | – | `bios_version`·`bios_revision`·`bios_fw_revision` 이 스위치 레코드에서 전건 비어 있다. 기존 수집분도 0/34 |
-| NETMACADDR | MAC 주소 | ALN(17) | Y | 미결 | `view_netport_v1.hwaddress` | 단수 컬럼이라 포트 28개 중 하나를 골라야 한다. 베이스 MAC 은 cluster 귀속이라 다중 멤버 시 중복된다. 멤버 자신의 포트 MAC 최솟값이 대안이다. 2절 참조 |
+| NETMACADDR | MAC 주소 | ALN(17) | Y | 미결 | `view_netport_v1.hwaddress` | 단수 컬럼이라 포트 28개 중 하나를 골라야 한다. 스택 대표값(베이스 MAC)과 멤버 고유값(자기 포트 MAC 최솟값) 중 선택이며 둘 다 유효하다. 2절 참조 |
 | NETSOURCEID1 | 네트워크 소스 ID | ALN(128) | Y | 원천없음 | – | 기존 수집분도 0/34 |
 | NETWORKADDRESS | 네트워크 주소 | ALN(39) | Y | 변환 | `view_ipaddress_v1.ip_address` | cluster 대응 후 관리 IP. 관측 2/2 · 2/2, cluster 당 IP 1개. 다중 멤버 시 여러 행이 같은 값을 갖는다. 기존 수집분 29/34 |
 | NODEID | 노드 ID | BIGINT(19) | N | 채번 | – | 부모 DEPLOYEDASSET.NODEID. `(SOURCEID, IMPORTSOURCE)` 로 조회 |
@@ -131,10 +143,11 @@ ORDER BY d.device_pk
 
 ## 6. 미결
 
-- **`NETMACADDR` 선정 규칙 미결.** 2절의 두 후보 중 하나를 정해야 한다.
-  베이스 MAC 은 cluster 귀속이라 멤버가 여럿이면 중복된다. 멤버 자신의 포트
-  MAC 최솟값은 멤버별로 다르지만 관례적인 장비 MAC 과 1 차이가 난다.
-  기존 수집분의 `NETMACADDR` 34건이 베이스인지 첫 포트인지 확인되지 않았다.
+- **`NETMACADDR` 선정 규칙 미결.** 스택 대표값(베이스 MAC)과 멤버 고유값(자기
+  포트 MAC 최솟값) 중 무엇을 넣을지 정해야 한다. 두 값은 1 차이다.
+  멤버 여럿이 같은 값을 갖는 것은 스택 구조상 정상이며 위험하지 않다.
+  선택은 의미의 문제다. 기존 수집분의 34건이 베이스인지 첫 포트인지는
+  원천이 없어 대조할 수 없다.
 - **다중 멤버 스택 미검증.** 관측 시점에 cluster 당 물리 멤버가 1개뿐이라
   1:N 동작을 실측하지 못했다. 멤버가 둘 이상인 스택이 생기면 재확인이 필요하다.
 - ISSUE-1 — 동일 스위치가 서버에 따라 다른 `device_pk` 를 갖는다. `.68` 은 13·108,
