@@ -35,7 +35,7 @@
 | Target 컬럼 | 한글명 | 타입 | Null | 구분 | Source | 변환·조건 |
 | --- | --- | --- | --- | --- | --- | --- |
 | CHANGEDATE | 변경 날짜 | DATETIME(10) | N | 채번 | – | 적재 시각 |
-| CPUID | CPU ID | BIGINT(19) | N | 채번 | – | 대리키. 원천 `part_pk` 는 재수집 시 바뀌므로 쓰지 않는다 |
+| CPUID | CPU ID | BIGINT(19) | N | 채번 | – | `NEXT VALUE FOR MAXIMO.DPACPUSEQ`. 테이블 전역 연번이며 노드별이 아니다. INSERT 시에만 발번하고 MATCHED 시 유지한다 |
 | CPUNUM | 프로세서 ID | ALN(64) | Y | 직접 | `view_part_v1.slot` | 예: `CPU.Socket.1`. 기존 수집분은 0/57 미사용 |
 | CREATEDATE | 작성 날짜 | DATETIME(10) | N | 채번 | – | 적재 시각 |
 | CURRSPEED | 현재 속도 | DECIMAL(10,2) | Y | 원천없음 | – | Device42 는 정격 속도만 제공한다. 기존 수집분은 `0.00` 으로 채움 |
@@ -77,5 +77,11 @@ ORDER BY p.device_fk, p.slot
 
 ## 6. 미결
 
-- `CPUID` 채번 규칙 미정. 기존 수집분은 전역 연번을 쓴다. 노드 내 연번으로 할지 전역 연번으로 할지 정해야 한다.
-- `DESCRIPTION` 은 관측 43건 중 일부만 값이 있다. 비어 있을 때 모델명으로 대체할지 NULL 로 둘지 정해야 한다.
+- **MERGE 매칭 키 미정.** `CPUID` 는 시퀀스로 발번하므로 재실행 시 같은 파트를
+  다시 찾아낼 키가 따로 있어야 한다. 없으면 실행할 때마다 행이 늘어난다.
+  후보는 `(NODEID, CPUNUM)` 이다. 원천 `view_part_v1.slot` 이 관측 43건 전부
+  값을 가지며 `(device_fk, slot)` 조합도 43건 전부 유일하다.
+  기존 수집분은 `CPUNUM` 이 0/57 로 비어 있어 이 키를 쓸 수 없다. Device42
+  적재분에만 적용할지, 기존분을 보정할지 정해야 한다.
+- `DESCRIPTION` 은 관측 43건 중 일부만 값이 있다. 비어 있을 때 모델명으로
+  대체할지 NULL 로 둘지 정해야 한다.

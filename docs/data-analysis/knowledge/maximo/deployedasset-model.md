@@ -40,6 +40,34 @@
 14개 테이블에는 그런 경우가 없다. 자체 ID 를 가진 10개 테이블의 유니크 인덱스는
 모두 `(자체ID, NODEID)` 형태라 `NODEID` 중복을 막지 않는다.
 
+자체 ID 를 쓰는 테이블에는 대응 시퀀스가 있다. 관측 시점에 10개 모두
+`START = max(ID) + 1` 로 데이터와 맞아 있었다.
+
+| 테이블 | ID 범위 | 시퀀스 | START |
+| --- | --- | --- | --- |
+| DPACPU | 1–57 | `DPACPUSEQ` | 58 |
+| DPADISK | 1–144 | `DPADISKSEQ` | 145 |
+| DPADISPLAY | 1–52 | `DPADISPLAYSEQ` | 53 |
+| DPALOGICALDRIVE | 1–80 | `DPALOGICALDRIVESEQ` | 81 |
+| DPAMEDIAADAPTER | 1–39 | `DPAMEDIAADAPTERSEQ` | 40 |
+| DPANETADAPTER | 1–61 | `DPANETADAPTERSEQ` | 62 |
+| DPAOS | 1–63 | `DPAOSSEQ` | 64 |
+| DPASOFTWARE | 1–13031 | `DPASOFTWARESEQ` | 13032 |
+| DPASWSUITE | 1–14 | `DPASWSUITESEQ` | 15 |
+| DPATCPIP | 1–53 | `DPATCPIPSEQ` | 54 |
+
+ID 는 노드별 연번이 아니라 테이블 전역 연번이다.
+
+역은 성립하지 않는다. `DPACOMPUTERSEQ`, `DPANETDEVICESEQ`, `DPANETPRINTERSEQ`
+도 존재하지만 세 테이블은 PK 가 `NODEID` 라 자기 시퀀스를 쓰지 않는다. 부모에서
+받은 `NODEID` 를 그대로 쓴다.
+
+시퀀스는 ID 발번만 해결한다. 재실행 멱등성은 MERGE 의 매칭 키가 따로 있어야
+성립한다. `DEPLOYEDASSET` 이 그 형태다. `(SOURCEID, IMPORTSOURCE)` 로 매칭하고
+`NOT MATCHED` 분기에서만 `NEXT VALUE FOR MAXIMO.DEPLOYEDASSETSEQ` 를 호출한다.
+
+재조회: `SYSCAT.SEQUENCES` 에서 `SEQSCHEMA = 'MAXIMO'`.
+
 행 수가 노드 수와 같다고 해서 1:1 인 것은 아니다. 관측 시점에 노드당 1행이었을
 뿐일 수 있다. DPATCPIP, DPAMEDIAADAPTER, DPASWSUITE 가 그런 경우다.
 
