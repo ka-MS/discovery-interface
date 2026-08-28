@@ -1,4 +1,4 @@
-package com.itmsg.device42.integration.config;
+package com.itmsg.device42.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

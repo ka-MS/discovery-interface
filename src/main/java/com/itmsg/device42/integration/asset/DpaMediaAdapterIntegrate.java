@@ -1,7 +1,7 @@
 package com.itmsg.device42.integration.asset;
 
-import com.itmsg.device42.dto.device42.Device42DpaCpuSource;
-import com.itmsg.device42.dto.maximo.DpaCpuUpsert;
+import com.itmsg.device42.dto.device42.Device42DpaMediaAdapterSource;
+import com.itmsg.device42.dto.maximo.DpaMediaAdapterUpsert;
 import com.itmsg.device42.config.Device42ConnectionFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,8 +10,6 @@ import org.springframework.core.annotation.Order;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -23,19 +21,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Component
-@Order(5)
-public class DpaCpuIntegrate implements AssetIntegrationTask {
+@Order(8)
+public class DpaMediaAdapterIntegrate implements AssetIntegrationTask {
 
-    private static final Logger log = LoggerFactory.getLogger(DpaCpuIntegrate.class);
+    private static final Logger log = LoggerFactory.getLogger(DpaMediaAdapterIntegrate.class);
 
     private static final int DEFAULT_BATCH_SIZE = 1000;
     private static final String UNKNOWN = "UNKNOWN";
-    private static final BigDecimal ZERO_SPEED = new BigDecimal("0.00");
+    private static final String MEDIA_TYPE = "Video";
 
     private final Device42ConnectionFactory connectionFactory;
     private final JdbcTemplate maximoJdbcTemplate;
 
-    public DpaCpuIntegrate(
+    public DpaMediaAdapterIntegrate(
             Device42ConnectionFactory connectionFactory,
             @Qualifier("maximoJdbcTemplate") JdbcTemplate maximoJdbcTemplate
     ) {
@@ -49,16 +47,16 @@ public class DpaCpuIntegrate implements AssetIntegrationTask {
         int batchSize = DEFAULT_BATCH_SIZE;
 
         if (totalCount <= 0) {
-            log.info("배치할 DPA CPU 데이터가 없습니다. totalcount={}", totalCount);
+            log.info("배치할 DPA 미디어 어댑터 데이터가 없습니다. totalcount={}", totalCount);
             return;
         }
 
         for (long offset = 0; offset < totalCount; offset += batchSize) {
             int limit = (int) Math.min(batchSize, totalCount - offset);
 
-            List<Device42DpaCpuSource> data = getData(offset, limit);
+            List<Device42DpaMediaAdapterSource> data = getData(offset, limit);
 
-            List<DpaCpuUpsert> mappedData = mapData(data);
+            List<DpaMediaAdapterUpsert> mappedData = mapData(data);
 
             putData(mappedData);
         }
@@ -75,29 +73,27 @@ public class DpaCpuIntegrate implements AssetIntegrationTask {
 
             return 0L;
         } catch (SQLException e) {
-            throw new IllegalStateException("DPA CPU 대상 파트 건수 조회에 실패했습니다.", e);
+            throw new IllegalStateException("DPA 미디어 어댑터 대상 파트 건수 조회에 실패했습니다.", e);
         }
     }
 
-    public List<Device42DpaCpuSource> getData(long offset, int limit) {
+    public List<Device42DpaMediaAdapterSource> getData(long offset, int limit) {
         String query = SOURCE_QUERY + "LIMIT %d OFFSET %d".formatted(limit, offset);
 
         try (Connection connection = connectionFactory.openConnection();
              Statement statement = connection.createStatement();
              ResultSet resultSet = statement.executeQuery(query)) {
 
-            List<Device42DpaCpuSource> rows = new ArrayList<>(limit);
+            List<Device42DpaMediaAdapterSource> rows = new ArrayList<>(limit);
 
             while (resultSet.next()) {
-                rows.add(new Device42DpaCpuSource(
+                rows.add(new Device42DpaMediaAdapterSource(
                         resultSet.getLong("part_pk"),
                         resultSet.getLong("device_fk"),
-                        resultSet.getString("slot"),
+                        resultSet.getString("serial_no"),
                         resultSet.getString("description"),
                         resultSet.getString("model_name"),
-                        getNullableInteger(resultSet, "cores"),
-                        resultSet.getBigDecimal("speed"),
-                        resultSet.getString("speed_unit"),
+                        resultSet.getString("model_description"),
                         resultSet.getString("vendor_name")
                 ));
             }
@@ -105,29 +101,29 @@ public class DpaCpuIntegrate implements AssetIntegrationTask {
             return rows;
         } catch (SQLException e) {
             throw new IllegalStateException(
-                    "DPA CPU 원천 조회에 실패했습니다. offset=" + offset + ", limit=" + limit,
+                    "DPA 미디어 어댑터 원천 조회에 실패했습니다. offset=" + offset + ", limit=" + limit,
                     e
             );
         }
     }
 
-    private List<DpaCpuUpsert> mapData(List<Device42DpaCpuSource> data) {
+    private List<DpaMediaAdapterUpsert> mapData(List<Device42DpaMediaAdapterSource> data) {
         LocalDateTime applyDateTime = LocalDateTime.now();
-        List<DpaCpuUpsert> mappedData = new ArrayList<>(data.size());
+        List<DpaMediaAdapterUpsert> mappedData = new ArrayList<>(data.size());
 
-        for (Device42DpaCpuSource source : data) {
-            mappedData.add(new DpaCpuUpsert(
+        for (Device42DpaMediaAdapterSource source : data) {
+            mappedData.add(new DpaMediaAdapterUpsert(
                     source.partPk(),
                     source.deviceFk(),
-                    trimToNull(source.slot()),
-                    ZERO_SPEED,
-                    firstNonBlank(source.description(), source.modelName()),
-                    0,
+                    firstNonBlank(
+                            source.description(),
+                            source.modelDescription(),
+                            source.modelName()
+                    ),
                     defaultUnknown(source.modelName()),
                     defaultUnknown(source.vendorName()),
-                    roundSpeed(source.speed()),
-                    source.cores(),
-                    trimToNull(source.speedUnit()),
+                    MEDIA_TYPE,
+                    trimToNull(source.serialNo()),
                     applyDateTime,
                     applyDateTime
             ));
@@ -136,31 +132,27 @@ public class DpaCpuIntegrate implements AssetIntegrationTask {
         return mappedData;
     }
 
-    public void putData(List<DpaCpuUpsert> data) {
+    public void putData(List<DpaMediaAdapterUpsert> data) {
         maximoJdbcTemplate.execute(
-                MERGE_DPA_CPU_QUERY,
+                MERGE_DPA_MEDIA_ADAPTER_QUERY,
                 (PreparedStatement statement) -> {
-                    for (DpaCpuUpsert cpu : data) {
+                    for (DpaMediaAdapterUpsert adapter : data) {
                         try {
-                            statement.setLong(1, cpu.cpuId());
-                            statement.setString(2, cpu.cpuNum());
-                            statement.setBigDecimal(3, cpu.currentSpeed());
-                            statement.setString(4, cpu.description());
-                            statement.setObject(5, cpu.is64BitEnabled(), java.sql.Types.INTEGER);
-                            statement.setString(6, cpu.makeModel());
-                            statement.setString(7, cpu.manufacturer());
-                            statement.setBigDecimal(8, cpu.maxSpeed());
-                            statement.setLong(9, cpu.nodeId());
-                            statement.setObject(10, cpu.numCore(), java.sql.Types.INTEGER);
-                            statement.setString(11, cpu.speedUnit());
-                            statement.setTimestamp(12, toTimestamp(cpu.createDate()));
-                            statement.setTimestamp(13, toTimestamp(cpu.changeDate()));
+                            statement.setLong(1, adapter.adapterId());
+                            statement.setString(2, adapter.description());
+                            statement.setString(3, adapter.makeModel());
+                            statement.setString(4, adapter.manufacturer());
+                            statement.setString(5, adapter.mediaType());
+                            statement.setLong(6, adapter.nodeId());
+                            statement.setString(7, adapter.serialNumber());
+                            statement.setTimestamp(8, toTimestamp(adapter.createDate()));
+                            statement.setTimestamp(9, toTimestamp(adapter.changeDate()));
                             statement.executeUpdate();
                         } catch (SQLException e) {
                             log.error(
-                                    "DPA CPU MERGE에 실패했습니다. cpuId={}, nodeId={}",
-                                    cpu.cpuId(),
-                                    cpu.nodeId(),
+                                    "DPA 미디어 어댑터 MERGE에 실패했습니다. adapterId={}, nodeId={}",
+                                    adapter.adapterId(),
+                                    adapter.nodeId(),
                                     e
                             );
                         }
@@ -170,25 +162,14 @@ public class DpaCpuIntegrate implements AssetIntegrationTask {
         );
     }
 
-    private static Integer getNullableInteger(ResultSet resultSet, String column) throws SQLException {
-        BigDecimal value = resultSet.getBigDecimal(column);
-        if (value == null) {
-            return null;
+    static String firstNonBlank(String... values) {
+        for (String value : values) {
+            String normalized = trimToNull(value);
+            if (normalized != null) {
+                return normalized;
+            }
         }
-        try {
-            return value.intValueExact();
-        } catch (ArithmeticException e) {
-            throw new SQLException(column + " 값을 정수로 변환할 수 없습니다: " + value, e);
-        }
-    }
-
-    static BigDecimal roundSpeed(BigDecimal value) {
-        return value == null ? null : value.setScale(2, RoundingMode.HALF_UP);
-    }
-
-    static String firstNonBlank(String primary, String fallback) {
-        String normalizedPrimary = trimToNull(primary);
-        return normalizedPrimary == null ? trimToNull(fallback) : normalizedPrimary;
+        return null;
     }
 
     static String defaultUnknown(String value) {
@@ -223,7 +204,7 @@ public class DpaCpuIntegrate implements AssetIntegrationTask {
             JOIN view_partmodel_v1 pm ON pm.partmodel_pk = p.partmodel_fk
             JOIN view_device_v2 d ON d.device_pk = p.device_fk
             LEFT JOIN view_vendor_v1 v ON v.vendor_pk = pm.vendor_fk
-            WHERE pm.type_name = 'CPU'
+            WHERE pm.type_name = 'GPU'
               AND
             """ + DEVICE_FILTER;
 
@@ -235,78 +216,60 @@ public class DpaCpuIntegrate implements AssetIntegrationTask {
             SELECT
                 p.part_pk,
                 p.device_fk,
-                p.slot,
+                p.serial_no,
                 p.description,
                 pm.name AS model_name,
-                pm.cores,
-                pm.speed,
-                pm.speed_unit,
+                pm.description AS model_description,
                 v.name AS vendor_name
             """ + SOURCE_FROM_AND_FILTER + """
-            ORDER BY p.device_fk, p.slot, p.part_pk
+            ORDER BY p.device_fk, p.part_pk
             """;
 
-    private static final String MERGE_DPA_CPU_QUERY = """
-            MERGE INTO MAXIMO.DPACPU AS target
+    private static final String MERGE_DPA_MEDIA_ADAPTER_QUERY = """
+            MERGE INTO MAXIMO.DPAMEDIAADAPTER AS target
             USING (
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ) AS source (
-                CPUID,
-                CPUNUM,
-                CURRSPEED,
+                ADAPTERID,
                 DESCRIPTION,
-                IS64BITEN,
                 MAKEMODEL,
                 MANUFACTURER,
-                MAXSPEED,
+                MEDIATYPE,
                 NODEID,
-                NUMCORE,
-                SPEEDUNIT,
+                SERIALNUMBER,
                 CREATEDATE,
                 CHANGEDATE
             )
-            ON target.CPUID = source.CPUID
+            ON target.ADAPTERID = source.ADAPTERID
             WHEN MATCHED THEN
                 UPDATE SET
-                    CPUNUM = source.CPUNUM,
-                    CURRSPEED = source.CURRSPEED,
                     DESCRIPTION = source.DESCRIPTION,
-                    IS64BITEN = source.IS64BITEN,
                     MAKEMODEL = source.MAKEMODEL,
                     MANUFACTURER = source.MANUFACTURER,
-                    MAXSPEED = source.MAXSPEED,
+                    MEDIATYPE = source.MEDIATYPE,
                     NODEID = source.NODEID,
-                    NUMCORE = source.NUMCORE,
-                    SPEEDUNIT = source.SPEEDUNIT,
+                    SERIALNUMBER = source.SERIALNUMBER,
                     CHANGEDATE = source.CHANGEDATE
             WHEN NOT MATCHED THEN
                 INSERT (
-                    CPUID,
-                    CPUNUM,
-                    CURRSPEED,
+                    ADAPTERID,
                     DESCRIPTION,
-                    IS64BITEN,
                     MAKEMODEL,
                     MANUFACTURER,
-                    MAXSPEED,
+                    MEDIATYPE,
                     NODEID,
-                    NUMCORE,
-                    SPEEDUNIT,
+                    SERIALNUMBER,
                     CREATEDATE,
                     CHANGEDATE
                 )
                 VALUES (
-                    source.CPUID,
-                    source.CPUNUM,
-                    source.CURRSPEED,
+                    source.ADAPTERID,
                     source.DESCRIPTION,
-                    source.IS64BITEN,
                     source.MAKEMODEL,
                     source.MANUFACTURER,
-                    source.MAXSPEED,
+                    source.MEDIATYPE,
                     source.NODEID,
-                    source.NUMCORE,
-                    source.SPEEDUNIT,
+                    source.SERIALNUMBER,
                     source.CREATEDATE,
                     source.CHANGEDATE
                 )

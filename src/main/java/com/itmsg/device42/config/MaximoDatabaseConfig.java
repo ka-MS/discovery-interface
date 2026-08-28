@@ -1,4 +1,4 @@
-package com.itmsg.device42.integration.config;
+package com.itmsg.device42.config;
 
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;

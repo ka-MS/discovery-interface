@@ -2,7 +2,7 @@ package com.itmsg.device42.integration.asset;
 
 import com.itmsg.device42.dto.device42.Device42DpaNetDeviceSource;
 import com.itmsg.device42.dto.maximo.DpaNetDeviceUpsert;
-import com.itmsg.device42.integration.config.Device42ConnectionFactory;
+import com.itmsg.device42.config.Device42ConnectionFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -18,10 +18,7 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @Component
 @Order(3)
@@ -30,7 +27,6 @@ public class DpaNetDeviceIntegrate implements AssetIntegrationTask {
     private static final Logger log = LoggerFactory.getLogger(DpaNetDeviceIntegrate.class);
 
     private static final int DEFAULT_BATCH_SIZE = 1000;
-    private static final String IMPORT_SOURCE = "Device42";
 
     private final Device42ConnectionFactory connectionFactory;
     private final JdbcTemplate maximoJdbcTemplate;
@@ -51,14 +47,9 @@ public class DpaNetDeviceIntegrate implements AssetIntegrationTask {
             int limit = (int) Math.min(DEFAULT_BATCH_SIZE, totalCount - offset);
             List<Device42DpaNetDeviceSource> sourceData = getData(offset, limit);
 
-            if (sourceData.isEmpty()) {
-                continue;
-            }
-
             List<DpaNetDeviceUpsert> mappedData = mapData(sourceData);
-            if (!mappedData.isEmpty()) {
-                putData(mappedData);
-            }
+
+            putData(mappedData);
         }
     }
 
@@ -99,23 +90,12 @@ public class DpaNetDeviceIntegrate implements AssetIntegrationTask {
     }
 
     private List<DpaNetDeviceUpsert> mapData(List<Device42DpaNetDeviceSource> sourceData) {
-        Map<String, Long> nodeIds = getNodeIds(sourceData);
         LocalDateTime applyDateTime = LocalDateTime.now();
         List<DpaNetDeviceUpsert> mappedData = new ArrayList<>(sourceData.size());
 
         for (Device42DpaNetDeviceSource source : sourceData) {
-            String sourceId = String.valueOf(source.devicePk());
-            Long nodeId = nodeIds.get(sourceId);
-            if (nodeId == null) {
-                log.warn(
-                        "DEPLOYEDASSET 교차키가 없어 DPA NetDevice 적재를 건너뜁니다. sourceId={}",
-                        sourceId
-                );
-                continue;
-            }
-
             mappedData.add(new DpaNetDeviceUpsert(
-                    nodeId,
+                    source.devicePk().longValue(),
                     source.macAddress(),
                     source.networkAddress(),
                     source.osVersion(),
@@ -125,31 +105,6 @@ public class DpaNetDeviceIntegrate implements AssetIntegrationTask {
         }
 
         return mappedData;
-    }
-
-    private Map<String, Long> getNodeIds(List<Device42DpaNetDeviceSource> sourceData) {
-        String placeholders = String.join(", ", Collections.nCopies(sourceData.size(), "?"));
-        String query = DEPLOYED_ASSET_NODE_ID_QUERY.formatted(placeholders);
-
-        return maximoJdbcTemplate.query(
-                query,
-                statement -> {
-                    statement.setString(1, IMPORT_SOURCE);
-                    for (int index = 0; index < sourceData.size(); index++) {
-                        statement.setString(index + 2, String.valueOf(sourceData.get(index).devicePk()));
-                    }
-                },
-                resultSet -> {
-                    Map<String, Long> nodeIds = new HashMap<>();
-                    while (resultSet.next()) {
-                        nodeIds.put(
-                                resultSet.getString("sourceid"),
-                                resultSet.getLong("nodeid")
-                        );
-                    }
-                    return nodeIds;
-                }
-        );
     }
 
     public void putData(List<DpaNetDeviceUpsert> data) {
@@ -215,13 +170,6 @@ public class DpaNetDeviceIntegrate implements AssetIntegrationTask {
             FROM target t
             LEFT JOIN link l ON l.physical_pk = t.device_pk
             ORDER BY t.device_pk
-            """;
-
-    private static final String DEPLOYED_ASSET_NODE_ID_QUERY = """
-            SELECT nodeid, sourceid
-            FROM MAXIMO.DEPLOYEDASSET
-            WHERE importsource = ?
-              AND sourceid IN (%s)
             """;
 
     private static final String MERGE_DPA_NET_DEVICE_QUERY = """

@@ -2,7 +2,7 @@ package com.itmsg.device42.integration.asset;
 
 import com.itmsg.device42.dto.device42.Device42DeployedAssetSource;
 import com.itmsg.device42.dto.maximo.DeployedAsset;
-import com.itmsg.device42.integration.config.Device42ConnectionFactory;
+import com.itmsg.device42.config.Device42ConnectionFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -40,23 +40,17 @@ public class DeployedAssetIntegrate implements AssetIntegrationTask {
         long totalCount = getTotalCount();
         int batchSize = DEFAULT_BATCH_SIZE;
 
-        if (totalCount <= 0 || batchSize <= 0) {
+        if (totalCount <= 0) {
+            log.info("배치할 데이터가 없습니다. totalcount={}", totalCount);
             return;
         }
 
         for (long offset = 0; offset < totalCount; offset += batchSize) {
-            int limit = (int) Math.min((long) batchSize, totalCount - offset);
+            int limit = (int) Math.min(batchSize, totalCount - offset);
+
             List<Device42DeployedAssetSource> data = getData(offset, limit);
 
-            if (data == null || data.isEmpty()) {
-                continue;
-            }
-
             List<DeployedAsset> mappedData = mapData(data);
-
-            if (mappedData.isEmpty()) {
-                continue;
-            }
 
             putData(mappedData);
         }

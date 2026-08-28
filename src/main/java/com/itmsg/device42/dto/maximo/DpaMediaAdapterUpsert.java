@@ -1,20 +1,15 @@
 package com.itmsg.device42.dto.maximo;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-public record DpaCpuUpsert(
-        Long cpuId,
+public record DpaMediaAdapterUpsert(
+        Long adapterId,
         Long nodeId,
-        String cpuNum,
-        BigDecimal currentSpeed,
         String description,
-        Integer is64BitEnabled,
         String makeModel,
         String manufacturer,
-        BigDecimal maxSpeed,
-        Integer numCore,
-        String speedUnit,
+        String mediaType,
+        String serialNumber,
         LocalDateTime createDate,
         LocalDateTime changeDate
 ) {

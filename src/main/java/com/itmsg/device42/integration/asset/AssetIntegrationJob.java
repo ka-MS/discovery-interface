@@ -24,11 +24,15 @@ public class AssetIntegrationJob implements IntegrationJob {
     public void run() {
         List<Exception> failures = new ArrayList<>();
 
+        int i = 0;
         for (AssetIntegrationTask task : tasks) {
             String taskName = task.getClass().getSimpleName();
 
             try {
                 log.info("{} 작업을 시작합니다.", taskName);
+                i++;
+
+//                if(i == 3) break;
 
                 task.integrate();
 

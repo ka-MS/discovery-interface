@@ -2,7 +2,7 @@ package com.itmsg.device42.integration.asset;
 
 import com.itmsg.device42.dto.device42.Device42DpaComputerSource;
 import com.itmsg.device42.dto.maximo.DpaComputer;
-import com.itmsg.device42.integration.config.Device42ConnectionFactory;
+import com.itmsg.device42.config.Device42ConnectionFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -17,7 +17,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 @Component
 @Order(2)
@@ -26,7 +27,6 @@ public class DpaComputerIntegrate implements AssetIntegrationTask {
     private static final Logger log = LoggerFactory.getLogger(DpaComputerIntegrate.class);
 
     private static final int DEFAULT_BATCH_SIZE = 10;
-    private static final String IMPORT_SOURCE = "Device42";
     private static final DateTimeFormatter US_DATE_FORMATTER =
             DateTimeFormatter.ofPattern("MM/dd/yyyy");
     private static final DateTimeFormatter LEGACY_DATE_TIME_FORMATTER =
@@ -53,17 +53,10 @@ public class DpaComputerIntegrate implements AssetIntegrationTask {
         }
 
         for (long offset = 0; offset < totalCount; offset += batchSize) {
-            int limit = (int) Math.min((long) batchSize, totalCount - offset);
+            int limit = (int) Math.min(batchSize, totalCount - offset);
             List<Device42DpaComputerSource> data = getData(offset, limit);
 
-            if (data.isEmpty()) {
-                continue;
-            }
-
             List<DpaComputer> mappedData = mapData(data);
-            if (mappedData.isEmpty()) {
-                continue;
-            }
 
             putData(mappedData);
         }
@@ -91,6 +84,7 @@ public class DpaComputerIntegrate implements AssetIntegrationTask {
             while (resultSet.next()) {
                 computers.add(new Device42DpaComputerSource(
                         resultSet.getInt("device_pk"),
+                        resultSet.getString("bios_name"),
                         resultSet.getString("bios_version"),
                         resultSet.getString("bios_release_date"),
                         resultSet.getBigDecimal("ram"),
@@ -109,23 +103,12 @@ public class DpaComputerIntegrate implements AssetIntegrationTask {
     }
 
     private List<DpaComputer> mapData(List<Device42DpaComputerSource> data) {
-        Map<String, Long> nodeIds = getNodeIds(data);
         LocalDateTime applyDateTime = LocalDateTime.now();
         List<DpaComputer> mappedData = new ArrayList<>(data.size());
 
         for (Device42DpaComputerSource source : data) {
-            String sourceId = String.valueOf(source.devicePk());
-            Long nodeId = nodeIds.get(sourceId);
-            if (nodeId == null) {
-                log.warn(
-                        "DEPLOYEDASSET 교차키가 없어 DPA Computer 적재를 건너뜁니다. sourceId={}",
-                        sourceId
-                );
-                continue;
-            }
-
             mappedData.add(new DpaComputer(
-                    nodeId,
+                    (long) source.devicePk(),
                     null,
                     null,
                     null,
@@ -135,7 +118,7 @@ public class DpaComputerIntegrate implements AssetIntegrationTask {
                     null,
                     null,
                     null,
-                    null,
+                    source.biosName(),
                     source.biosVersion(),
                     parseBiosDate(source.biosReleaseDate()),
                     0,
@@ -172,35 +155,6 @@ public class DpaComputerIntegrate implements AssetIntegrationTask {
         return mappedData;
     }
 
-    private Map<String, Long> getNodeIds(List<Device42DpaComputerSource> data) {
-        if (data.isEmpty()) {
-            return Map.of();
-        }
-
-        String placeholders = String.join(", ", Collections.nCopies(data.size(), "?"));
-        String query = DEPLOYED_ASSET_NODE_ID_QUERY.formatted(placeholders);
-
-        return maximoJdbcTemplate.query(
-                query,
-                statement -> {
-                    statement.setString(1, IMPORT_SOURCE);
-                    for (int index = 0; index < data.size(); index++) {
-                        statement.setString(index + 2, String.valueOf(data.get(index).devicePk()));
-                    }
-                },
-                resultSet -> {
-                    Map<String, Long> nodeIds = new HashMap<>();
-                    while (resultSet.next()) {
-                        nodeIds.put(
-                                resultSet.getString("sourceid"),
-                                resultSet.getLong("nodeid")
-                        );
-                    }
-                    return nodeIds;
-                }
-        );
-    }
-
     public void putData(List<DpaComputer> data) {
         maximoJdbcTemplate.execute(
                 MERGE_DPA_COMPUTER_QUERY,
@@ -208,17 +162,18 @@ public class DpaComputerIntegrate implements AssetIntegrationTask {
                     for (DpaComputer computer : data) {
                         try {
                             statement.setLong(1, computer.nodeId());
-                            statement.setString(2, computer.biosVersion());
-                            statement.setTimestamp(3, toTimestamp(computer.biosDate()));
-                            statement.setObject(4, computer.supportsWmi(), Types.INTEGER);
-                            statement.setObject(5, computer.biosPnp(), Types.INTEGER);
-                            statement.setBigDecimal(6, computer.ramSize());
-                            statement.setString(7, computer.ramUnit());
-                            statement.setObject(8, computer.smbios(), Types.INTEGER);
-                            statement.setTimestamp(9, toTimestamp(computer.createDate()));
-                            statement.setTimestamp(10, toTimestamp(computer.changeDate()));
-                            statement.setObject(11, computer.numCpuTotal1(), Types.INTEGER);
-                            statement.setObject(12, computer.numCoreTotal(), Types.INTEGER);
+                            statement.setString(2, computer.biosName());
+                            statement.setString(3, computer.biosVersion());
+                            statement.setTimestamp(4, toTimestamp(computer.biosDate()));
+                            statement.setObject(5, computer.supportsWmi(), Types.INTEGER);
+                            statement.setObject(6, computer.biosPnp(), Types.INTEGER);
+                            statement.setBigDecimal(7, computer.ramSize());
+                            statement.setString(8, computer.ramUnit());
+                            statement.setObject(9, computer.smbios(), Types.INTEGER);
+                            statement.setTimestamp(10, toTimestamp(computer.createDate()));
+                            statement.setTimestamp(11, toTimestamp(computer.changeDate()));
+                            statement.setObject(12, computer.numCpuTotal1(), Types.INTEGER);
+                            statement.setObject(13, computer.numCoreTotal(), Types.INTEGER);
                             statement.executeUpdate();
                         } catch (SQLException e) {
                             log.error(
@@ -233,6 +188,10 @@ public class DpaComputerIntegrate implements AssetIntegrationTask {
         );
     }
 
+    /**
+     * 숫자형 조회값을 nullable Integer로 변환한다.
+     * 소수이거나 Integer 범위를 벗어난 값은 데이터 오류로 처리한다.
+     */
     private static Integer getNullableInteger(ResultSet resultSet, String column) throws SQLException {
         BigDecimal value = resultSet.getBigDecimal(column);
         if (value == null) {
@@ -245,10 +204,12 @@ public class DpaComputerIntegrate implements AssetIntegrationTask {
         }
     }
 
+    /** RAM 용량을 소수점 둘째 자리까지 반올림한다. */
     private static BigDecimal roundRamSize(BigDecimal value) {
         return value == null ? null : value.setScale(2, RoundingMode.HALF_UP);
     }
 
+    /** CPU 개수와 CPU당 코어 수를 곱해 전체 코어 수를 계산한다. */
     private static Integer calculateTotalCores(Integer totalCpus, Integer corePerCpu) {
         if (totalCpus == null || corePerCpu == null) {
             return null;
@@ -256,6 +217,10 @@ public class DpaComputerIntegrate implements AssetIntegrationTask {
         return Math.multiplyExact(totalCpus, corePerCpu);
     }
 
+    /**
+     * Device42에서 관측되는 BIOS 날짜 형식을 LocalDateTime으로 변환한다.
+     * 값이 없거나 지원하지 않는 형식이면 null을 반환한다.
+     */
     static LocalDateTime parseBiosDate(String value) {
         if (value == null || value.isBlank()) {
             return null;
@@ -278,6 +243,7 @@ public class DpaComputerIntegrate implements AssetIntegrationTask {
         }
     }
 
+    /** LocalDateTime을 JDBC Timestamp로 변환하며 null은 그대로 유지한다. */
     private static Timestamp toTimestamp(LocalDateTime value) {
         return value == null ? null : Timestamp.valueOf(value);
     }
@@ -304,6 +270,7 @@ public class DpaComputerIntegrate implements AssetIntegrationTask {
     private static final String DEVICE_QUERY = """
             SELECT
                 d.device_pk,
+                v.name AS bios_name,
                 d.bios_version,
                 d.bios_release_date,
                 d.ram,
@@ -311,24 +278,20 @@ public class DpaComputerIntegrate implements AssetIntegrationTask {
                 d.total_cpus,
                 d.core_per_cpu
             FROM view_device_v2 d
+            LEFT JOIN view_vendor_v1 v
+                ON v.vendor_pk = d.bios_vendor_fk
             WHERE
             """ + DEVICE_FILTER + """
             ORDER BY d.device_pk
             """;
 
-    private static final String DEPLOYED_ASSET_NODE_ID_QUERY = """
-            SELECT nodeid, sourceid
-            FROM MAXIMO.DEPLOYEDASSET
-            WHERE importsource = ?
-              AND sourceid IN (%s)
-            """;
-
     private static final String MERGE_DPA_COMPUTER_QUERY = """
             MERGE INTO MAXIMO.DPACOMPUTER AS target
             USING (
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ) AS source (
                 NODEID,
+                BIOSNAME,
                 BIOSVERSION,
                 BIOSDATE,
                 SUPPORTSWMI,
@@ -344,6 +307,7 @@ public class DpaComputerIntegrate implements AssetIntegrationTask {
             ON target.NODEID = source.NODEID
             WHEN MATCHED THEN
                 UPDATE SET
+                    BIOSNAME = source.BIOSNAME,
                     BIOSVERSION = source.BIOSVERSION,
                     BIOSDATE = source.BIOSDATE,
                     SUPPORTSWMI = source.SUPPORTSWMI,
@@ -357,6 +321,7 @@ public class DpaComputerIntegrate implements AssetIntegrationTask {
             WHEN NOT MATCHED THEN
                 INSERT (
                     NODEID,
+                    BIOSNAME,
                     BIOSVERSION,
                     BIOSDATE,
                     SUPPORTSWMI,
@@ -371,6 +336,7 @@ public class DpaComputerIntegrate implements AssetIntegrationTask {
                 )
                 VALUES (
                     source.NODEID,
+                    source.BIOSNAME,
                     source.BIOSVERSION,
                     source.BIOSDATE,
                     source.SUPPORTSWMI,

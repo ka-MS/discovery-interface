@@ -2,7 +2,7 @@ package com.itmsg.device42.integration.asset;
 
 import com.itmsg.device42.dto.device42.Device42DpaNetPrinterSource;
 import com.itmsg.device42.dto.maximo.DpaNetPrinterUpsert;
-import com.itmsg.device42.integration.config.Device42ConnectionFactory;
+import com.itmsg.device42.config.Device42ConnectionFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -20,10 +20,7 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @Component
 @Order(4)
@@ -32,7 +29,6 @@ public class DpaNetPrinterIntegrate implements AssetIntegrationTask {
     private static final Logger log = LoggerFactory.getLogger(DpaNetPrinterIntegrate.class);
 
     private static final int DEFAULT_BATCH_SIZE = 1000;
-    private static final String IMPORT_SOURCE = "Device42";
 
     private final Device42ConnectionFactory connectionFactory;
     private final JdbcTemplate maximoJdbcTemplate;
@@ -53,14 +49,9 @@ public class DpaNetPrinterIntegrate implements AssetIntegrationTask {
             int limit = (int) Math.min(DEFAULT_BATCH_SIZE, totalCount - offset);
             List<Device42DpaNetPrinterSource> sourceData = getData(offset, limit);
 
-            if (sourceData.isEmpty()) {
-                continue;
-            }
-
             List<DpaNetPrinterUpsert> mappedData = mapData(sourceData);
-            if (!mappedData.isEmpty()) {
-                putData(mappedData);
-            }
+
+            putData(mappedData);
         }
     }
 
@@ -103,23 +94,12 @@ public class DpaNetPrinterIntegrate implements AssetIntegrationTask {
     }
 
     private List<DpaNetPrinterUpsert> mapData(List<Device42DpaNetPrinterSource> sourceData) {
-        Map<String, Long> nodeIds = getNodeIds(sourceData);
         LocalDateTime applyDateTime = LocalDateTime.now();
         List<DpaNetPrinterUpsert> mappedData = new ArrayList<>(sourceData.size());
 
         for (Device42DpaNetPrinterSource source : sourceData) {
-            String sourceId = String.valueOf(source.devicePk());
-            Long nodeId = nodeIds.get(sourceId);
-            if (nodeId == null) {
-                log.warn(
-                        "DEPLOYEDASSET 교차키가 없어 DPA NetPrinter 적재를 건너뜁니다. sourceId={}",
-                        sourceId
-                );
-                continue;
-            }
-
             mappedData.add(new DpaNetPrinterUpsert(
-                    nodeId,
+                    source.devicePk().longValue(),
                     roundCurrentRam(source.currentRam()),
                     source.macAddress(),
                     source.networkAddress(),
@@ -131,31 +111,6 @@ public class DpaNetPrinterIntegrate implements AssetIntegrationTask {
         }
 
         return mappedData;
-    }
-
-    private Map<String, Long> getNodeIds(List<Device42DpaNetPrinterSource> sourceData) {
-        String placeholders = String.join(", ", Collections.nCopies(sourceData.size(), "?"));
-        String query = DEPLOYED_ASSET_NODE_ID_QUERY.formatted(placeholders);
-
-        return maximoJdbcTemplate.query(
-                query,
-                statement -> {
-                    statement.setString(1, IMPORT_SOURCE);
-                    for (int index = 0; index < sourceData.size(); index++) {
-                        statement.setString(index + 2, String.valueOf(sourceData.get(index).devicePk()));
-                    }
-                },
-                resultSet -> {
-                    Map<String, Long> nodeIds = new HashMap<>();
-                    while (resultSet.next()) {
-                        nodeIds.put(
-                                resultSet.getString("sourceid"),
-                                resultSet.getLong("nodeid")
-                        );
-                    }
-                    return nodeIds;
-                }
-        );
     }
 
     public void putData(List<DpaNetPrinterUpsert> data) {
@@ -226,13 +181,6 @@ public class DpaNetPrinterIntegrate implements AssetIntegrationTask {
               AND (d.network_device = false OR d.network_device IS NULL)
               AND d.physicalsubtype = 'Network Printer'
             ORDER BY d.device_pk
-            """;
-
-    private static final String DEPLOYED_ASSET_NODE_ID_QUERY = """
-            SELECT nodeid, sourceid
-            FROM MAXIMO.DEPLOYEDASSET
-            WHERE importsource = ?
-              AND sourceid IN (%s)
             """;
 
     private static final String MERGE_DPA_NET_PRINTER_QUERY = """

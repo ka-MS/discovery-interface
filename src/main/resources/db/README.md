@@ -26,6 +26,9 @@
 | --- | --- | --- |
 | `discovery/001-source-target-map.sql` | `DISCOVERY.SOURCE_TARGET_MAP` | 2026-08-28 |
 
+`SOURCE_TARGET_MAP`은 적용 이력만 남아 있으며 현행 Device42 적재에서는 사용하지
+않는다. 현행 적재는 Device42 PK를 Maximo ID로 직접 사용한다.
+
 ## 애플리케이션은 이 파일을 실행하지 않는다
 
 Spring Boot 의 `spring.sql.init` 은 기본값이 `embedded` 라 Db2 같은 외부

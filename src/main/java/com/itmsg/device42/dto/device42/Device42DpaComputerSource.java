@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 
 public record Device42DpaComputerSource(
         Integer devicePk,
+        String biosName,
         String biosVersion,
         String biosReleaseDate,
         BigDecimal ram,

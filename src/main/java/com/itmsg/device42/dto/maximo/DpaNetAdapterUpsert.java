@@ -3,18 +3,19 @@ package com.itmsg.device42.dto.maximo;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-public record DpaCpuUpsert(
-        Long cpuId,
+public record DpaNetAdapterUpsert(
+        Long adapterId,
         Long nodeId,
-        String cpuNum,
-        BigDecimal currentSpeed,
+        String adapterType,
+        BigDecimal bandwidth,
+        String bandwidthUnit,
         String description,
-        Integer is64BitEnabled,
         String makeModel,
         String manufacturer,
-        BigDecimal maxSpeed,
-        Integer numCore,
-        String speedUnit,
+        String netMacAddr1,
+        String netMacAddr2,
+        String port,
+        String protocol,
         LocalDateTime createDate,
         LocalDateTime changeDate
 ) {

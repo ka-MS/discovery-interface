@@ -1,4 +1,4 @@
-package com.itmsg.device42.integration.config;
+package com.itmsg.device42.config;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
