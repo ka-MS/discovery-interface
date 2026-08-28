@@ -44,3 +44,6 @@ out/
 
 ### TMP
 local/
+
+# 실제 자격정보. 로컬 전용
+config/application.env
