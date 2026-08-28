@@ -10,7 +10,7 @@
 - 부모: MAXIMO.DEPLOYEDASSET (NODEID)
 - 카디널리티: DEPLOYEDASSET 1 : N DPAMEDIAADAPTER (PK 는 `ADAPTERID`. 관측은 39노드/39행이나 스키마는 다건을 허용한다)
 - 선행: DEPLOYEDASSET
-- 동기화 ID: `SOURCE_TARGET_MAP`의 `view_part_v1.part_pk`
+- MERGE ID: `ADAPTERID = view_part_v1.part_pk`
 
 ## 2. 테이블 매핑
 
@@ -20,7 +20,6 @@
 | `view_partmodel_v1` | (보강) | `view_part_v1.partmodel_fk = partmodel_pk` | N:1 |
 | `view_vendor_v1` | (보강) | `view_partmodel_v1.vendor_fk = vendor_pk` | N:1 |
 | `view_device_v2` | (대상 판정) | `view_part_v1.device_fk = device_pk` | N:1 |
-| MAXIMO.DEPLOYEDASSET | (교차키) | `SOURCEID = view_part_v1.device_fk AND IMPORTSOURCE = 'Device42'` → `NODEID` | N:1 |
 
 뷰 컬럼 구조는 두 서버가 동일하다. COMPUTER 대상 GPU 파트는 1.35에서
 1장비/1행, 2.68에서 3장비/6행이다.
@@ -32,13 +31,12 @@
 | GPU 파트만 | `pm.type_name = 'GPU'` | `view_part_v1`은 여러 파트 종류를 한 테이블에 담는다 |
 | 부모 적재 대상 | `d.type IN ('virtual','physical') AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)` | DEPLOYEDASSET 필터와 일치시킨다 |
 | COMPUTER만 | `(d.network_device = false OR d.network_device IS NULL) AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer','PDU'))` | 다른 ASSETCLASS와 PDU의 자식을 만들지 않는다 |
-| 부모 존재 | 교차키 조회 결과가 있는 것만 | 부모가 없으면 적재할 수 없다 |
 
 ## 4. 컬럼 매핑
 
 | Target 컬럼 | 한글명 | 타입 | Null | 구분 | Source | 변환·조건 |
 | --- | --- | --- | --- | --- | --- | --- |
-| ADAPTERID | 어댑터 | BIGINT(19) | N | 채번 | – | `NEXT VALUE FOR MAXIMO.DPAMEDIAADAPTERSEQ`. 테이블 전역 연번이며 INSERT 시에만 발번하고 MATCHED 시 유지한다 |
+| ADAPTERID | 어댑터 | BIGINT(19) | N | 직접 | `view_part_v1.part_pk` | Maximo ID로 그대로 사용하며 MERGE 키로 삼는다 |
 | ASSETTAG | 자산 태그 | ALN(64) | Y | 원천없음 | – | `view_part_v1.asset_no` 양 서버 합계 관측 0/7 |
 | BUSTYPE | 버스 유형 | ALN(32) | Y | 원천없음 | – | `view_partmodel_v1.connectivity_name` 양 서버 합계 관측 0/7 |
 | CHANGEDATE | 변경 날짜 | DATETIME(10) | N | 채번 | – | 적재 시각 |
@@ -49,7 +47,7 @@
 | MANUFACTURER | 제조업체 | ALN(128) | N | 직접 | `view_vendor_v1.name` | 1.35는 0/1, 2.68은 5/6. 없으면 `UNKNOWN`. DEFAULTVALUE=UNKNOWN |
 | MEDIATYPE | 미디어 어댑터 유형 | ALN(32) | Y | 상수 | – | `'Video'`. 기존 수집분도 39/39 전건 `Video` |
 | MEMORYTYPE | 메모리 유형 | ALN(32) | Y | 원천없음 | – | `view_partmodel_v1.ramtype` 양 서버 합계 관측 0/7 |
-| NODEID | 노드 ID | BIGINT(19) | N | 채번 | – | 부모 DEPLOYEDASSET.NODEID. `(SOURCEID, IMPORTSOURCE)` 로 조회 |
+| NODEID | 노드 ID | BIGINT(19) | N | 직접 | `view_part_v1.device_fk` | 부모 DEPLOYEDASSET와 동일한 ID를 직접 사용한다 |
 | RAMSIZE | RAM 크기 | DECIMAL(10,2) | Y | 원천없음 | – | `view_partmodel_v1.ramsize` 양 서버 합계 관측 0/7 |
 | RAMUNIT | RAM 단위 | ALN(16) | Y | 원천없음 | – | 7/7에 단위 `GB`는 있으나 대응 `ramsize`가 없어 단독 적재하지 않는다 |
 | SERIALNUMBER | 일련 번호 | ALN(64) | Y | 직접 | `view_part_v1.serial_no` | 양 서버 합계 7/7. PCI·GPU 장치 식별자이며 관측 최대 62자 |

@@ -18,9 +18,9 @@
 | Source | Target | 조인 조건 | 카디널리티 |
 | --- | --- | --- | --- |
 | `view_device_v2` | MAXIMO.DPACOMPUTER | – | 1:1 |
-| MAXIMO.DEPLOYEDASSET | (교차키) | `SOURCEID = device_pk AND IMPORTSOURCE = 'Device42'` → `NODEID` | N:1 |
 
-MERGE 키는 `NODEID` 단독이다. 노드당 1행이므로 부모와 1:1 이다.
+`NODEID = view_device_v2.device_pk` 다. MERGE 키는 `NODEID` 단독이며 노드당
+1행이므로 부모와 1:1 이다.
 
 ## 3. 조회 조건
 
@@ -38,7 +38,7 @@ MERGE 키는 `NODEID` 단독이다. 노드당 1행이므로 부모와 1:1 이다
 | Target 컬럼 | 한글명 | 타입 | Null | 구분 | Source | 변환·조건 |
 | --- | --- | --- | --- | --- | --- | --- |
 | BIOSDATE | BIOS 날짜 | DATETIME(10) | Y | 변환 | `view_device_v2.bios_release_date` | `yyyy-MM-dd`, `MM/dd/yyyy`, `yyyy/MM/dd HH:mm` 순으로 변환한다. 모두 실패하면 경고를 남기고 NULL. 관측 .35 4/66 · .68 2/28 |
-| BIOSNAME | BIOS | ALN(64) | Y | 원천없음 | – | `view_device_v2.bios_vendor_fk` 가 있으나 .68 에서 28대 중 1대뿐이다 |
+| BIOSNAME | BIOS | ALN(64) | Y | 직접 | `view_vendor_v1.name` | `view_vendor_v1.vendor_pk = view_device_v2.bios_vendor_fk`로 LEFT JOIN. 제조사 정보가 없는 장비는 NULL |
 | BIOSPNP | PNP | YORN(1) | N | 상수 | – | `0` |
 | BIOSVERSION | BIOS 버전 | ALN(32) | Y | 직접 | `view_device_v2.bios_version` | 수집률이 매우 낮다. .68 은 대상 28대 중 2대뿐이다 |
 | CAPACITYMODEL1 | 용량 모델 | ALN(128) | Y | 원천없음 | – | 메인프레임 용량 지표. 수집 대상이 아니다 |
@@ -53,7 +53,7 @@ MERGE 키는 `NODEID` 단독이다. 노드당 1행이므로 부모와 1:1 이다
 | MOBOMANUFACTURER | 제조업체 | ALN(128) | Y | 원천없음 | – |  |
 | MOBOSERIALNUMBER | 일련 번호 | ALN(64) | Y | 원천없음 | – |  |
 | MSUS1 | MSU 용량 | INTEGER(12) | Y | 원천없음 | – | 메인프레임 용량 지표. 수집 대상이 아니다 |
-| NODEID | 노드 ID | BIGINT(19) | N | 채번 | – | 부모 DEPLOYEDASSET.NODEID. `(SOURCEID, IMPORTSOURCE)` 로 조회. 교차키가 없으면 로그만 남기고 건너뛴다 |
+| NODEID | 노드 ID | BIGINT(19) | N | 직접 | `view_device_v2.device_pk` | 부모 DEPLOYEDASSET와 동일한 ID를 직접 사용한다 |
 | NUMCORETOTAL | 총 코어 | INTEGER(12) | Y | 변환 | `view_device_v2`.total_cpus, .core_per_cpu | 두 값의 곱. 하나라도 NULL 이면 NULL |
 | NUMCPUCONFIG1 | 구성된 프로세서 수 | INTEGER(12) | Y | 원천없음 | – |  |
 | NUMCPUTOTAL1 | 총 프로세서 수 | INTEGER(12) | Y | 직접 | `view_device_v2.total_cpus` | .68 은 28대 중 20대만 값이 있다 |
@@ -87,6 +87,7 @@ MERGE 키는 `NODEID` 단독이다. 노드당 1행이므로 부모와 1:1 이다
 ```sql
 SELECT
     d.device_pk,
+    v.name AS bios_name,
     d.bios_version,
     d.bios_release_date,
     d.ram,
@@ -94,11 +95,13 @@ SELECT
     d.total_cpus,
     d.core_per_cpu
 FROM view_device_v2 d
+ LEFT JOIN VIEW_VENDOR_V1 v
+   ON v.vendor_pk = d.bios_vendor_fk
 WHERE d.type IN ('virtual', 'physical')
   AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)
   AND (d.network_device = false OR d.network_device IS NULL)
   AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer', 'PDU'))
-ORDER BY d.device_pk
+ORDER BY d.device_pk;
 ```
 
 ## 6. 미결

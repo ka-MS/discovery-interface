@@ -10,7 +10,7 @@
 ## 1. 관계
 
 - 계층의 루트. 부모 없음.
-- `NODEID` 는 `MAXIMO.DEPLOYEDASSETSEQ` 로 발번한다.
+- `NODEID` 는 `view_device_v2.device_pk` 를 그대로 사용한다.
 - 적재 대상 필터와 키 전략은 3번에 기술한다.
 
 ## 2. 테이블 매핑
@@ -21,7 +21,7 @@
 | `view_hardware_v1` | (보강) | `view_device_v2.hardware_fk = hardware_pk` | N:1 |
 | `view_vendor_v1` | (보강) | `view_hardware_v1.vendor_fk = vendor_pk` | N:1 |
 
-MERGE 키는 `(SOURCEID, IMPORTSOURCE)` 다. 재실행해도 멱등하다.
+MERGE 키는 `NODEID` 다. `NODEID = device_pk` 이므로 재실행해도 멱등하다.
 
 ## 3. 조회 조건
 
@@ -46,17 +46,17 @@ MERGE 키는 `(SOURCEID, IMPORTSOURCE)` 다. 재실행해도 멱등하다.
 | GUID | 발견 ID | ALN(192) | Y | 원천없음 | – |  |
 | HWDETECTIONTOOL | 하드웨어 검색 도구 | ALN(256) | Y | 상수 | – | `'Device42'` |
 | HWLASTSCANDATE | 하드웨어 최종 스캔 날짜 | DATETIME(10) | Y | 직접 | `view_device_v2`.last_discovered |  |
-| IMPORTSOURCE | 가져오기 소스 | ALN(128) | Y | 상수 | – | `'Device42'`. MERGE 키의 일부 |
+| IMPORTSOURCE | 가져오기 소스 | ALN(128) | Y | 상수 | – | `'Device42'` |
 | MAKEMODEL | 제조/모델 | ALN(128) | Y | 직접 | `view_hardware_v1.name` | `view_device_v2.hardware_fk` 조인. 가상 장비는 양쪽 서버 모두 전건 NULL (.68 VMWare 0/18, EC2 0/8 · .35 VMWare 0/55) |
 | MANUFACTURER | 제조업체 | ALN(128) | N | 직접 | `view_vendor_v1.name` | `view_hardware_v1.vendor_fk` 조인. 없으면 `UNKNOWN`. DEFAULTVALUE=UNKNOWN |
-| NODEID | 노드 ID | BIGINT(19) | N | 채번 | – | `MAXIMO.DEPLOYEDASSETSEQ`. INSERT 시에만 발번, MERGE MATCHED 시 유지 |
+| NODEID | 노드 ID | BIGINT(19) | N | 직접 | `view_device_v2.device_pk` | Maximo ID로 그대로 사용하며 MERGE 키로 삼는다 |
 | NODEID2 | 노드 ID 2 | BIGINT(19) | Y | 원천없음 | – | 보조 키 컬럼. 현행 적재는 사용하지 않는다 |
 | NODENAME | 노드 | ALN(128) | N | 직접 | `view_device_v2`.name | 비어 있으면 `UNKNOWN` |
 | ORGID | 조직 | UPPER(8) | Y | 원천없음 | – | Maximo 조직 체계 값. 수집 원천이 아니다 |
 | PLUSPCUSTOMER | 고객 | UPPER(12) | Y | 원천없음 | – |  |
 | SERIALNUMBER | 일련 번호 | ALN(64) | Y | 직접 | `view_device_v2.serial_no` | .68 VMWare 17/18, EC2 0/8 · .35 전체 12/69 |
 | SITEID | 사이트 | UPPER(8) | Y | 원천없음 | – | Maximo 조직 체계 값. 수집 원천이 아니다 |
-| SOURCEID | 소스 | ALN(128) | Y | 변환 | `view_device_v2`.device_pk | 문자열로 변환. MERGE 키의 일부 |
+| SOURCEID | 소스 | ALN(128) | Y | 변환 | `view_device_v2`.device_pk | 문자열로 변환 |
 | SOURCEID2 | Source2 | ALN(128) | Y | 원천없음 | – | 보조 키 컬럼. 현행 적재는 사용하지 않는다 |
 | SUPPORTSSNMP | SNMP 지원 | YORN(1) | N | 상수 | – | `0` |
 | SYSTEMROLE | 역할 | ALN(32) | Y | 미결 | `view_device_v2`.type, .virtualsubtype, .physicalsubtype | 기존 수집분은 13종(Server, Network PC, Unix Box 등)을 쓴다. D42 타입 체계를 여기에 대응시킬 자리이나 값 대응 규칙 미정 |

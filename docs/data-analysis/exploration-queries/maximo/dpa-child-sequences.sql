@@ -1,4 +1,4 @@
--- 자체 ID를 쓰는 DPA 자식 테이블의 Maximo 시퀀스와 현재 ID 범위를 확인한다.
+-- Device42 적재에는 쓰지 않는 기존 Maximo 시퀀스와 현재 ID 범위를 확인한다.
 
 -- name: target-sequences
 SELECT SEQNAME, START, INCREMENT, NEXTCACHEFIRSTVALUE

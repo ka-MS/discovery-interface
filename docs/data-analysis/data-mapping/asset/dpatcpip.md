@@ -10,7 +10,7 @@
 - 부모: MAXIMO.DEPLOYEDASSET (NODEID)
 - 카디널리티: DEPLOYEDASSET 1 : N DPATCPIP (PK 는 `TCPIPID`. 관측은 53노드/53행이나 스키마는 다건을 허용한다)
 - 선행: DEPLOYEDASSET
-- 동기화 ID: `SOURCE_TARGET_MAP`의 `view_ipaddress_v1.ipaddress_pk`
+- MERGE ID: `TCPIPID = view_ipaddress_v1.ipaddress_pk`
 
 기존 수집분은 노드당 1행이지만 스키마는 N을 허용한다. Device42 는 장비당
 IP 가 여럿이므로 IP 1건당 1행을 적재한다. 1행으로 줄이기 위한 대표 IP 선택
@@ -23,7 +23,6 @@ IP 가 여럿이므로 IP 1건당 1행을 적재한다. 1행으로 줄이기 위
 | `view_ipaddress_v1` | MAXIMO.DPATCPIP | – | 1:1 (IP 1건 = 행 1건) |
 | `view_subnet_v1` | (보강) | `view_ipaddress_v1.subnet_fk = subnet_pk` | N:1 |
 | `view_device_v2` | (대상 판정·HOST) | `view_ipaddress_v1.device_fk = device_pk` | N:1 |
-| MAXIMO.DEPLOYEDASSET | (교차키) | `SOURCEID = view_ipaddress_v1.device_fk AND IMPORTSOURCE = 'Device42'` → `NODEID` | N:1 |
 
 장비당 IP 건수 분포는 아래와 같다. 2.68 에는 IP 를 9개 가진 장비가 있어
 1:N 이 관측으로도 분명하다.
@@ -46,7 +45,6 @@ IP 가 여럿이므로 IP 1건당 1행을 적재한다. 1행으로 줄이기 위
 | --- | --- | --- |
 | 부모 적재 대상 | `d.type IN ('virtual','physical') AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)` | DEPLOYEDASSET 필터와 일치시킨다 |
 | COMPUTER만 | `(d.network_device = false OR d.network_device IS NULL) AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer','PDU'))` | 다른 ASSETCLASS와 PDU의 자식을 만들지 않는다 |
-| 부모 존재 | 교차키 조회 결과가 있는 것만 | 부모가 없으면 적재할 수 없다 |
 
 ## 4. 컬럼 매핑
 
@@ -60,12 +58,12 @@ IP 가 여럿이므로 IP 1건당 1행을 적재한다. 1행으로 줄이기 위
 | DNSSERVER3 | DNS 서버 3 | ALN(100) | Y | 원천없음 | – | 대응 원천이 없다 |
 | GATEWAY | 게이트웨이 | ALN(32) | Y | 직접 | `view_subnet_v1.gateway` | 관측 0/70 · 0/45. 두 서버 모두 전건 비어 있어 현재는 NULL 이다 |
 | HOST | 호스트 | ALN(128) | Y | 직접 | `view_device_v2.name` | 관측 70/70 · 45/45, 최대 41자. 같은 장비라도 서버에 따라 이름이 다를 수 있다 |
-| NODEID | 노드 ID | BIGINT(19) | N | 채번 | – | 부모 DEPLOYEDASSET.NODEID. `(SOURCEID, IMPORTSOURCE)` 로 조회 |
+| NODEID | 노드 ID | BIGINT(19) | N | 직접 | `view_ipaddress_v1.device_fk` | 부모 DEPLOYEDASSET와 동일한 ID를 직접 사용한다 |
 | PRIMARYWINS | 기본 WINS | ALN(32) | Y | 원천없음 | – | 대응 원천이 없다 |
 | SECONDARYWINS | 보조 WINS | ALN(32) | Y | 원천없음 | – | 대응 원천이 없다 |
 | TCPIPADDRESS | TCP/IP 주소 | ALN(39) | N | 변환 | `view_ipaddress_v1.ip_address` | `HOST(ip_address)`. inet 타입이라 그냥 캐스팅하면 `/32` 접미가 붙는다. 관측 70/70 · 45/45, 접미 포함 최대 18자. IPv6 는 양쪽 0건 |
 | TCPIPDOMAIN | TCP/IP 도메인 | ALN(256) | Y | 원천없음 | – | 대응 원천이 없다. 장비명에 FQDN 이 섞여 있으나 도메인 컬럼이 아니다 |
-| TCPIPID | TcpIp ID | BIGINT(19) | N | 채번 | – | `NEXT VALUE FOR MAXIMO.DPATCPIPSEQ`. INSERT 시에만 발번하고 `SOURCE_TARGET_MAP`으로 유지한다 |
+| TCPIPID | TcpIp ID | BIGINT(19) | N | 직접 | `view_ipaddress_v1.ipaddress_pk` | Maximo ID로 그대로 사용하며 MERGE 키로 삼는다 |
 | TCPIPNETMASK | 네트워크 마스크 | ALN(32) | Y | 변환 | `view_subnet_v1.mask_bits` | 비트 수를 점 표기 넷마스크로 변환한다(`24` → `255.255.255.0`). `mask_bits = 0` 은 catch-all 서브넷이므로 NULL |
 
 구분 허용값: 직접 / 변환 / 상수 / 채번 / 원천없음 / 미결

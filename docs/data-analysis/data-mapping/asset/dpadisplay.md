@@ -36,7 +36,7 @@
 | COLORDEPTHBIT | 색상 수(비트) | INTEGER(12) | Y | 원천없음 | – | 대응 원천이 없다 |
 | CREATEDATE | 작성 날짜 | DATETIME(10) | N | 원천없음 | – | 대응 원천이 없어 DPADISPLAY 행을 생성하지 않는다 |
 | DESCRIPTION | 설명 | ALN(256) | Y | 원천없음 | – | 대응 원천이 없다 |
-| DISPLAYID | 디스플레이 ID | BIGINT(19) | N | 원천없음 | – | 대응 시퀀스는 `MAXIMO.DPADISPLAYSEQ`. 원천이 없어 현재는 채번 대상 행이 없다 |
+| DISPLAYID | 디스플레이 ID | BIGINT(19) | N | 원천없음 | – | 대응 원천이 없어 ID를 정하거나 생성할 행이 없다 |
 | DISPLAYSIZE | 디스플레이 크기 | INTEGER(12) | Y | 원천없음 | – | 대응 원천이 없다 |
 | DISPLAYTYPE | 디스플레이 유형 | ALN(32) | Y | 원천없음 | – | 대응 원천이 없다 |
 | MAKEMODEL | 제조/모델 | ALN(128) | Y | 원천없음 | – | 대응 원천이 없다 |

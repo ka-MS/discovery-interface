@@ -2,6 +2,8 @@
 
 > 관측 2026-08-27 · Device42 192.168.1.35
 > 재조회 docs/data-analysis/exploration-queries/device42/view-counts.sql
+> 벤더 절만 2026-08-28 · 양쪽 서버
+> 재조회 docs/data-analysis/exploration-queries/device42/vendor-master-source.sql
 
 실재가 확인된 뷰와 device 연결 키다. 카탈로그 조회가 막혀 있어
 개별 확인으로 얻은 목록이다.
@@ -54,6 +56,32 @@ MAC 전용 뷰는 없다. MAC 은 `view_netport_v1.hwaddress` 에만 있으며 �
 | `view_subnet_v1` | `view_ipaddress_v1.subnet_fk = subnet_pk` | 넷마스크·게이트웨이 |
 | `view_vlan_v1` | `view_subnet_v1.parent_vlan_fk = vlan_pk` | VLAN |
 | `view_service_v2` | `view_serviceinstance_v2.service_fk = service_pk` | 서비스명 |
+
+## 벤더
+
+`view_vendor_v1` 이 벤더 마스터다. 장비와 소프트웨어가 각각 `vendor_fk` 로
+참조한다. 장비는 직접 참조하지 않고 `view_device_v2.hardware_fk` →
+`view_hardware_v1.vendor_fk` 로 두 단계를 거친다. Maximo 제조사 마스터에 넣을
+값의 원천이다.
+
+| 관측 | 192.168.2.68 | 192.168.1.35 |
+| --- | --- | --- |
+| 벤더 | 71 | 41 |
+| 하드웨어가 쓰는 벤더 | 6 | 6 |
+| 소프트웨어가 쓰는 벤더 | 45 | 11 |
+| `vendor_fk` 없는 소프트웨어 | 1613 / 2273 | 586 / 808 |
+
+가상 장비는 `hardware_fk` 가 비어 제조사를 얻을 수 없다. 물리 장비만 벤더에
+닿는다.
+
+이름은 정규화되어 있지 않다. `IBM` 과 `IBM Corporation`, `Microsoft` 와
+`Microsoft Corp.` 와 `Microsoft Corporation`, `HCL` 과 `HCL Technologies Ltd.`
+와 `HCL Technologies Limited` 가 각각 별개 행이다. `Google\Chrome` 처럼 벤더명이
+아닌 값도 있다.
+
+`enrichai_details` 에 `normalized` 와 `alias` 가 들어 있으나 충전율이 낮다.
+`normalized` 는 18/71 · 14/41, `alias` 는 10/71 · 6/41 이다. 정규화 사전으로
+쓸 수 없다.
 
 ## 존재하지 않는 뷰
 

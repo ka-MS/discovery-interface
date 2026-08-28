@@ -12,7 +12,7 @@
 - 부모: MAXIMO.DEPLOYEDASSET (NODEID)
 - 카디널리티: DEPLOYEDASSET 1 : N DPADISK (PK 는 `DISKID`. 관측 61노드/144행)
 - 선행: DEPLOYEDASSET
-- 동기화 ID: `SOURCE_TARGET_MAP`의 `view_part_v1.part_pk`
+- MERGE ID: `DISKID = view_part_v1.part_pk`
 
 ## 2. 테이블 매핑
 
@@ -22,7 +22,6 @@
 | `view_partmodel_v1` | (보강) | `view_part_v1.partmodel_fk = partmodel_pk` | N:1 |
 | `view_vendor_v1` | (보강) | `view_partmodel_v1.vendor_fk = vendor_pk` | N:1 |
 | `view_device_v2` | (대상 판정) | `view_part_v1.device_fk = device_pk` | N:1 |
-| MAXIMO.DEPLOYEDASSET | (교차키) | `SOURCEID = view_part_v1.device_fk AND IMPORTSOURCE = 'Device42'` → `NODEID` | N:1 |
 
 관측은 .35 6파트/6장비, .68 22파트/17장비다. 물리 디스크가 여러 개인
 장비에서는 N 이 된다.
@@ -34,7 +33,6 @@
 | 디스크 파트만 | `pm.type_name = 'Hard Disk'` | `view_part_v1` 은 여러 파트 종류를 한 테이블에 담는다 |
 | 부모 적재 대상 | `d.type IN ('virtual','physical') AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)` | DEPLOYEDASSET 필터와 일치시킨다 |
 | COMPUTER만 | `(d.network_device = false OR d.network_device IS NULL) AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer','PDU'))` | 다른 ASSETCLASS와 PDU의 자식을 만들지 않는다 |
-| 부모 존재 | 교차키 조회 결과가 있는 것만 | 부모가 없으면 적재할 수 없다 |
 
 `view_mountpoint_v1` 은 논리 드라이브 원천이며 DPALOGICALDRIVE 로 간다. 물리 디스크와 혼동하지 않는다.
 
@@ -46,14 +44,14 @@
 | CHANGEDATE | 변경 날짜 | DATETIME(10) | N | 채번 | – | 적재 시각 |
 | CREATEDATE | 작성 날짜 | DATETIME(10) | N | 채번 | – | 적재 시각 |
 | DESCRIPTION | 설명 | ALN(256) | Y | 변환 | `view_part_v1.description` | 비어 있으면 `view_partmodel_v1.name` |
-| DISKID | 디스크 ID | BIGINT(19) | N | 채번 | – | `NEXT VALUE FOR MAXIMO.DPADISKSEQ`. 테이블 전역 연번이며 노드별이 아니다. INSERT 시에만 발번하고 MATCHED 시 유지한다 |
+| DISKID | 디스크 ID | BIGINT(19) | N | 직접 | `view_part_v1.part_pk` | Maximo ID로 그대로 사용하며 MERGE 키로 삼는다 |
 | DISKINTERFACE | 디스크 인터페이스 | ALN(32) | Y | 직접 | `view_partmodel_v1.hddtype_name` | .68 9/22 (`SCSI`, `IDE`, `SSD`) · .35 1/6. 기존 수집분은 0/144 |
 | DISKTYPE | 디스크 유형 | ALN(32) | Y | 원천없음 | – | 기존 수집분은 `Hard`/`Floppy`/`CD_ROM` 을 쓴다. `media_type_name` 은 .35 에서 전건 `storage`, .68 에서 전건 NULL 이라 대응값이 되지 못한다 |
 | EXTERNALDEVICE | 외부 디바이스 | YORN(1) | N | 상수 | – | 기존 수집분 전건 `0` |
 | HOTSWAPPABLE | 핫스왑 가능 | YORN(1) | N | 상수 | – | 기존 수집분 전건 `0` |
 | MAKEMODEL | 제조/모델 | ALN(128) | Y | 직접 | `view_partmodel_v1.name` | .68 은 실제 모델명(`Samsung SSD 870 QVO 1TB`, `INTEL SSDPEKNW020T8`), .35 는 대부분 `sda NNN GB` 형태다 |
 | MANUFACTURER | 제조업체 | ALN(128) | N | 직접 | `view_vendor_v1.name` | `view_partmodel_v1.vendor_fk` 조인. 양쪽 서버 모두 전건 미보유라 사실상 `UNKNOWN` |
-| NODEID | 노드 ID | BIGINT(19) | N | 채번 | – | 부모 DEPLOYEDASSET.NODEID. `(SOURCEID, IMPORTSOURCE)` 로 조회 |
+| NODEID | 노드 ID | BIGINT(19) | N | 직접 | `view_part_v1.device_fk` | 부모 DEPLOYEDASSET와 동일한 ID를 직접 사용한다 |
 | REMOVABLEMEDIA | 이동식 미디어 | YORN(1) | N | 상수 | – | 기존 수집분 전건 `0` |
 | SERIALNUMBER | 일련 번호 | ALN(64) | Y | 직접 | `view_part_v1.serial_no` | .68 12/22 · .35 1/6. MERGE 매칭에는 사용하지 않는다 |
 | SIZEUNIT | 크기 단위 | ALN(16) | Y | 직접 | `view_partmodel_v1.hdsize_unit` | 관측값 `GB` |

@@ -1,5 +1,8 @@
 # data-analysis 문서 체계 구축 Implementation Plan
 
+> 완료된 과거 구축 계획이다. 현재 ID 정책은 Device42 PK 직접 사용이며,
+> `docs/data-analysis/data-mapping/`과 `docs/data-analysis/close-issues.md`를 따른다.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Device42 → Maximo 매핑 작업의 관측 사실·탐색 쿼리·매핑 설계를 `docs/data-analysis/` 아래 세 계층으로 분리해 구축하고, 조사 완료분을 이관한다.
@@ -588,8 +591,8 @@ column -t -s$'\t' local/db-access-kit/work/maximo/assetclass-dist.tsv
 
 ## 키
 
-- `NODEID` 는 `MAXIMO.DEPLOYEDASSETSEQ` 시퀀스로 발번된다.
-- 현행 적재의 MERGE 키는 `(SOURCEID, IMPORTSOURCE)` 다.
+- `NODEID` 는 Device42 `device_pk`를 직접 사용한다.
+- 현행 적재의 MERGE 키는 `NODEID`다.
   근거: `DeployedAssetIntegrate.java` `MERGE_DEPLOYED_ASSET_QUERY`
 - `SOURCEID` 에는 Device42 `device_pk` 가 들어간다. 관련 미결 사항은
   `../../open-issues.md` 참조.
@@ -892,11 +895,10 @@ git commit -m "docs: add Device42 views, device types, server coverage knowledge
 
 ## ISSUE-1 SOURCEID 가 서버 간 불일치
 
-**상태:** 정책 정의 대기. 기록만 한다.
+**상태:** 이슈 아님. 운영은 단일 Device42를 사용한다.
 
-`DEPLOYEDASSET` 의 MERGE 키는 `(SOURCEID, IMPORTSOURCE)` 이고 `SOURCEID` 에는
-Device42 `device_pk` 가 들어간다. `device_pk` 는 수집 서버가 다르거나
-재수집하면 값이 바뀐다. 동일 장비가 서버에 따라 다른 `SOURCEID` 로 적재된다.
+`DEPLOYEDASSET.NODEID`와 MERGE 키는 Device42 `device_pk`다. 데모 서버 간
+`device_pk` 차이는 운영 적재에 영향을 주지 않는다.
 
 동일 장비 확인 근거는 `serial_no` 와 `uuid` 다. 두 값은 서버가 달라도 같다.
 
@@ -983,7 +985,8 @@ git commit -m "docs: record open issues on source id, switch split, PDU class"
 
 ## 실행 순서
 
-`DEPLOYEDASSET` 이 `NODEID` 를 발번한 뒤에야 자식 테이블을 적재할 수 있다.
+`DEPLOYEDASSET` 이 부모 행을 만든 뒤 자식 테이블을 적재한다. `NODEID`는
+Device42 `device_pk`를 직접 사용한다.
 
 1. `DEPLOYEDASSET`
 2. `DPACOMPUTER` (COMPUTER 는 부모와 1:1)
@@ -1148,7 +1151,7 @@ def build(table, desc, columns):
     if table == "DEPLOYEDASSET":
         lines += [
             "- 계층의 루트. 부모 없음.",
-            "- `NODEID` 는 `MAXIMO.DEPLOYEDASSETSEQ` 로 발번한다.",
+            "- `NODEID` 는 Device42 `device_pk`를 직접 사용한다.",
             "- 적재 대상 필터와 키 전략은 3번에 기술한다.",
         ]
     else:

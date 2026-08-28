@@ -10,7 +10,7 @@
 - 부모: MAXIMO.DEPLOYEDASSET (NODEID)
 - 카디널리티: DEPLOYEDASSET 1 : N DPAOS (PK 는 `OSID`. 관측 61노드/63행)
 - 선행: DEPLOYEDASSET
-- 동기화 ID: `SOURCE_TARGET_MAP`의 `view_deviceos_v1.deviceos_pk`
+- MERGE ID: `OSID = view_deviceos_v1.deviceos_pk`
 
 스키마는 노드당 다건을 허용하지만 Device42 원천은 장비당 최대 1건이다.
 판별 규칙은 `../../knowledge/maximo/deployedasset-model.md` 참조.
@@ -23,7 +23,6 @@
 | `view_os_v1` | (보강) | `view_deviceos_v1.os_fk = os_pk` | N:1 |
 | `view_vendor_v1` | (보강) | `view_os_v1.vendor_fk = vendor_pk` | N:1 |
 | `view_device_v2` | (대상 판정) | `view_deviceos_v1.device_fk = device_pk` | N:1 |
-| MAXIMO.DEPLOYEDASSET | (교차키) | `SOURCEID = view_deviceos_v1.device_fk AND IMPORTSOURCE = 'Device42'` → `NODEID` | N:1 |
 
 두 서버 모두 장비당 deviceos 가 최대 1건이다.
 
@@ -45,7 +44,6 @@
 | --- | --- | --- |
 | 부모 적재 대상 | `d.type IN ('virtual','physical') AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)` | DEPLOYEDASSET 필터와 일치시킨다 |
 | COMPUTER만 | `(d.network_device = false OR d.network_device IS NULL) AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer','PDU'))` | 다른 ASSETCLASS와 PDU의 자식을 만들지 않는다 |
-| 부모 존재 | 교차키 조회 결과가 있는 것만 | 부모가 없으면 적재할 수 없다 |
 
 ## 4. 컬럼 매핑
 
@@ -61,8 +59,8 @@
 | LICENSEDUSER | 라이센스가 부여된 사용자 | ALN(64) | Y | 원천없음 | – | 대응 원천이 없다 |
 | MANUFACTURER | 제조업체 | ALN(128) | N | 직접 | `view_vendor_v1.name` | `view_os_v1.vendor_fk` 조인. 관측 5/59 · 18/20, 최대 9자. 없으면 `UNKNOWN`. DEFAULTVALUE=UNKNOWN |
 | NAME | 운영 체제 | ALN(256) | N | 직접 | `view_deviceos_v1.os_name` | 관측 59/59 · 20/20, 최대 151자. 없으면 `UNKNOWN`. DEFAULTVALUE=UNKNOWN |
-| NODEID | 노드 ID | BIGINT(19) | N | 채번 | – | 부모 DEPLOYEDASSET.NODEID. `(SOURCEID, IMPORTSOURCE)` 로 조회 |
-| OSID | 운영 체제 ID | BIGINT(19) | N | 채번 | – | `NEXT VALUE FOR MAXIMO.DPAOSSEQ`. INSERT 시에만 발번하고 `SOURCE_TARGET_MAP`으로 유지한다 |
+| NODEID | 노드 ID | BIGINT(19) | N | 직접 | `view_deviceos_v1.device_fk` | 부모 DEPLOYEDASSET와 동일한 ID를 직접 사용한다 |
+| OSID | 운영 체제 ID | BIGINT(19) | N | 직접 | `view_deviceos_v1.deviceos_pk` | Maximo ID로 그대로 사용하며 MERGE 키로 삼는다 |
 | SERIALNUMBER | 일련 번호 | ALN(64) | Y | 원천없음 | – | 대응 원천이 없다. `os_license_key` 계열은 양쪽 서버 전건 0이고 일련번호도 아니다 |
 | SERVICEPACK | 서비스 팩 | ALN(64) | Y | 원천없음 | – | 대응 원천이 없다 |
 | VERSION | 버전 | ALN(128) | Y | 직접 | `view_deviceos_v1.os_version` | 관측 9/59 · 15/20, 최대 7자 |

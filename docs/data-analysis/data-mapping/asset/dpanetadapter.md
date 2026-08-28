@@ -10,7 +10,7 @@
 - 부모: MAXIMO.DEPLOYEDASSET (NODEID)
 - 카디널리티: DEPLOYEDASSET 1 : N DPANETADAPTER (PK 는 `ADAPTERID`. 관측 39노드/61행)
 - 선행: DEPLOYEDASSET
-- 동기화 ID: `SOURCE_TARGET_MAP`의 `view_netport_v1.netport_pk`
+- MERGE ID: `ADAPTERID = view_netport_v1.netport_pk`
 
 ## 2. 테이블 매핑
 
@@ -19,7 +19,6 @@
 | `view_netport_v1` | MAXIMO.DPANETADAPTER | – | 1:1 (포트 1건 = 행 1건) |
 | `view_vendor_v1` | (보강) | `view_netport_v1.vendor_fk = vendor_pk` | N:1 |
 | `view_device_v2` | (대상 판정) | `view_netport_v1.device_fk = device_pk` | N:1 |
-| MAXIMO.DEPLOYEDASSET | (교차키) | `SOURCEID = view_netport_v1.device_fk AND IMPORTSOURCE = 'Device42'` → `NODEID` | N:1 |
 
 뷰 컬럼 구조는 두 서버가 동일하다. COMPUTER 대상 원천과 주요 컬럼 충전율은
 다음과 같다.
@@ -35,13 +34,12 @@
 | --- | --- | --- |
 | 부모 적재 대상 | `d.type IN ('virtual','physical') AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)` | DEPLOYEDASSET 필터와 일치시킨다 |
 | COMPUTER만 | `(d.network_device = false OR d.network_device IS NULL) AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer','PDU'))` | 다른 ASSETCLASS와 PDU의 자식을 만들지 않는다 |
-| 부모 존재 | 교차키 조회 결과가 있는 것만 | 부모가 없으면 적재할 수 없다 |
 
 ## 4. 컬럼 매핑
 
 | Target 컬럼 | 한글명 | 타입 | Null | 구분 | Source | 변환·조건 |
 | --- | --- | --- | --- | --- | --- | --- |
-| ADAPTERID | 어댑터 | BIGINT(19) | N | 채번 | – | `NEXT VALUE FOR MAXIMO.DPANETADAPTERSEQ`. 테이블 전역 연번이며 INSERT 시에만 발번하고 MATCHED 시 유지한다 |
+| ADAPTERID | 어댑터 | BIGINT(19) | N | 직접 | `view_netport_v1.netport_pk` | Maximo ID로 그대로 사용하며 MERGE 키로 삼는다 |
 | ADAPTERTYPE | 어댑터 유형 | ALN(32) | Y | 상수 | – | `'Network Adapter'`. 기존 수집분도 61/61 전건 동일 |
 | ASSETTAG | 자산 태그 | ALN(64) | Y | 원천없음 | – | `view_netport_v1`에 자산 태그가 없다 |
 | BANDWIDTH | 대역폭 | DECIMAL(10,2) | Y | 변환 | `view_netport_v1.port_speed` | 첫 공백 앞 숫자를 소수 2자리로 변환. 값이 없거나 숫자가 아니면 NULL |
@@ -55,7 +53,7 @@
 | MANUFACTURER | 제조업체 | ALN(128) | N | 직접 | `view_vendor_v1.name` | `vendor_fk` 조인. 양 서버 모두 관측값이 없어 현재는 `UNKNOWN`. DEFAULTVALUE=UNKNOWN |
 | NETMACADDR1 | MAC 주소 1 | ALN(17) | Y | 변환 | `view_netport_v1.hwaddress` | `UPPER(hwaddress)`. 양 서버 관측값은 구분자 없는 12자리이며 기존 수집분 형식과 같다 |
 | NETMACADDR2 | MAC 주소 2 | ALN(17) | Y | 변환 | `view_netport_v1.hwaddress2` | `UPPER(hwaddress2)`. 양 서버 모두 관측값 없음 |
-| NODEID | 노드 ID | BIGINT(19) | N | 채번 | – | 부모 DEPLOYEDASSET.NODEID. `(SOURCEID, IMPORTSOURCE)` 로 조회 |
+| NODEID | 노드 ID | BIGINT(19) | N | 직접 | `view_netport_v1.device_fk` | 부모 DEPLOYEDASSET와 동일한 ID를 직접 사용한다 |
 | PORT | 포트 | ALN(16) | Y | 변환 | `view_netport_v1.port` | `LEFT(port, 16)`. 관측 최대 71자로 타겟 길이에 맞춘다 |
 | PROTOCOL | 프로토콜 | ALN(64) | Y | 직접 | `view_netport_v1.global_type` | 양쪽 서버 모두 전건 비어 있다 |
 | SERIALNUMBER | 일련 번호 | ALN(64) | Y | 원천없음 | – | 대응 원천이 없다 |

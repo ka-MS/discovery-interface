@@ -1,4 +1,4 @@
--- DISCOVERY.SOURCE_TARGET_MAP의 컬럼, 키, 인덱스, 현재 데이터 상태를 확인한다.
+-- 현행 적재에서 사용하지 않는 DISCOVERY.SOURCE_TARGET_MAP의 잔존 상태를 확인한다.
 
 -- name: map-columns
 SELECT COLNO,

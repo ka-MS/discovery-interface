@@ -40,8 +40,8 @@
 14개 테이블에는 그런 경우가 없다. 자체 ID 를 가진 10개 테이블의 유니크 인덱스는
 모두 `(자체ID, NODEID)` 형태라 `NODEID` 중복을 막지 않는다.
 
-자체 ID 를 쓰는 테이블에는 대응 시퀀스가 있다. 관측 시점에 10개 모두
-`START = max(ID) + 1` 로 데이터와 맞아 있었다.
+자체 ID 를 쓰는 테이블에는 대응 시퀀스가 있다. 아래는 관측 당시 기존 수집분과
+시퀀스 상태다. Device42 적재는 이 시퀀스를 사용하지 않는다.
 
 | 테이블 | ID 범위 | 시퀀스 | START |
 | --- | --- | --- | --- |
@@ -56,14 +56,28 @@
 | DPASWSUITE | 1–14 | `DPASWSUITESEQ` | 15 |
 | DPATCPIP | 1–53 | `DPATCPIPSEQ` | 54 |
 
-ID 는 노드별 연번이 아니라 테이블 전역 연번이다.
+기존 수집분의 ID는 노드별 연번이 아니라 테이블 전역 연번이다.
 
-역은 성립하지 않는다. `DPACOMPUTERSEQ`, `DPANETDEVICESEQ`, `DPANETPRINTERSEQ`
-도 존재하지만 세 테이블은 PK 가 `NODEID` 라 자기 시퀀스를 쓰지 않는다. 부모에서
-받은 `NODEID` 를 그대로 쓴다.
+`DPACOMPUTERSEQ`, `DPANETDEVICESEQ`, `DPANETPRINTERSEQ`도 존재하지만 세 테이블은
+PK가 `NODEID`라 자기 시퀀스를 쓰지 않는다.
 
-시퀀스는 ID 발번에 사용한다. 1:N 자식의 재실행 매칭은
-`SOURCE_TARGET_MAP`의 원천 ID와 대상 ID 대응으로 처리한다.
+Device42 적재는 원천 PK를 Maximo ID로 직접 사용한다. 부모와 자식 모두 별도
+교차키 조회, Maximo 시퀀스, `DISCOVERY.SOURCE_TARGET_MAP`을 사용하지 않는다.
+
+| 대상 | Maximo ID | Device42 원천 |
+| --- | --- | --- |
+| `DEPLOYEDASSET`·1:1 자식 | `NODEID` | `view_device_v2.device_pk` |
+| `DPACPU` | `CPUID` | `view_part_v1.part_pk` |
+| `DPADISK` | `DISKID` | `view_part_v1.part_pk` |
+| `DPALOGICALDRIVE` | `LOGICALDRIVEID` | `view_mountpoint_v1.mountpoint_pk` |
+| `DPAMEDIAADAPTER` | `ADAPTERID` | `view_part_v1.part_pk` |
+| `DPANETADAPTER` | `ADAPTERID` | `view_netport_v1.netport_pk` |
+| `DPAOS` | `OSID` | `view_deviceos_v1.deviceos_pk` |
+| `DPASOFTWARE` | `SOFTWAREID` | `view_softwareinuse_v1.softwareinuse_pk` |
+| `DPATCPIP` | `TCPIPID` | `view_ipaddress_v1.ipaddress_pk` |
+
+모든 자식의 `NODEID`는 해당 원천 레코드의 `device_fk`다. 원천이 없는
+`DPADISPLAY`와 `DPASWSUITE`는 적재하지 않는다.
 
 재조회: `SYSCAT.SEQUENCES` 에서 `SEQSCHEMA = 'MAXIMO'`.
 
@@ -102,7 +116,7 @@ ID 는 노드별 연번이 아니라 테이블 전역 연번이다.
 
 ## 키
 
-- `NODEID` 는 `MAXIMO.DEPLOYEDASSETSEQ` 시퀀스로 발번된다.
-- 현행 적재의 MERGE 키는 `(SOURCEID, IMPORTSOURCE)` 다.
+- `NODEID` 는 Device42 `view_device_v2.device_pk` 다.
+- 현행 적재의 MERGE 키는 `NODEID` 다.
   근거: `DeployedAssetIntegrate.java` `MERGE_DEPLOYED_ASSET_QUERY`
 - `SOURCEID` 에는 Device42 `device_pk` 가 들어간다.

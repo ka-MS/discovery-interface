@@ -9,6 +9,7 @@
 --   software-key       자연키 후보의 노드 내 유일성. 중복 제거 규칙 판단용
 --   software-name-eq   softwareinuse.software_name 과 software.name 의 일치 여부
 --   software-type      Device42 software_type 값 분포. 타겟 TYPE 과 다른 개념임을 확인
+--   tloam-key-quality  TLOAMSOFTWARE UNIQUEID 후보의 건수·충돌·구분자 검사
 
 -- name: software-coverage
 WITH src AS (
@@ -23,7 +24,7 @@ WITH src AS (
     WHERE d.type IN ('virtual', 'physical')
       AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)
       AND (d.network_device = false OR d.network_device IS NULL)
-      AND (d.physicalsubtype IS NULL OR d.physicalsubtype <> 'Network Printer')
+      AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer', 'PDU'))
 )
 SELECT 'row-total' AS col, COUNT(*) AS filled, 0 AS max_len FROM src
 UNION ALL SELECT 'catalog_name', COUNT(NULLIF(catalog_name,'')), MAX(LENGTH(catalog_name)) FROM src
@@ -48,7 +49,7 @@ WITH src AS (
     WHERE d.type IN ('virtual', 'physical')
       AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)
       AND (d.network_device = false OR d.network_device IS NULL)
-      AND (d.physicalsubtype IS NULL OR d.physicalsubtype <> 'Network Printer')
+      AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer', 'PDU'))
 ),
 g1 AS (SELECT device_fk, nm, ver, COUNT(*) AS n FROM src GROUP BY device_fk, nm, ver),
 g2 AS (SELECT device_fk, nm, ver, pth, COUNT(*) AS n FROM src GROUP BY device_fk, nm, ver, pth)
@@ -67,7 +68,7 @@ WITH src AS (
     WHERE d.type IN ('virtual', 'physical')
       AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)
       AND (d.network_device = false OR d.network_device IS NULL)
-      AND (d.physicalsubtype IS NULL OR d.physicalsubtype <> 'Network Printer')
+      AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer', 'PDU'))
 )
 SELECT COUNT(*) AS row_cnt,
     COUNT(CASE WHEN software_name = catalog_name THEN 1 END) AS same_cnt,
@@ -83,3 +84,38 @@ JOIN view_software_v1 s ON s.software_pk = u.software_fk
 GROUP BY s.software_type, s.category_name
 ORDER BY n DESC
 LIMIT 20;
+
+-- name: tloam-key-quality
+WITH src AS (
+    SELECT
+        COALESCE(NULLIF(TRIM(s.name), ''), 'UNKNOWN') AS software_name,
+        COALESCE(NULLIF(TRIM(u.version), ''), 'UNKNOWN') AS version,
+        COALESCE(NULLIF(TRIM(v.name), ''), 'UNKNOWN') AS manufacturer
+    FROM view_softwareinuse_v1 u
+    JOIN view_device_v2 d ON d.device_pk = u.device_fk
+    LEFT JOIN view_software_v1 s ON s.software_pk = u.software_fk
+    LEFT JOIN view_vendor_v1 v ON v.vendor_pk = s.vendor_fk
+    WHERE d.type IN ('virtual', 'physical')
+      AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)
+      AND (d.network_device = false OR d.network_device IS NULL)
+      AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer', 'PDU'))
+), keyed AS (
+    SELECT *,
+        UPPER(software_name) || '|'
+        || UPPER(REPLACE(version, ' ', '')) || '|'
+        || UPPER(manufacturer) AS unique_id
+    FROM src
+), grouped AS (
+    SELECT unique_id,
+        COUNT(DISTINCT software_name || '|' || version || '|' || manufacturer) AS raw_tuples
+    FROM keyed
+    GROUP BY unique_id
+)
+SELECT
+    (SELECT COUNT(*) FROM src) AS install_rows,
+    COUNT(*) AS catalog_rows,
+    COUNT(*) FILTER (WHERE raw_tuples > 1) AS normalization_collisions,
+    MAX(raw_tuples) AS max_raw_tuples,
+    (SELECT COUNT(*) FROM src
+     WHERE software_name LIKE '%|%' OR version LIKE '%|%' OR manufacturer LIKE '%|%') AS delimiter_rows
+FROM grouped;

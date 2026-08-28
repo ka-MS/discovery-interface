@@ -1,4 +1,4 @@
--- SOURCE_TARGET_MAP에 저장할 1:N DPA 자식 원천 뷰의 PK 컬럼을 확인한다.
+-- Maximo DPA 자체 ID로 직접 사용할 Device42 자식 PK 컬럼을 확인한다.
 
 -- name: part-source-id
 SELECT part_pk, device_fk

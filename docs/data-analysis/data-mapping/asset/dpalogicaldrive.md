@@ -10,7 +10,7 @@
 - 부모: MAXIMO.DEPLOYEDASSET (NODEID)
 - 카디널리티: DEPLOYEDASSET 1 : N DPALOGICALDRIVE (PK 는 `LOGICALDRIVEID`. 관측 49노드/80행)
 - 선행: DEPLOYEDASSET
-- 동기화 ID: `SOURCE_TARGET_MAP`의 `view_mountpoint_v1.mountpoint_pk`
+- MERGE ID: `LOGICALDRIVEID = view_mountpoint_v1.mountpoint_pk`
 
 ## 2. 테이블 매핑
 
@@ -18,7 +18,6 @@
 | --- | --- | --- | --- |
 | `view_mountpoint_v1` | MAXIMO.DPALOGICALDRIVE | – | 1:1 (마운트포인트 1건 = 행 1건) |
 | `view_device_v2` | (대상 판정) | `view_mountpoint_v1.device_fk = device_pk` | N:1 |
-| MAXIMO.DEPLOYEDASSET | (교차키) | `SOURCEID = view_mountpoint_v1.device_fk AND IMPORTSOURCE = 'Device42'` → `NODEID` | N:1 |
 
 뷰 컬럼 구조는 두 서버가 동일하다. COMPUTER 대상과 의사 파일시스템 제외 결과는
 다음과 같다.
@@ -35,7 +34,6 @@
 | 부모 적재 대상 | `d.type IN ('virtual','physical') AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)` | DEPLOYEDASSET 필터와 일치시킨다 |
 | COMPUTER만 | `(d.network_device = false OR d.network_device IS NULL) AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer','PDU'))` | 다른 ASSETCLASS와 PDU의 자식을 만들지 않는다 |
 | 의사 파일시스템 제외 | `LOWER(COALESCE(m.fstype_name,'')) NOT IN ('overlay','devtmpfs','efivarfs')` | 컨테이너 overlay, `/dev`, EFI 변수 의사 파일시스템은 논리 드라이브가 아니다 |
-| 부모 존재 | 교차키 조회 결과가 있는 것만 | 부모가 없으면 적재할 수 없다 |
 
 ## 4. 컬럼 매핑
 
@@ -50,9 +48,9 @@
 | DRIVETYPE | 드라이브 유형 | ALN(32) | Y | 상수 | – | `'UNKNOWN'`. 기존 수집분도 80/80 전건 `UNKNOWN` |
 | ENCRYPTED | 비밀번호화됨 | YORN(1) | N | 상수 | – | `0`. Device42에 암호화 여부가 없고 기존 수집분도 전건 `0` |
 | FILESYSTEM | 파일 시스템 | ALN(32) | Y | 직접 | `view_mountpoint_v1.fstype_name` | 필터 후 양 서버 관측 10종, 최대 7자. 2.68에 NULL 1건 |
-| LOGICALDRIVEID | 논리 드라이브 ID | BIGINT(19) | N | 채번 | – | `NEXT VALUE FOR MAXIMO.DPALOGICALDRIVESEQ`. 테이블 전역 연번이며 INSERT 시에만 발번하고 MATCHED 시 유지한다 |
+| LOGICALDRIVEID | 논리 드라이브 ID | BIGINT(19) | N | 직접 | `view_mountpoint_v1.mountpoint_pk` | Maximo ID로 그대로 사용하며 MERGE 키로 삼는다 |
 | MOUNT | 드라이브 | ALN(256) | Y | 직접 | `view_mountpoint_v1.mountpoint` | 관측 최대 131자 |
-| NODEID | 노드 ID | BIGINT(19) | N | 채번 | – | 부모 DEPLOYEDASSET.NODEID. `(SOURCEID, IMPORTSOURCE)` 로 조회 |
+| NODEID | 노드 ID | BIGINT(19) | N | 직접 | `view_mountpoint_v1.device_fk` | 부모 DEPLOYEDASSET와 동일한 ID를 직접 사용한다 |
 | SIZEUNIT | 크기 단위 | ALN(16) | Y | 상수 | – | `'MB'`. `capacity`, `free_capacity`의 Device42 관측 단위 |
 | TOTALSIZE | 총 크기 | DECIMAL(10,2) | Y | 직접 | `view_mountpoint_v1.capacity` | Device42 관측 단위 MB. 소수 2자리 |
 | VAVAILABLESIZE | 가용 크기 | ALN(32) | Y | 원천없음 | – | 비영속 속성(PERSISTENT=0). DB 컬럼이 아니므로 적재 대상이 아니다 |

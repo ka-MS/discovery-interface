@@ -13,8 +13,8 @@
 
 기본키가 `NODEID` 다. 대리키가 없어 노드당 1행만 존재할 수 있다.
 `DPANETPRINTERSEQ` 가 존재하지만 이 테이블은 쓰지 않고 부모에서 받은 `NODEID`
-를 그대로 쓴다. MERGE 매칭 키도 `NODEID` 하나로 끝나므로 ISSUE-5 대상이
-아니다. 근거는 `../../knowledge/maximo/deployedasset-model.md` 참조.
+를 그대로 쓴다. `NODEID = view_device_v2.device_pk` 이며 MERGE 키도 `NODEID`
+하나다. 근거는 `../../knowledge/maximo/deployedasset-model.md` 참조.
 
 ## 2. 테이블 매핑
 
@@ -24,7 +24,6 @@
 | `view_netport_v1` | (보강) | `view_netport_v1.device_fk = device_pk` | N:1 |
 | `view_ipaddress_v1` | (보강) | `view_ipaddress_v1.device_fk = device_pk` | N:1 |
 | `view_part_v1` | (용지함 수) | `view_part_v1.device_fk = device_pk`, `view_partmodel_v1.type_name = 'printer_input'` | N:1 |
-| MAXIMO.DEPLOYEDASSET | (교차키) | `SOURCEID = view_device_v2.device_pk AND IMPORTSOURCE = 'Device42'` → `NODEID` | 1:1 |
 
 프린터 본체 정보는 `view_device_v2` 에 있다. `view_part_v1` 에 달린 27건은
 토너·드럼·롤러 같은 소모품(`printer_marker`)과 급지·배지 트레이
@@ -49,7 +48,6 @@
 | 부모 적재 대상 | `d.type IN ('virtual','physical') AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)` | DEPLOYEDASSET 필터와 일치시킨다 |
 | NETPRINTER만 | `(d.network_device = false OR d.network_device IS NULL) AND d.physicalsubtype = 'Network Printer'` | ASSETCLASS 판정에서 `network_device` 가 `physicalsubtype` 보다 우선한다 |
 | MAC 보유 포트만 | `n.hwaddress <> ''` | 관측 2포트 중 `Loopback Interface` 는 MAC 이 비어 있다 |
-| 부모 존재 | 교차키 조회 결과가 있는 것만 | 부모가 없으면 적재할 수 없다 |
 
 ## 4. 컬럼 매핑
 
@@ -65,7 +63,7 @@
 | MAXWIDTH | 최대 용지 너비 | DECIMAL(10,2) | Y | 원천없음 | – | 대응 원천이 없다. 기존 수집분도 전건 `0.00` |
 | NETMACADDR | 네트워크 MAC 주소 | ALN(17) | Y | 변환 | `view_netport_v1.hwaddress` | `UPPER(hwaddress)`. 구분자 없는 12자리이며 DPANETADAPTER·기존 수집분과 형식이 같다 |
 | NETWORKADDRESS | 네트워크 주소 | ALN(39) | Y | 변환 | `view_ipaddress_v1.ip_address` | `HOST(ip_address)`. inet 타입이라 그냥 캐스팅하면 `/32` 접미가 붙는다 |
-| NODEID | 노드 ID | BIGINT(19) | N | 채번 | – | 부모 DEPLOYEDASSET.NODEID. 이 테이블의 기본키이기도 하다 |
+| NODEID | 노드 ID | BIGINT(19) | N | 직접 | `view_device_v2.device_pk` | 부모 DEPLOYEDASSET와 동일한 ID를 직접 사용하며 이 테이블의 MERGE 키로 삼는다 |
 | NUMBEROFTRAYS | 용지함 수 | INTEGER(12) | Y | 변환 | `view_part_v1`, `view_partmodel_v1.type_name` | `type_name = 'printer_input'` 인 파트 건수. 관측 3(Tray 1, Tray 2, MP Tray) |
 | RAMUNIT | RAM 단위 | ALN(16) | Y | 직접 | `view_device_v2.ram_size_type` | 관측 `GB`. 기존 수집분의 `KB` 는 다른 도구의 관례다 |
 | SIZEUNIT | 크기 단위 | ALN(16) | Y | 원천없음 | – | `MAXLENGTH`·`MAXWIDTH` 원천이 없어 단위만 단독 적재하지 않는다 |

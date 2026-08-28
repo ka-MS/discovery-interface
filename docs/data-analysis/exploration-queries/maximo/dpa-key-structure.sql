@@ -1,5 +1,6 @@
 -- DEPLOYEDASSET와 DPA 자식의 Maximo 기본키 및 Device42 자식 적재 여부를 확인한다.
 
+-- 현행 적재에서는 사용하지 않는 과거 적용 테이블이다.
 -- name: source-target-map-table
 SELECT TABSCHEMA, TABNAME
 FROM SYSCAT.TABLES
