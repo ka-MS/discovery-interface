@@ -1,0 +1,43 @@
+-- DISCOVERY.SOURCE_TARGET_MAP
+--
+-- Device42 원천 레코드와 Maximo 대상 행의 대응을 보관한다. 1:N DPA 자식
+-- 테이블의 재실행 매칭에 쓴다. 자식의 자체 ID 는 Maximo 시퀀스로 발번하므로,
+-- 재실행 시 같은 원천 행이 어떤 대상 행이 되었는지 여기서 찾는다.
+--
+-- 적용 대상은 자체 ID 가 기본키인 1:N 자식뿐이다. DPACOMPUTER, DPANETDEVICE,
+-- DPANETPRINTER 는 NODEID 가 기본키인 1:1 이라 매핑이 필요 없다.
+--
+-- 설계 근거는 docs/data-analysis/open-issues.md ISSUE-5 참조.
+
+CREATE TABLE DISCOVERY.SOURCE_TARGET_MAP (
+    SOURCE_SYSTEM     VARCHAR(32)   NOT NULL,
+    SOURCE_OBJECT     VARCHAR(128)  NOT NULL,
+    SOURCE_ID         BIGINT        NOT NULL,
+    SOURCE_PARENT_ID  BIGINT        NOT NULL,
+    TARGET_SYSTEM     VARCHAR(32)   NOT NULL,
+    TARGET_OBJECT     VARCHAR(128)  NOT NULL,
+    TARGET_ID         BIGINT        NOT NULL,
+    TARGET_PARENT_ID  BIGINT        NOT NULL,
+    CREATED_DATE      TIMESTAMP     NOT NULL WITH DEFAULT CURRENT TIMESTAMP,
+    UPDATED_DATE      TIMESTAMP     NOT NULL WITH DEFAULT CURRENT TIMESTAMP,
+
+    -- 원천 레코드 하나가 대상 테이블별로 한 행씩 가진다. TARGET_SYSTEM 과
+    -- TARGET_OBJECT 를 키에 넣어 같은 원천이 여러 대상에 매핑되는 경우를
+    -- 허용한다. view_part_v1.part_pk 가 DPACPU·DPADISK·DPAMEDIAADAPTER 셋에
+    -- 쓰이는 것이 그 예다.
+    CONSTRAINT PK_SOURCE_TARGET_MAP
+        PRIMARY KEY (SOURCE_SYSTEM, SOURCE_OBJECT, SOURCE_ID,
+                     TARGET_SYSTEM, TARGET_OBJECT),
+
+    -- 대상 행 하나는 매핑 하나만 갖는다.
+    CONSTRAINT UQ_SOURCE_TARGET_MAP_TARGET
+        UNIQUE (TARGET_SYSTEM, TARGET_OBJECT, TARGET_ID)
+);
+
+-- 장비 단위 조회. "이 device_pk 의 자식 매핑 전부"
+CREATE INDEX DISCOVERY.IX_SOURCE_TARGET_MAP_SRC_PARENT
+    ON DISCOVERY.SOURCE_TARGET_MAP (SOURCE_SYSTEM, SOURCE_OBJECT, SOURCE_PARENT_ID);
+
+-- 노드 단위 조회. "이 NODEID 의 대상 행 전부"
+CREATE INDEX DISCOVERY.IX_SOURCE_TARGET_MAP_TGT_PARENT
+    ON DISCOVERY.SOURCE_TARGET_MAP (TARGET_SYSTEM, TARGET_OBJECT, TARGET_PARENT_ID);

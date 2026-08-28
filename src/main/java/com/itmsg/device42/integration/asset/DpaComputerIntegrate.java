@@ -29,6 +29,8 @@ public class DpaComputerIntegrate implements AssetIntegrationTask {
     private static final String IMPORT_SOURCE = "Device42";
     private static final DateTimeFormatter US_DATE_FORMATTER =
             DateTimeFormatter.ofPattern("MM/dd/yyyy");
+    private static final DateTimeFormatter LEGACY_DATE_TIME_FORMATTER =
+            DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm");
 
     private final Device42ConnectionFactory connectionFactory;
     private final JdbcTemplate maximoJdbcTemplate;
@@ -43,7 +45,7 @@ public class DpaComputerIntegrate implements AssetIntegrationTask {
 
     @Override
     public void integrate() {
-        long totalCount = getViewDeviceTotalCount();
+        long totalCount = getTotalCount();
         int batchSize = DEFAULT_BATCH_SIZE;
 
         if (totalCount <= 0 || batchSize <= 0) {
@@ -67,7 +69,7 @@ public class DpaComputerIntegrate implements AssetIntegrationTask {
         }
     }
 
-    public long getViewDeviceTotalCount() {
+    public long getTotalCount() {
         try (Connection connection = connectionFactory.openConnection();
              PreparedStatement statement = connection.prepareStatement(DEVICE_TOTAL_COUNT_QUERY);
              ResultSet resultSet = statement.executeQuery()) {
@@ -254,7 +256,7 @@ public class DpaComputerIntegrate implements AssetIntegrationTask {
         return Math.multiplyExact(totalCpus, corePerCpu);
     }
 
-    private static LocalDateTime parseBiosDate(String value) {
+    static LocalDateTime parseBiosDate(String value) {
         if (value == null || value.isBlank()) {
             return null;
         }
@@ -265,8 +267,13 @@ public class DpaComputerIntegrate implements AssetIntegrationTask {
         } catch (DateTimeParseException ignored) {
             try {
                 return LocalDate.parse(normalized, US_DATE_FORMATTER).atStartOfDay();
-            } catch (DateTimeParseException invalidFormat) {
-                return null;
+            } catch (DateTimeParseException ignoredUsFormat) {
+                try {
+                    return LocalDateTime.parse(normalized, LEGACY_DATE_TIME_FORMATTER);
+                } catch (DateTimeParseException invalidFormat) {
+                    log.warn("지원하지 않는 BIOS 날짜 형식입니다. value={}", value);
+                    return null;
+                }
             }
         }
     }

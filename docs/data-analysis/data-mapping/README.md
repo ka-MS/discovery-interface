@@ -19,9 +19,10 @@
 | `asset/dpanetprinter.md` | `integration/asset/DpaNetPrinterIntegrate.java` |
 | `software/dpasoftware.md` | `integration/software/DpaSoftwareIntegrate.java` |
 
-현재 실제 적재 구현은 `DeployedAssetIntegrate`와 `DpaComputerIntegrate`뿐이다.
-`DpaOsIntegrate`와 `DpaSoftwareIntegrate`는 자리표시자이며 나머지 자식 구현
-클래스는 아직 없다. 표는 문서 한 장이 대응할 구현 클래스를 가리킨다.
+현재 실제 적재 구현은 `DeployedAssetIntegrate`, `DpaComputerIntegrate`,
+`DpaNetDeviceIntegrate`, `DpaNetPrinterIntegrate`, `DpaCpuIntegrate`다. `DpaOsIntegrate`와
+`DpaSoftwareIntegrate`는 자리표시자이며 나머지 자식 구현 클래스는 아직 없다.
+표는 문서 한 장이 대응할 구현 클래스를 가리킨다.
 
 ## 실행 순서
 

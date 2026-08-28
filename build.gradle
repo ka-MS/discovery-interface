@@ -19,12 +19,15 @@ repositories {
 }
 
 dependencies {
-    implementation 'org.springframework.boot:spring-boot-starter-batch-jdbc'
+    implementation 'org.springframework.boot:spring-boot-starter-restclient'
+    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+    implementation files('libs/d42-jdbc-driver-1.0.2-jar-with-dependencies.jar')
     runtimeOnly 'com.ibm.db2:jcc'
-    testImplementation 'org.springframework.boot:spring-boot-starter-batch-jdbc-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 tasks.named('test') {
     useJUnitPlatform()
+    systemProperty 'jdk.net.hosts.file', file('config/device42-test-hosts').absolutePath
 }

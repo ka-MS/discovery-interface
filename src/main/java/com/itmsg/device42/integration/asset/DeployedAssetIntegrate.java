@@ -25,7 +25,7 @@ public class DeployedAssetIntegrate implements AssetIntegrationTask {
     private final Device42ConnectionFactory connectionFactory;
     private final JdbcTemplate maximoJdbcTemplate;
 
-    private static final int DEFAULT_BATCH_SIZE = 10;
+    private static final int DEFAULT_BATCH_SIZE = 1000;
 
     public DeployedAssetIntegrate(
             Device42ConnectionFactory connectionFactory,
@@ -37,7 +37,7 @@ public class DeployedAssetIntegrate implements AssetIntegrationTask {
 
     @Override
     public void integrate() {
-        long totalCount = getViewDeviceTotalCount();
+        long totalCount = getTotalCount();
         int batchSize = DEFAULT_BATCH_SIZE;
 
         if (totalCount <= 0 || batchSize <= 0) {
@@ -62,7 +62,7 @@ public class DeployedAssetIntegrate implements AssetIntegrationTask {
         }
     }
 
-    public long getViewDeviceTotalCount() {
+    public long getTotalCount() {
         try (Connection connection = connectionFactory.openConnection();
              PreparedStatement statement = connection.prepareStatement(DEVICE_TOTAL_COUNT_QUERY);
              ResultSet resultSet = statement.executeQuery()) {
@@ -147,7 +147,7 @@ public class DeployedAssetIntegrate implements AssetIntegrationTask {
                     : source.name();
 
             mappedData.add(new DeployedAsset(
-                    null,
+                    (long) source.devicePk(),
                     nodeName,
                     "UNKNOWN",
                     source.serialNo(),
@@ -199,24 +199,25 @@ public class DeployedAssetIntegrate implements AssetIntegrationTask {
                 (PreparedStatement statement) -> {
                     for (DeployedAsset asset : datas) {
                         try {
-                            statement.setString(1, asset.sourceId());
-                            statement.setString(2, asset.importSource());
-                            statement.setString(3, asset.nodeName());
-                            statement.setString(4, asset.domainName());
-                            statement.setString(5, asset.serialNumber());
-                            statement.setString(6, asset.assetTag());
-                            statement.setString(7, asset.makeModel());
-                            statement.setString(8, asset.manufacturer());
-                            statement.setString(9, asset.description());
-                            statement.setTimestamp(10, toTimestamp(asset.hwLastScanDate()));
-                            statement.setString(11, asset.hwDetectionTool());
-                            statement.setObject(12, asset.supportsSnmp(), Types.INTEGER);
-                            statement.setString(13, asset.assetClass());
-                            statement.setTimestamp(14, toTimestamp(asset.createDate()));
-                            statement.setTimestamp(15, toTimestamp(asset.changeDate()));
-                            statement.setString(16, asset.tloamStatus());
-                            statement.setString(17, asset.tloamNrsManufacturer());
-                            statement.setString(18, asset.tloamNrsUuid());
+                            statement.setLong(1, asset.nodeId());
+                            statement.setString(2, asset.sourceId());
+                            statement.setString(3, asset.importSource());
+                            statement.setString(4, asset.nodeName());
+                            statement.setString(5, asset.domainName());
+                            statement.setString(6, asset.serialNumber());
+                            statement.setString(7, asset.assetTag());
+                            statement.setString(8, asset.makeModel());
+                            statement.setString(9, asset.manufacturer());
+                            statement.setString(10, asset.description());
+                            statement.setTimestamp(11, toTimestamp(asset.hwLastScanDate()));
+                            statement.setString(12, asset.hwDetectionTool());
+                            statement.setObject(13, asset.supportsSnmp(), Types.INTEGER);
+                            statement.setString(14, asset.assetClass());
+                            statement.setTimestamp(15, toTimestamp(asset.createDate()));
+                            statement.setTimestamp(16, toTimestamp(asset.changeDate()));
+                            statement.setString(17, asset.tloamStatus());
+                            statement.setString(18, asset.tloamNrsManufacturer());
+                            statement.setString(19, asset.tloamNrsUuid());
                             statement.executeUpdate();
                         } catch (SQLException e) {
                             log.error(
@@ -298,8 +299,9 @@ public class DeployedAssetIntegrate implements AssetIntegrationTask {
     private static final String MERGE_DEPLOYED_ASSET_QUERY = """
             MERGE INTO MAXIMO.DEPLOYEDASSET AS target
             USING (
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ) AS source (
+                NODEID,
                 SOURCEID,
                 IMPORTSOURCE,
                 NODENAME,
@@ -319,8 +321,7 @@ public class DeployedAssetIntegrate implements AssetIntegrationTask {
                 TLOAMNRSMANUFACTURER,
                 TLOAMNRSUUID
             )
-            ON target.SOURCEID = source.SOURCEID
-               AND target.IMPORTSOURCE = source.IMPORTSOURCE
+            ON target.NODEID = source.NODEID
             WHEN MATCHED THEN
                 UPDATE SET
                     NODENAME = source.NODENAME,
@@ -361,7 +362,7 @@ public class DeployedAssetIntegrate implements AssetIntegrationTask {
                     TLOAMNRSUUID
                 )
                 VALUES (
-                    NEXT VALUE FOR MAXIMO.DEPLOYEDASSETSEQ,
+                    source.NODEID,
                     source.SOURCEID,
                     source.IMPORTSOURCE,
                     source.NODENAME,

@@ -51,9 +51,10 @@ FROM view_netport_v1 WHERE second_device_fk IS NOT NULL
 **상태:** 적재 정책 확정. 삭제 정책 논의 필요.
 
 자식 테이블의 자체 ID 는 Maximo 시퀀스로 발번한다. 재실행 시 같은 원천 행을
-찾기 위해 `SOURCE_TARGET_MAP` 을 신설한다.
+찾기 위해 `SOURCE_TARGET_MAP` 을 신설했다.
 
-현재 Db2에는 `SOURCE_TARGET_MAP` 테이블이 없다. 구현 전에 DDL을 적용해야 한다.
+`DISCOVERY.SOURCE_TARGET_MAP` 을 2026-08-28 에 적용했다. DDL 정본은
+`src/main/resources/db/discovery/001-source-target-map.sql` 이다.
 
 | 컬럼 | 값 |
 | --- | --- |
@@ -68,9 +69,26 @@ FROM view_netport_v1 WHERE second_device_fk IS NOT NULL
 | `CREATED_DATE` | 매핑 생성 일시 |
 | `UPDATED_DATE` | 매핑 변경 일시 |
 
-원천 매칭 키는 `(SOURCE_SYSTEM, SOURCE_OBJECT, SOURCE_ID)` 다. 대상에는
-`(TARGET_SYSTEM, TARGET_OBJECT, TARGET_ID)` 유일 제약을 둔다. 서버 주소는
-식별자에 포함하지 않는다.
+기본키는 `(SOURCE_SYSTEM, SOURCE_OBJECT, SOURCE_ID, TARGET_SYSTEM,
+TARGET_OBJECT)` 다. 대상 테이블을 키에 넣어야 한 원천 레코드가 대상 테이블별로
+한 행씩 가질 수 있다. `view_part_v1` 이 `DPACPU`·`DPADISK`·`DPAMEDIAADAPTER`
+셋의 원천인 경우가 그렇다. 다만 파트 하나는 `partmodel_fk` 가 하나뿐이라
+`type_name` 이 단일하므로, 관측 시점에 실제로 여러 대상에 들어가는 `part_pk`
+는 없다. 여지를 열어둔 것이다.
+
+대상에는 `(TARGET_SYSTEM, TARGET_OBJECT, TARGET_ID)` 유일 제약을 둔다.
+`TARGET_ID` 단독으로는 유일하지 않다. 각 대상 테이블이 자기 시퀀스를 쓰고 모두
+1부터 시작해 ID 가 겹치기 때문이다. 유일성은 대상 테이블 안에서만 성립한다.
+
+두 제약은 방향이 다르다. 기본키는 같은 원천이 같은 대상 테이블에 두 번
+매핑되는 것을, 유일 제약은 같은 대상 행이 두 원천에 매핑되는 것을 막는다.
+
+기본키가 막는 것은 원천 1건을 같은 대상 테이블의 여러 행으로 나누는
+fan-out 이다. 노드 하나에 자식이 여러 행 붙는 1:N 은 원천 레코드가 애초에
+여러 건인 경우이므로 해당하지 않는다. 관측된 원천 9종은 모두 레코드 1건이
+대상 행 1건이 되므로 나눌 일이 없다.
+
+서버 주소는 식별자에 포함하지 않는다.
 
 | 대상 | 대상 ID·시퀀스 | 원천 ID |
 | --- | --- | --- |

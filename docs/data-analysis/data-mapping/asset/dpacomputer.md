@@ -37,7 +37,7 @@ MERGE 키는 `NODEID` 단독이다. 노드당 1행이므로 부모와 1:1 이다
 
 | Target 컬럼 | 한글명 | 타입 | Null | 구분 | Source | 변환·조건 |
 | --- | --- | --- | --- | --- | --- | --- |
-| BIOSDATE | BIOS 날짜 | DATETIME(10) | Y | 변환 | `view_device_v2.bios_release_date` | ISO_LOCAL_DATE 우선, 실패 시 `MM/dd/yyyy`. 둘 다 실패하면 NULL. .68 은 28대 중 2대만 값이 있다 |
+| BIOSDATE | BIOS 날짜 | DATETIME(10) | Y | 변환 | `view_device_v2.bios_release_date` | `yyyy-MM-dd`, `MM/dd/yyyy`, `yyyy/MM/dd HH:mm` 순으로 변환한다. 모두 실패하면 경고를 남기고 NULL. 관측 .35 4/66 · .68 2/28 |
 | BIOSNAME | BIOS | ALN(64) | Y | 원천없음 | – | `view_device_v2.bios_vendor_fk` 가 있으나 .68 에서 28대 중 1대뿐이다 |
 | BIOSPNP | PNP | YORN(1) | N | 상수 | – | `0` |
 | BIOSVERSION | BIOS 버전 | ALN(32) | Y | 직접 | `view_device_v2.bios_version` | 수집률이 매우 낮다. .68 은 대상 28대 중 2대뿐이다 |
