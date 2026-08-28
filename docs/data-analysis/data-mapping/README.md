@@ -17,20 +17,37 @@
 | `asset/dpaswsuite.md` | `integration/asset/DpaSwSuiteIntegrate.java` |
 | `asset/dpanetdevice.md` | `integration/asset/DpaNetDeviceIntegrate.java` |
 | `asset/dpanetprinter.md` | `integration/asset/DpaNetPrinterIntegrate.java` |
+| `software/tloamsoftware.md` | `integration/software/TloamSoftwareIntegrate.java` |
 | `software/dpasoftware.md` | `integration/software/DpaSoftwareIntegrate.java` |
 
+## 변환 데이터
+
+자식 테이블이 Maximo UI 에 보이려면 변환 변형에 값이 등록되어 있어야 한다.
+뷰가 INNER 조인하기 때문이다. `conversion/README.md` 참조.
+
 현재 실제 적재 구현은 `DeployedAssetIntegrate`, `DpaComputerIntegrate`,
-`DpaNetDeviceIntegrate`, `DpaNetPrinterIntegrate`, `DpaCpuIntegrate`다. `DpaOsIntegrate`와
-`DpaSoftwareIntegrate`는 자리표시자이며 나머지 자식 구현 클래스는 아직 없다.
-표는 문서 한 장이 대응할 구현 클래스를 가리킨다.
+`DpaNetDeviceIntegrate`, `DpaNetPrinterIntegrate`, `DpaCpuIntegrate`,
+`DpaOsIntegrate`, `DpaDiskIntegrate`, `DpaLogicalDriveIntegrate`,
+`DpaNetAdapterIntegrate`, `DpaMediaAdapterIntegrate`, `DpaTcpIpIntegrate`,
+`TloamSoftwareIntegrate`, `DpaSoftwareIntegrate`다. 나머지 자식 구현 클래스는
+아직 없다. 표는 문서 한 장이 대응할 구현 클래스를 가리킨다.
 
 ## 실행 순서
 
-`DEPLOYEDASSET` 이 `NODEID` 를 발번한 뒤에야 자식 테이블을 적재할 수 있다.
+Device42 PK를 DPA 행의 Maximo ID로 직접 사용한다. `DEPLOYEDASSET.NODEID`는
+`device_pk`, 각 1:N DPA 자식의 자체 ID는 해당 원천 레코드 PK다.
+`DISCOVERY.SOURCE_TARGET_MAP`은 사용하지 않는다. 전역 변환 데이터와
+`TLOAMSOFTWARE`의 신규 ID는 각 Maximo 시퀀스로 발번한다.
 
 1. `DEPLOYEDASSET`
 2. `DPACOMPUTER` (COMPUTER 는 부모와 1:1)
 3. 나머지 자식 테이블
+
+자식의 `NODEID`에는 원천 `device_fk`를 직접 넣는다. 부모 조회는 하지 않지만
+참조 대상 행을 먼저 만들기 위해 실행 순서는 유지한다.
+
+전체 잡은 `conversion → asset → ci → software` 순서다. `software` 잡 안에서는
+`TLOAMSOFTWARE → DPASOFTWARE` 순서로 적재한다.
 
 ## ASSETCLASS 라우팅
 
@@ -54,6 +71,7 @@ PDU 는 `DEPLOYEDASSET` 과 모든 자식의 조회 대상에서 제외한다.
 | DPACOMPUTER | `view_device_v2`, `view_part_v1`(RAM) | 작성 완료 |
 | DPAOS | `view_deviceos_v1`, `view_os_v1` | 작성 완료 |
 | DPASOFTWARE | `view_softwareinuse_v1`, `view_software_v1` | 작성 완료 |
+| TLOAMSOFTWARE | `view_softwareinuse_v1`, `view_software_v1`, `view_vendor_v1` | 작성 완료 |
 | DPACPU | `view_part_v1`(CPU) | 작성 완료 |
 | DPADISK | `view_part_v1`(Hard Disk) | 작성 완료 |
 | DPALOGICALDRIVE | `view_mountpoint_v1` | 작성 완료 |

@@ -1,13 +1,13 @@
--- DPASOFTWARE 기존 수집분의 값 관례와 마스터 계열 구조를 확인한다. Device42
+-- DPASOFTWARE 기존 수집분의 값 관례와 변환 계열 구조를 확인한다. Device42
 -- 적재 규칙의 근거가 아니라 타겟 도메인과 표기가 호환되는지 비교하는 용도다.
 --
 -- 블록
 --   software-coverage  DPASOFTWARE 컬럼별 충전 건수
 --   software-values    TYPE·LANGUAGE·USAGECOUNT·SUITEID 값 관례
 --   software-key       자연키 후보의 유일성. INSTALLPATH 가 필요한 이유
---   master-tables      DPAM* 마스터 계열의 실재 여부와 행 수
---   master-coverage    자식 이름이 마스터에 등록돼 있는지
---   device42-manufacturer-coverage  Device42 부모 제조사의 마스터 등록 여부
+--   master-tables      DPAM* 변환 계열의 실재 여부와 행 수
+--   master-coverage    자식 이름이 변환 변형에 등록돼 있는지
+--   device42-manufacturer-coverage  Device42 부모 제조사의 변환 변형 등록 여부
 
 -- name: software-coverage
 SELECT COUNT(*) AS ROWS_ALL,

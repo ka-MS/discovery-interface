@@ -25,6 +25,20 @@ DPA 계열 원본 테이블의 사본이다. 매핑 구현이 실제로 쓰기�
 | `DPANETDEVICE_BAK` | 34 | 2026-08-28 | 원본 전량 |
 | `DPANETPRINTER_BAK` | 4 | 2026-08-28 | 원본 전량 |
 
+변환 계열은 별도로 떴다. `conversion` 잡이 이 테이블들에 MERGE 하기 전 상태다.
+
+| 백업 테이블 | 행 | 생성 | 내용 |
+| --- | --- | --- | --- |
+| `TLOAMSOFTWARE_BAK` | 2175 | 2026-08-28 | 소프트웨어 제품 테이블 |
+| `DPAMMANUFACTURER_BAK` | 315 | 2026-08-28 | 제조업체 변환 대상 |
+| `DPAMMANUVARIANT_BAK` | 315 | 2026-08-28 | 제조업체 변환 변형 |
+| `DPAMADAPTER_BAK` | 59 | 2026-08-28 | 어댑터 변환 대상 |
+| `DPAMADPTVARIANT_BAK` | 59 | 2026-08-28 | 어댑터 변환 변형 |
+| `DPAMOS_BAK` | 23 | 2026-08-28 | 운영체제 변환 대상 |
+| `DPAMOSVARIANT_BAK` | 23 | 2026-08-28 | 운영체제 변환 변형 |
+| `DPAMPROCESSOR_BAK` | 13 | 2026-08-28 | 프로세서 변환 대상 |
+| `DPAMPROCVARIANT_BAK` | 13 | 2026-08-28 | 프로세서 변환 변형 |
+
 2026-08-28 생성분은 행 수와 컬럼 수가 원본과 전건 일치한다.
 
 ## 만든 방식
@@ -47,12 +61,24 @@ CREATE TABLE MAXIMO.<원본>_BAK AS (
 ## 복원 시 주의
 
 백업본에 유니크 제약이 없어 `INSERT ... SELECT` 로 원본에 되돌리면 중복을
-막을 수단이 없다. `DEPLOYEDASSET_BAK` 은 기존 수집분 106행이라 살아 있는
+막을 수단이 없다. 변환 계열은 원본이 이름 컬럼에 유일 인덱스를 걸어 동작하므로
+특히 주의한다.
+
+| 원본 | 유일 인덱스 컬럼 |
+| --- | --- |
+| `DPAMMANUFACTURER` | `MANUFACTURERNAME` |
+| `DPAMMANUVARIANT` | `MANUFACTURERVAR` |
+| `DPAMOS` / `DPAMOSVARIANT` | `OSNAME` / `OSVARIANT` |
+| `DPAMPROCESSOR` / `DPAMPROCVARIANT` | `PROCESSORNAME` / `PROCESSORVAR` |
+| `DPAMADAPTER` / `DPAMADPTVARIANT` | `ADAPTERNAME` / `ADAPTERVARIANT` |
+| `TLOAMSOFTWARE` | `UNIQUEID` |
+
+`conversion` 잡의 MERGE 는 `WHEN NOT MATCHED` 뿐이라 멱등하다. 변환 계열을
+되돌릴 때는 원본을 비운 뒤 잡을 다시 실행하는 편이 안전하다. `DEPLOYEDASSET_BAK` 은 기존 수집분 106행이라 살아 있는
 같은 행과 `NODEID` 가 통째로 충돌한다.
 
-`DEPLOYEDASSET` 의 MERGE 는 `(SOURCEID, IMPORTSOURCE)` 로 멱등이므로, Device42
-적재분을 되돌릴 때는 해당 행을 지우고 잡을 다시 실행하는 편이 안전하다.
-시퀀스는 되돌아가지 않아 `NODEID` 에 구멍이 남는다.
+Device42 적재는 `NODEID = device_pk`로 MERGE한다. 적재분을 되돌릴 때는 해당
+행을 지우고 잡을 다시 실행하면 같은 `NODEID`로 복원된다.
 
 ## 재조회
 

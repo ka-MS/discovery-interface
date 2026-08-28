@@ -1,0 +1,136 @@
+# DPAMADPTVARIANT
+
+어댑터 변환 변형
+
+> Target: MAXIMO.DPAMADPTVARIANT · 구현: DpamAdptVariantIntegrate.java
+> 관측 2026-08-28 · Device42 192.168.1.35 · 192.168.2.68 / Maximo BLUDB
+> 재조회 `../../exploration-queries/maximo/dpa-view-conversion-requirements.sql`
+
+## 1. 관계
+
+- 부모: 없음. 노드와 무관한 전역 사전이다
+- 카디널리티: 원시 문자열 1건 = 행 1건
+- 선행: `DPAMADAPTER` 적재. 이 테이블의 `ADAPTERNAME` 이 그 대상을 가리킨다
+- MERGE 키: `ADAPTERVARIANT` (유일 인덱스)
+
+**UI 뷰가 실제로 조인하는 테이블이다.** 값이 없으면 자식 행이 화면에서
+사라진다. 짝이 되는 대상 테이블은 `dpamadapter.md` 참조.
+
+어댑터 계열 뷰 넷이 요구한다. `DPACNETADAPTER`, `DPACMEDIAADAPTER`,
+`DPACCOMMDEVICE`, `DPACNETDEVCARD` 다.
+
+```sql
+from dpanetadapter, dpammanuvariant, dpamadptvariant
+where dpanetadapter.manufacturer = dpammanuvariant.manufacturervar
+  and dpanetadapter.makemodel    = dpamadptvariant.adaptervariant
+```
+
+## 2. 테이블 매핑
+
+| Source | Target | 카디널리티 |
+| --- | --- | --- |
+| `view_partmodel_v1.name` (`type_name = 'GPU'`) + 상수 `UNKNOWN` | MAXIMO.DPAMADPTVARIANT | N:1 |
+
+두 자식의 `MAKEMODEL` 성격이 다르다.
+
+| 자식 | 기록되는 값 | Device42 원천 |
+| --- | --- | --- |
+| `DPAMEDIAADAPTER` | `defaultUnknown(view_partmodel_v1.name)` | GPU 파트 모델명 |
+| `DPANETADAPTER` | **상수 `UNKNOWN`** | **대응 컬럼 없음** |
+
+`DPANETADAPTER.MAKEMODEL` 은 `view_netport_v1` 에 어댑터 모델 컬럼이 없어 매핑이
+상수로 정한 값이다. Device42 에서 조회할 수 없으므로 GPU 모델명에 상수
+`UNKNOWN` 을 더해 만든다. 근거는 `../asset/dpanetadapter.md` 참조.
+
+기존 59행은 `3Com 3C920 ...` 같은 구세대 NIC 모델명이다.
+
+## 3. 조회 조건
+
+| 조건 | 식 | 사유 |
+| --- | --- | --- |
+| GPU 파트만 | `pm.type_name = 'GPU'` | `view_part_v1` 은 여러 파트 종류를 한 테이블에 담는다 |
+| COMPUTER 대상 | `DpaMediaAdapterIntegrate` 와 동일한 `DEVICE_FILTER` | 자식이 기록할 값만 등록한다 |
+| 상수 추가 | `UNION SELECT 'UNKNOWN'` | `DPANETADAPTER` 가 기록하는 값 |
+| 빈 값 제외 | `name IS NOT NULL AND name <> ''` | 이름 컬럼이 NOT NULL 이다 |
+
+## 4. 컬럼 매핑
+
+| Target 컬럼 | 한글명 | 타입 | Null | 구분 | Source | 변환·조건 |
+| --- | --- | --- | --- | --- | --- | --- |
+| DPAMADPTVARIANTID | 어댑터 변형 ID | BIGINT(19) | N | 채번 | – | `NEXT VALUE FOR MAXIMO.DPAMADPTVARIANTSEQ`(START 60). NOT MATCHED 시에만 발번 |
+| ADAPTERNAME | 대상 어댑터 | ALN(128) | N | 직접 | 대상 테이블의 정규명 | 정규화 없이 쓰면 원시값과 같다 |
+| ADAPTERVARIANT | 어댑터 변형 | ALN(128) | N | 직접 | `view_partmodel_v1.name` (`type_name = 'GPU'`) + 상수 `UNKNOWN` | 유일 인덱스. MERGE 키. **뷰가 조인하는 컬럼** |
+
+구분 허용값: 직접 / 변환 / 상수 / 채번 / 원천없음 / 미결
+
+정규화 없이 적재하면 `ADAPTERNAME` 과 `ADAPTERVARIANT` 가 같은 값이 된다. 그러면 변환
+계층이 실질적으로 동작하지 않는다. 기존 59행도 전건 그 상태이며
+`VALIDATED` 가 `0` 이다. 정규화 규칙은 `../../open-issues.md` ISSUE-6 참조.
+
+## 5. 조회 쿼리
+
+대상 테이블과 같은 쿼리를 쓴다.
+
+```sql
+WITH gpu AS (
+    SELECT DISTINCT pm.name
+    FROM view_part_v1 p
+    JOIN view_partmodel_v1 pm ON pm.partmodel_pk = p.partmodel_fk
+    JOIN view_device_v2 d ON d.device_pk = p.device_fk
+    WHERE pm.type_name = 'GPU'
+      AND
+      d.type IN ('virtual', 'physical')
+      AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)
+      AND (d.network_device = false OR d.network_device IS NULL)
+      AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer', 'PDU'))
+      AND pm.name IS NOT NULL
+      AND pm.name <> ''
+)
+SELECT name FROM gpu
+UNION
+SELECT 'UNKNOWN'
+ORDER BY name
+```
+
+관측 `.35` 2종, `.68` 6종이다.
+
+## 6. 적재 쿼리
+
+```sql
+MERGE INTO MAXIMO.DPAMADPTVARIANT AS target
+USING (
+    VALUES (?, ?)
+) AS source (
+    ADAPTERNAME,
+    ADAPTERVARIANT
+)
+ON target.ADAPTERVARIANT = source.ADAPTERVARIANT
+WHEN NOT MATCHED THEN
+    INSERT (
+        DPAMADPTVARIANTID,
+        ADAPTERNAME,
+        ADAPTERVARIANT
+    )
+    VALUES (
+        NEXT VALUE FOR MAXIMO.DPAMADPTVARIANTSEQ,
+        source.ADAPTERNAME,
+        source.ADAPTERVARIANT
+    )
+```
+
+## 7. 관측
+
+2종이 145행을 가리고 있다. 그중 1종이 144행을 차지한다.
+
+| 값 | 출처 | 행 |
+| --- | --- | --- |
+| `UNKNOWN` | `DPANETADAPTER` | 144 |
+| `VMware SVGA 3D` | `DPAMEDIAADAPTER` | 1 |
+
+## 8. 미결
+
+- `UNKNOWN` 을 사전에 넣는 것이 옳은지 판단이 필요하다. 값이 아니라 값 없음을
+  뜻하므로 변환 데이터의 성격과 맞지 않는다. `DPANETADAPTER.MAKEMODEL` 에 다른
+  원천을 찾아 채우는 것이 대안이다.
+- `MAKEMODEL` 은 `MAXATTRIBUTE.DEFAULTVALUE` 가 `UNKNOWN` 인 NOT NULL 컬럼이라
+  값을 비울 수는 없다.

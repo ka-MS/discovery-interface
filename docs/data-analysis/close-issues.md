@@ -14,8 +14,8 @@
 `physicalsubtype = 'PDU'`가 COMPUTER로 분류됐다. Maximo에 대응 ASSETCLASS와
 DPA 테이블이 없어 `DEPLOYEDASSET`과 COMPUTER 자식의 조회 대상에서 제외했다.
 
-필터 적용 전에 적재된 PDU 1건(`SOURCEID=172`)은 Maximo에 남아 있다. 삭제는
-ISSUE-5의 삭제 정책을 정한 뒤 처리한다.
+필터 적용 전에 적재된 PDU 1건(`SOURCEID=172`)은 Maximo에 남아 있다. 삭제
+정책은 별도로 논의한다.
 
 ## ISSUE-4 자식 태스크의 조회 조건이 부모와 다름
 
@@ -23,6 +23,16 @@ ISSUE-5의 삭제 정책을 정한 뒤 처리한다.
 
 COMPUTER 자식이 부모에서 제외한 Docker Container 등을 조회했다. 부모의 타입,
 Docker Container, PDU 제외 조건을 동일하게 적용한 뒤 COMPUTER 대상만 조회한다.
+
+## ISSUE-5 1:N 자식 테이블의 MERGE 매칭 키
+
+**결론:** `SOURCE_TARGET_MAP`을 사용하지 않는다.
+
+운영은 단일 Device42를 사용한다. `DEPLOYEDASSET.NODEID`에는 `device_pk`, 각 DPA
+자식의 `NODEID`에는 `device_fk`, 자체 ID에는 해당 원천 레코드 PK를 직접 넣는다.
+Maximo 시퀀스와 별도 교차키 없이 대상 ID를 MERGE 키로 사용한다.
+
+원천이 사라졌을 때의 삭제·비활성화 정책은 별도로 논의한다.
 
 ## 가상 장비 vendor 없음
 

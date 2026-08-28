@@ -71,12 +71,14 @@ Maximo 는 한 대뿐이라 `DB_ACCESS_ENV` 없이 기본 파일을 쓴다.
 | `device42/dpa-os-network-mapping.sql` | OS·TCP/IP·프린터의 대상 원천과 값 분포 |
 | `device42/dpa-software-mapping.sql` | 소프트웨어의 COMPUTER 대상 원천, 자연키 유일성 |
 | `device42/dpacpu-integration-source.sql` | DPACPU 구현 원천 조건·반환 컬럼 검증 |
+| `device42/vendor-master-source.sql` | 벤더 뷰 사용처와 정규화 상태. 제조사 변환 대상 원천 |
 | `maximo/table-description.sql` | 테이블 한글 설명 |
 | `maximo/column-skeleton.sql` | 컬럼 매핑표 앞 4열 생성 |
 | `maximo/dpa-child-coverage.sql` | DPA 자식 테이블 노드 커버리지, ASSETCLASS 분포, Device42 부모 목록 |
 | `maximo/dpa-key-structure.sql` | DPA 기본키 구조와 Device42 자식 적재 건수 |
-| `maximo/source-target-map-structure.sql` | SOURCE_TARGET_MAP 컬럼·제약·인덱스·데이터 상태 검증 |
+| `maximo/source-target-map-structure.sql` | 현행 미사용 SOURCE_TARGET_MAP의 잔존 상태 검증 |
 | `maximo/dpa-hardware-existing-values.sql` | 세 DPA 하드웨어 자식의 기존값 관례 |
-| `maximo/dpa-child-sequences.sql` | 자체 ID를 쓰는 DPA 자식의 시퀀스와 현재 ID 범위 |
+| `maximo/dpa-child-sequences.sql` | 현행 미사용 DPA 시퀀스와 기존 ID 범위 확인 |
 | `maximo/dpa-os-network-existing-values.sql` | DPAOS·DPATCPIP·DPANETPRINTER·DPASWSUITE 기존값 관례 |
-| `maximo/dpa-software-existing-values.sql` | DPASOFTWARE 기존값 관례, DPAM* 마스터 계열 구조 |
+| `maximo/dpa-software-existing-values.sql` | DPASOFTWARE 기존값 관례, DPAM* 변환 계열 구조 |
+| `maximo/dpa-view-conversion-requirements.sql` | UI 뷰가 요구하는 변환 데이터 등록 상태와 미표시 건수 |
