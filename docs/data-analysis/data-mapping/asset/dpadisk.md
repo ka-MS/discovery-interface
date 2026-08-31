@@ -34,7 +34,7 @@
 | 부모 적재 대상 | `d.type IN ('virtual','physical') AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)` | DEPLOYEDASSET 필터와 일치시킨다 |
 | COMPUTER만 | `(d.network_device = false OR d.network_device IS NULL) AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer','PDU'))` | 다른 ASSETCLASS와 PDU의 자식을 만들지 않는다 |
 
-`view_mountpoint_v1` 은 논리 드라이브 원천이며 DPALOGICALDRIVE 로 간다. 물리 디스크와 혼동하지 않는다.
+`view_mountpoint_v2` 은 논리 드라이브 원천이며 DPALOGICALDRIVE 로 간다. 물리 디스크와 혼동하지 않는다.
 
 ## 4. 컬럼 매핑
 

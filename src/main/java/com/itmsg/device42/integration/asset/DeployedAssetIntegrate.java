@@ -281,7 +281,7 @@ public class DeployedAssetIntegrate implements AssetIntegrationTask {
                 d.bios_version,
                 d.bios_release_date
             FROM view_device_v2 d
-            LEFT JOIN view_hardware_v1 h
+            LEFT JOIN view_hardware_v2 h
                 ON d.hardware_fk = h.hardware_pk
             LEFT JOIN view_vendor_v1 v
                 ON h.vendor_fk = v.vendor_pk

@@ -168,8 +168,8 @@ public class DpaNetPrinterIntegrate implements AssetIntegrationTask {
                  WHERE n.device_fk = d.device_pk AND n.hwaddress <> ''
                  LIMIT 1) AS hwaddress,
                 (SELECT HOST(i.ip_address)
-                 FROM view_ipaddress_v1 i
-                 WHERE i.device_fk = d.device_pk
+                 FROM view_ipaddress_v2 i
+                 WHERE d.device_pk = ANY(i.device_fks)
                  LIMIT 1) AS ip_address,
                 (SELECT COUNT(*)
                  FROM view_part_v1 p

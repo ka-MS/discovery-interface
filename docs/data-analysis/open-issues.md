@@ -81,3 +81,38 @@ Maximo UI 는 `DPA*` 자식 테이블을 직접 읽지 않는다. 자식 위에 
 
 현재 MERGE는 조회된 원천만 INSERT 또는 UPDATE한다. Device42에서 사라진 부모나
 자식은 Maximo에 그대로 남는다. 삭제할지 비활성화할지 별도로 결정한다.
+## ISSUE-10 전력·설비 서브타입의 적재 제외 범위
+
+**상태:** 정책 정의 대기.
+
+`DEPLOYEDASSET.ASSETCLASS` 는 도메인이 없는 자유 `ALN(32)` 다. 값 제약이
+없으므로 실제 기준은 받아 줄 자식 테이블이 있느냐다. 현재 DPA 자식 18개는
+전부 컴퓨터·네트워크·프린터·이미징·통신 계열이고 전력·설비 대응 테이블이
+없다.
+
+현행 필터는 `physicalsubtype <> 'PDU'` 하나만 제외한다.
+근거: `DeployedAssetIntegrate.java` `DEVICE_FILTER`.
+
+같은 성격인데 빠져 있는 값이 다섯이다.
+
+| pk | 값 | 성격 |
+| ---: | --- | --- |
+| 6 | `CRAC` | 항온항습 |
+| 7 | `UPS` | 무정전 전원 |
+| 9 | `Branch Circuit Power Meter` | 분전반 계측 |
+| 10 | `Power Unit` | 전원 |
+| 15 | `Environment Monitor` | 환경 센서 |
+
+`view_physicalsubtype_v2.building` 이 거짓인 것은 `CRAC` 과
+`Environment Monitor` 둘뿐이라, 원천 플래그만으로는 다섯을 다 가려낼 수 없다.
+
+관측 시점에 다섯 모두 데이터에 없다. 지금 필터를 넓혀도 걸러지는 건수는 0이다.
+
+`TAP`(8) 은 판단이 갈린다. 네트워크 장비라 `DPANETDEVICE` 에 넣을 수는 있다.
+
+### 남은 결정
+
+- 다섯 값을 필터에 넣을지
+- `TAP` 의 취급
+- 넣는다면 `DeployedAssetIntegrate` 외에 conversion 부모 범위 쿼리 4곳도
+  같이 맞춰야 한다. 근거: `data-mapping/conversion/dpammanufacturer.md` 부모 범위

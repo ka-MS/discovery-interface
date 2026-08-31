@@ -74,12 +74,12 @@ PDU 는 `DEPLOYEDASSET` 과 모든 자식의 조회 대상에서 제외한다.
 | TLOAMSOFTWARE | `view_softwareinuse_v1`, `view_software_v1`, `view_vendor_v1` | 작성 완료 |
 | DPACPU | `view_part_v1`(CPU) | 작성 완료 |
 | DPADISK | `view_part_v1`(Hard Disk) | 작성 완료 |
-| DPALOGICALDRIVE | `view_mountpoint_v1` | 작성 완료 |
+| DPALOGICALDRIVE | `view_mountpoint_v2` | 작성 완료 |
 | DPANETADAPTER | `view_netport_v1` | 작성 완료 |
-| DPATCPIP | `view_ipaddress_v1`, `view_subnet_v1` | 작성 완료 |
+| DPATCPIP | `view_ipaddress_v2`, `view_subnet_v1` | 작성 완료 |
 | DPAMEDIAADAPTER | `view_part_v1`(GPU) | 작성 완료 |
-| DPANETDEVICE | `view_device_v2`(`physical`), `view_netport_v1`, `view_ipaddress_v1` | 작성 완료 |
-| DPANETPRINTER | `view_device_v2`, `view_netport_v1`, `view_ipaddress_v1`, `view_part_v1`(printer_input) | 작성 완료 |
+| DPANETDEVICE | `view_device_v2`(`physical`), `view_netport_v1`, `view_ipaddress_v2` | 작성 완료 |
+| DPANETPRINTER | `view_device_v2`, `view_netport_v1`, `view_ipaddress_v2`, `view_part_v1`(printer_input) | 작성 완료 |
 | DPADISPLAY | 없음 | 작성 완료 (원천 없음) |
 | DPASWSUITE | 없음 | 작성 완료 (원천 없음) |
 

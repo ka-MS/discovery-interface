@@ -14,7 +14,7 @@ LIMIT 1;
 
 -- name: ipaddress-shape
 SELECT *
-FROM view_ipaddress_v1
+FROM view_ipaddress_v2
 LIMIT 1;
 
 -- name: subnet-shape

@@ -22,7 +22,7 @@
 | --- | --- | --- | --- |
 | `view_device_v2` | MAXIMO.DPANETPRINTER | – | 1:1 (장비 1건 = 행 1건) |
 | `view_netport_v1` | (보강) | `view_netport_v1.device_fk = device_pk` | N:1 |
-| `view_ipaddress_v1` | (보강) | `view_ipaddress_v1.device_fk = device_pk` | N:1 |
+| `view_ipaddress_v2` | (보강) | `device_pk = ANY(view_ipaddress_v2.device_fks)` | N:1 |
 | `view_part_v1` | (용지함 수) | `view_part_v1.device_fk = device_pk`, `view_partmodel_v1.type_name = 'printer_input'` | N:1 |
 
 프린터 본체 정보는 `view_device_v2` 에 있다. `view_part_v1` 에 달린 27건은
@@ -62,7 +62,7 @@
 | MAXRAM | 최대 RAM | DECIMAL(10,2) | Y | 원천없음 | – | 대응 원천이 없다. `view_device_v2.ram` 은 현재값이다 |
 | MAXWIDTH | 최대 용지 너비 | DECIMAL(10,2) | Y | 원천없음 | – | 대응 원천이 없다. 기존 수집분도 전건 `0.00` |
 | NETMACADDR | 네트워크 MAC 주소 | ALN(17) | Y | 변환 | `view_netport_v1.hwaddress` | `UPPER(hwaddress)`. 구분자 없는 12자리이며 DPANETADAPTER·기존 수집분과 형식이 같다 |
-| NETWORKADDRESS | 네트워크 주소 | ALN(39) | Y | 변환 | `view_ipaddress_v1.ip_address` | `HOST(ip_address)`. inet 타입이라 그냥 캐스팅하면 `/32` 접미가 붙는다 |
+| NETWORKADDRESS | 네트워크 주소 | ALN(39) | Y | 변환 | `view_ipaddress_v2.ip_address` | `HOST(ip_address)`. inet 타입이라 그냥 캐스팅하면 `/32` 접미가 붙는다 |
 | NODEID | 노드 ID | BIGINT(19) | N | 직접 | `view_device_v2.device_pk` | 부모 DEPLOYEDASSET와 동일한 ID를 직접 사용하며 이 테이블의 MERGE 키로 삼는다 |
 | NUMBEROFTRAYS | 용지함 수 | INTEGER(12) | Y | 변환 | `view_part_v1`, `view_partmodel_v1.type_name` | `type_name = 'printer_input'` 인 파트 건수. 관측 3(Tray 1, Tray 2, MP Tray) |
 | RAMUNIT | RAM 단위 | ALN(16) | Y | 직접 | `view_device_v2.ram_size_type` | 관측 `GB`. 기존 수집분의 `KB` 는 다른 도구의 관례다 |
@@ -91,8 +91,8 @@ SELECT
      WHERE n.device_fk = d.device_pk AND n.hwaddress <> ''
      LIMIT 1) AS hwaddress,
     (SELECT HOST(i.ip_address)
-     FROM view_ipaddress_v1 i
-     WHERE i.device_fk = d.device_pk
+     FROM view_ipaddress_v2 i
+     WHERE d.device_pk = ANY(i.device_fks)
      LIMIT 1) AS ip_address,
     (SELECT COUNT(*)
      FROM view_part_v1 p

@@ -39,3 +39,46 @@ Maximo 시퀀스와 별도 교차키 없이 대상 ID를 MERGE 키로 사용한�
 **결론:** 이슈 아님.
 
 `MAXATTRIBUTE.DEFAULTVALUE`가 `UNKNOWN`으로 정의되어 있어 정상 결과다.
+
+## ISSUE-9 구현이 낮은 버전 뷰를 씀
+
+**상태:** 반영 완료. 2026-08-31.
+
+`view_hardware_v1`·`view_ipaddress_v1`·`view_mountpoint_v1` 을 쓰던 7곳을
+`_v2` 로 바꿨다. 규칙은 `../../CLAUDE.md` 와
+`knowledge/device42/views.md` 버전 규칙 절.
+
+`view_hardware_v2` 는 조인 키가 같아 이름만 바꿨다.
+`DeployedAssetIntegrate`, `DpamManufacturerIntegrate`, `DpamManuVariantIntegrate`.
+
+`view_ipaddress_v2` 와 `view_mountpoint_v2` 는 `device_fk` 가 `device_fks`
+배열로 바뀌어 `= ANY(...)` 로 조인한다. `DpaTcpIpIntegrate`,
+`DpaNetDeviceIntegrate`, `DpaNetPrinterIntegrate`, `DpaLogicalDriveIntegrate`.
+
+### 배열 조인이 만든 ID 중복
+
+한 IP 가 장비 여럿에 걸리면 같은 `ipaddress_pk` 가 여러 행이 되어 `TCPIPID` 가
+중복된다. MERGE 키가 깨지므로 `DISTINCT ON` 으로 장비 하나만 남긴다.
+건수 쿼리는 `COUNT(DISTINCT ...)` 로 맞춘다.
+
+`MIN(device_fks)` 로 고르는 방법은 버렸다. 필터를 통과하지 못하는 장비가
+뽑혀 행이 사라진다. `.68` 의 `192.168.1.81` 이 `unknown` 타입 장비와
+`DESKTOP-P7KJHB7` 에 함께 걸려 있어 45행이 44행이 됐다. `DISTINCT ON` 은
+필터 통과 후 최솟값을 고르므로 이 문제가 없다.
+
+`DpaNetDeviceIntegrate` 와 `DpaNetPrinterIntegrate` 는 스칼라 서브쿼리라
+행이 늘지 않는다.
+
+### 적재 결과 변화
+
+| 대상 | .35 v1 | .35 v2 | .68 v1 | .68 v2 |
+| --- | ---: | ---: | ---: | ---: |
+| DPATCPIP | 70 | 70 | 45 | 45 |
+| DPALOGICALDRIVE | 20 | **29** | 61 | 61 |
+
+`.35` 의 9행은 ESXi 호스트의 VMFS 데이터스토어다. 논리 드라이브로 적재하기로
+했다. 상세는 `data-mapping/asset/dpalogicaldrive.md`.
+
+`DEPLOYEDASSET`, `DPANETDEVICE`, `DPANETPRINTER` 는 변화 없다.
+
+탐색 쿼리 10개도 함께 고쳤고 양쪽 서버에서 전 블록 실행을 확인했다.

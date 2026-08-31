@@ -7,12 +7,12 @@ WITH target AS (
 )
 SELECT 'view_deviceos_v1' AS related_view, 'device_fk' AS link_column, count(*) AS row_cnt
   FROM view_deviceos_v1 t, target d WHERE t.device_fk = d.pk
-UNION ALL SELECT 'view_ipaddress_v1', 'device_fk', count(*)
-  FROM view_ipaddress_v1 t, target d WHERE t.device_fk = d.pk
+UNION ALL SELECT 'view_ipaddress_v2', 'device_fks', count(*)
+  FROM view_ipaddress_v2 t, target d WHERE d.pk = ANY(t.device_fks)
 UNION ALL SELECT 'view_netport_v1', 'device_fk', count(*)
   FROM view_netport_v1 t, target d WHERE t.device_fk = d.pk
-UNION ALL SELECT 'view_mountpoint_v1', 'device_fk', count(*)
-  FROM view_mountpoint_v1 t, target d WHERE t.device_fk = d.pk
+UNION ALL SELECT 'view_mountpoint_v2', 'device_fks', count(*)
+  FROM view_mountpoint_v2 t, target d WHERE d.pk = ANY(t.device_fks)
 UNION ALL SELECT 'view_part_v1', 'device_fk', count(*)
   FROM view_part_v1 t, target d WHERE t.device_fk = d.pk
 UNION ALL SELECT 'view_softwareinuse_v1', 'device_fk', count(*)

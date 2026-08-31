@@ -16,6 +16,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 미결·정책 대기 항목의 정본은 `docs/data-analysis/open-issues.md` 하나다. 다른 문서는 이슈 ID와 한 줄 요약만 참조한다.
 
+**DOQL 뷰는 높은 버전을 쓴다.** `view_hardware_v2`, `view_ipaddress_v2`, `view_mountpoint_v2` 처럼 `_v2` 가 있으면 무조건 그쪽이다. 낮은 버전은 컬럼이 빠져 있거나 행이 적다. 카탈로그 조회가 막혀 있어 버전 확인은 개별로 찔러 보는 수밖에 없다. 확인 쿼리는 `docs/data-analysis/exploration-queries/device42/view-version-probe.sql` 이고, 목록은 `docs/data-analysis/knowledge/device42/views.md` 버전 규칙 절에 있다. `device_fks` 배열 조인은 같은 원천 PK 가 여러 행이 되어 MERGE 키를 깨뜨릴 수 있다. `DISTINCT ON` 으로 장비 하나만 남긴다. 근거는 `close-issues.md` ISSUE-9.
+
 **Device42 는 두 대다.** `192.168.2.68` 은 소프트웨어·파트·마운트가, `192.168.1.35` 는 네트워크·OS 가 넓다. 같은 뷰라도 건수가 크게 다르므로 한 대만 보고 결론을 내지 않는다. 조사 결과를 문서에 옮길 때 어느 서버 관측인지 함께 적는다. 전환은 `DB_ACCESS_ENV` 로 서버별 접속 파일을 지정한다. `connections.env` 는 편집하지 않는다. 상세는 `docs/data-analysis/knowledge/device42/servers.md` 에 있다.
 
 ## 명령어

@@ -18,7 +18,7 @@ ORDER BY name;
 SELECT 'hardware' AS used_by,
        count(DISTINCT vendor_fk) AS vendors,
        count(*) AS rows_total
-FROM view_hardware_v1
+FROM view_hardware_v2
 UNION ALL
 SELECT 'software', count(DISTINCT vendor_fk), count(*)
 FROM view_software_v1;
@@ -28,7 +28,7 @@ SELECT d.type,
        v.name AS vendor,
        count(*) AS n
 FROM view_device_v2 d
-LEFT JOIN view_hardware_v1 h ON h.hardware_pk = d.hardware_fk
+LEFT JOIN view_hardware_v2 h ON h.hardware_pk = d.hardware_fk
 LEFT JOIN view_vendor_v1   v ON v.vendor_pk   = h.vendor_fk
 GROUP BY d.type, v.name
 ORDER BY n DESC;

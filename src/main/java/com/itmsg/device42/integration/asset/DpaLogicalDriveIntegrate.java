@@ -223,21 +223,21 @@ public class DpaLogicalDriveIntegrate implements AssetIntegrationTask {
             """;
 
     private static final String SOURCE_FROM_AND_FILTER = """
-            FROM view_mountpoint_v1 m
-            JOIN view_device_v2 d ON d.device_pk = m.device_fk
+            FROM view_mountpoint_v2 m
+            JOIN view_device_v2 d ON d.device_pk = ANY(m.device_fks)
             WHERE
             """ + DEVICE_FILTER + """
               AND LOWER(COALESCE(m.fstype_name, '')) NOT IN ('overlay', 'devtmpfs', 'efivarfs')
             """;
 
     private static final String TOTAL_COUNT_QUERY = """
-            SELECT COUNT(*)
+            SELECT COUNT(DISTINCT m.mountpoint_pk)
             """ + SOURCE_FROM_AND_FILTER;
 
     private static final String SOURCE_QUERY = """
-            SELECT
+            SELECT DISTINCT ON (m.mountpoint_pk)
                 m.mountpoint_pk,
-                m.device_fk,
+                d.device_pk AS device_fk,
                 m.mountpoint,
                 m.filesystem,
                 m.fstype_name,
@@ -245,7 +245,7 @@ public class DpaLogicalDriveIntegrate implements AssetIntegrationTask {
                 m.free_capacity,
                 m.label
             """ + SOURCE_FROM_AND_FILTER + """
-            ORDER BY m.device_fk, m.mountpoint, m.mountpoint_pk
+            ORDER BY m.mountpoint_pk, d.device_pk
             """;
 
     private static final String MERGE_DPA_LOGICAL_DRIVE_QUERY = """

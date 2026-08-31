@@ -72,6 +72,7 @@ Maximo 는 한 대뿐이라 `DB_ACCESS_ENV` 없이 기본 파일을 쓴다.
 | `device42/dpa-software-mapping.sql` | 소프트웨어의 COMPUTER 대상 원천, 자연키 유일성 |
 | `device42/dpacpu-integration-source.sql` | DPACPU 구현 원천 조건·반환 컬럼 검증 |
 | `device42/vendor-master-source.sql` | 벤더 뷰 사용처와 정규화 상태. 제조사 변환 대상 원천 |
+| `device42/view-version-probe.sql` | 뷰 최고 버전 확인, 물리 서브타입·파트타입 마스터 |
 | `maximo/table-description.sql` | 테이블 한글 설명 |
 | `maximo/column-skeleton.sql` | 컬럼 매핑표 앞 4열 생성 |
 | `maximo/dpa-child-coverage.sql` | DPA 자식 테이블 노드 커버리지, ASSETCLASS 분포, Device42 부모 목록 |

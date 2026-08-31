@@ -6,8 +6,8 @@ FROM view_part_v1
 LIMIT 1;
 
 -- name: mountpoint-source-id
-SELECT mountpoint_pk, device_fk
-FROM view_mountpoint_v1
+SELECT mountpoint_pk, device_fks
+FROM view_mountpoint_v2
 LIMIT 1;
 
 -- name: netport-source-id
@@ -26,6 +26,6 @@ FROM view_softwareinuse_v1
 LIMIT 1;
 
 -- name: tcpip-source-id
-SELECT ipaddress_pk, device_fk
-FROM view_ipaddress_v1
+SELECT ipaddress_pk, device_fks
+FROM view_ipaddress_v2
 LIMIT 1;

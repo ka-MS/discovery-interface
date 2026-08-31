@@ -198,26 +198,26 @@ public class DpaTcpIpIntegrate implements AssetIntegrationTask {
             """;
 
     private static final String SOURCE_FROM_AND_FILTER = """
-            FROM view_ipaddress_v1 i
-            JOIN view_device_v2 d ON d.device_pk = i.device_fk
+            FROM view_ipaddress_v2 i
+            JOIN view_device_v2 d ON d.device_pk = ANY(i.device_fks)
             LEFT JOIN view_subnet_v1 b ON b.subnet_pk = i.subnet_fk
             WHERE
             """ + DEVICE_FILTER;
 
     private static final String TOTAL_COUNT_QUERY = """
-            SELECT COUNT(*)
+            SELECT COUNT(DISTINCT i.ipaddress_pk)
             """ + SOURCE_FROM_AND_FILTER;
 
     private static final String SOURCE_QUERY = """
-            SELECT
+            SELECT DISTINCT ON (i.ipaddress_pk)
                 i.ipaddress_pk,
-                i.device_fk,
+                d.device_pk AS device_fk,
                 d.name AS device_name,
                 HOST(i.ip_address) AS ip_address,
                 b.gateway,
                 b.mask_bits
             """ + SOURCE_FROM_AND_FILTER + """
-            ORDER BY i.device_fk, i.ip_address, i.ipaddress_pk
+            ORDER BY i.ipaddress_pk, d.device_pk
             """;
 
     private static final String MERGE_DPA_TCP_IP_QUERY = """

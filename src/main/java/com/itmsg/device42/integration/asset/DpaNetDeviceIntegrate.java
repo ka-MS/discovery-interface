@@ -165,8 +165,8 @@ public class DpaNetDeviceIntegrate implements AssetIntegrationTask {
                    t.os_version,
                    l.mac,
                    (SELECT MIN(ip_address)
-                      FROM view_ipaddress_v1
-                     WHERE device_fk = l.cluster_pk) AS mgmt_ip
+                      FROM view_ipaddress_v2
+                     WHERE l.cluster_pk = ANY(device_fks)) AS mgmt_ip
             FROM target t
             LEFT JOIN link l ON l.physical_pk = t.device_pk
             ORDER BY t.device_pk

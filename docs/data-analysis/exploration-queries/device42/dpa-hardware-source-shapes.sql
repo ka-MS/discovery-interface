@@ -2,7 +2,7 @@
 
 -- name: mountpoint-shape
 SELECT *
-FROM view_mountpoint_v1
+FROM view_mountpoint_v2
 LIMIT 1;
 
 -- name: netport-shape

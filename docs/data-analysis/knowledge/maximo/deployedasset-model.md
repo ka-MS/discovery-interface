@@ -69,12 +69,12 @@ Device42 적재는 원천 PK를 Maximo ID로 직접 사용한다. 부모와 자�
 | `DEPLOYEDASSET`·1:1 자식 | `NODEID` | `view_device_v2.device_pk` |
 | `DPACPU` | `CPUID` | `view_part_v1.part_pk` |
 | `DPADISK` | `DISKID` | `view_part_v1.part_pk` |
-| `DPALOGICALDRIVE` | `LOGICALDRIVEID` | `view_mountpoint_v1.mountpoint_pk` |
+| `DPALOGICALDRIVE` | `LOGICALDRIVEID` | `view_mountpoint_v2.mountpoint_pk` |
 | `DPAMEDIAADAPTER` | `ADAPTERID` | `view_part_v1.part_pk` |
 | `DPANETADAPTER` | `ADAPTERID` | `view_netport_v1.netport_pk` |
 | `DPAOS` | `OSID` | `view_deviceos_v1.deviceos_pk` |
 | `DPASOFTWARE` | `SOFTWAREID` | `view_softwareinuse_v1.softwareinuse_pk` |
-| `DPATCPIP` | `TCPIPID` | `view_ipaddress_v1.ipaddress_pk` |
+| `DPATCPIP` | `TCPIPID` | `view_ipaddress_v2.ipaddress_pk` |
 
 모든 자식의 `NODEID`는 해당 원천 레코드의 `device_fk`다. 원천이 없는
 `DPADISPLAY`와 `DPASWSUITE`는 적재하지 않는다.

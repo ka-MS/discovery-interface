@@ -3,7 +3,7 @@
 
 -- name: logical-drive-source
 SELECT
-    m.device_fk,
+    d.device_pk AS device_fk,
     m.mountpoint,
     m.filesystem,
     m.fstype_name,
@@ -12,21 +12,21 @@ SELECT
     m.label,
     m.first_added,
     m.last_updated
-FROM view_mountpoint_v1 m
-JOIN view_device_v2 d ON d.device_pk = m.device_fk
+FROM view_mountpoint_v2 m
+JOIN view_device_v2 d ON d.device_pk = ANY(m.device_fks)
 WHERE d.type IN ('virtual', 'physical')
   AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)
   AND (d.network_device = false OR d.network_device IS NULL)
   AND (d.physicalsubtype IS NULL OR d.physicalsubtype <> 'Network Printer')
   AND LOWER(COALESCE(m.fstype_name, '')) NOT IN ('overlay', 'devtmpfs', 'efivarfs')
-ORDER BY m.device_fk, m.mountpoint;
+ORDER BY m.mountpoint_pk, d.device_pk;
 
 -- name: logical-drive-filesystems
 SELECT
     COALESCE(m.fstype_name, '<NULL>') AS fstype_name,
     count(*) AS row_count
-FROM view_mountpoint_v1 m
-JOIN view_device_v2 d ON d.device_pk = m.device_fk
+FROM view_mountpoint_v2 m
+JOIN view_device_v2 d ON d.device_pk = ANY(m.device_fks)
 WHERE d.type IN ('virtual', 'physical')
   AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)
   AND (d.network_device = false OR d.network_device IS NULL)

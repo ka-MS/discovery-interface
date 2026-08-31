@@ -18,8 +18,8 @@
 | Source | Target | 조인 조건 | 카디널리티 |
 | --- | --- | --- | --- |
 | `view_device_v2` | MAXIMO.DEPLOYEDASSET | – | 1:1 |
-| `view_hardware_v1` | (보강) | `view_device_v2.hardware_fk = hardware_pk` | N:1 |
-| `view_vendor_v1` | (보강) | `view_hardware_v1.vendor_fk = vendor_pk` | N:1 |
+| `view_hardware_v2` | (보강) | `view_device_v2.hardware_fk = hardware_pk` | N:1 |
+| `view_vendor_v1` | (보강) | `view_hardware_v2.vendor_fk = vendor_pk` | N:1 |
 
 MERGE 키는 `NODEID` 다. `NODEID = device_pk` 이므로 재실행해도 멱등하다.
 
@@ -47,8 +47,8 @@ MERGE 키는 `NODEID` 다. `NODEID = device_pk` 이므로 재실행해도 멱등
 | HWDETECTIONTOOL | 하드웨어 검색 도구 | ALN(256) | Y | 상수 | – | `'Device42'` |
 | HWLASTSCANDATE | 하드웨어 최종 스캔 날짜 | DATETIME(10) | Y | 직접 | `view_device_v2`.last_discovered |  |
 | IMPORTSOURCE | 가져오기 소스 | ALN(128) | Y | 상수 | – | `'Device42'` |
-| MAKEMODEL | 제조/모델 | ALN(128) | Y | 직접 | `view_hardware_v1.name` | `view_device_v2.hardware_fk` 조인. 가상 장비는 양쪽 서버 모두 전건 NULL (.68 VMWare 0/18, EC2 0/8 · .35 VMWare 0/55) |
-| MANUFACTURER | 제조업체 | ALN(128) | N | 직접 | `view_vendor_v1.name` | `view_hardware_v1.vendor_fk` 조인. 없으면 `UNKNOWN`. DEFAULTVALUE=UNKNOWN |
+| MAKEMODEL | 제조/모델 | ALN(128) | Y | 직접 | `view_hardware_v2.name` | `view_device_v2.hardware_fk` 조인. 가상 장비는 양쪽 서버 모두 전건 NULL (.68 VMWare 0/18, EC2 0/8 · .35 VMWare 0/55) |
+| MANUFACTURER | 제조업체 | ALN(128) | N | 직접 | `view_vendor_v1.name` | `view_hardware_v2.vendor_fk` 조인. 없으면 `UNKNOWN`. DEFAULTVALUE=UNKNOWN |
 | NODEID | 노드 ID | BIGINT(19) | N | 직접 | `view_device_v2.device_pk` | Maximo ID로 그대로 사용하며 MERGE 키로 삼는다 |
 | NODEID2 | 노드 ID 2 | BIGINT(19) | Y | 원천없음 | – | 보조 키 컬럼. 현행 적재는 사용하지 않는다 |
 | NODENAME | 노드 | ALN(128) | N | 직접 | `view_device_v2`.name | 비어 있으면 `UNKNOWN` |
@@ -67,7 +67,7 @@ MERGE 키는 `NODEID` 다. `NODEID = device_pk` 이므로 재실행해도 멱등
 | TLOAMNRSHOSTSYSTEM | NRS 호스트 시스템 | ALN(128) | Y | 미결 | `view_device_v2.virtual_host_device_fk` | 가상 호스트의 이름. 자기참조 조인 필요. 적재 대상 중 호스트 관계를 가진 장비가 .68 은 0대, .35 는 55대다 |
 | TLOAMNRSMANAGEDSYSTEMNAME | NRS 관리 대상 시스템 이름 | ALN(128) | Y | 원천없음 | – |  |
 | TLOAMNRSMANUFACTURER | NRS 제조업체 | ALN(128) | Y | 직접 | `view_vendor_v1.name` | MANUFACTURER 와 동일 원천. 없으면 NULL(UNKNOWN 대체 없음) |
-| TLOAMNRSMODEL | NRS 제조사/모델 | ALN(128) | Y | 미결 | `view_hardware_v1.name` | MAKEMODEL 과 동일 원천. 중복 적재 여부 미정 |
+| TLOAMNRSMODEL | NRS 제조사/모델 | ALN(128) | Y | 미결 | `view_hardware_v2.name` | MAKEMODEL 과 동일 원천. 중복 적재 여부 미정 |
 | TLOAMNRSNAME | NRS 이름 | ALN(128) | Y | 미결 | `view_device_v2`.name | NODENAME 과 동일 원천. 중복 적재 여부 미정 |
 | TLOAMNRSPRIMARYMACADDRESS | NRS MAC 주소 | ALN(17) | Y | 미결 | `view_netport_v1.hwaddress` | 대표 포트 선정 규칙 필요. 가상 포트(veth/docker/br-) 제외 시 .68 은 85대 중 64대, .35 는 79대 중 56대가 포트 1개라 모호하지 않다. 나머지는 규칙이 필요하다 |
 | TLOAMNRSSERIALNUMBER | NRS 일련 번호 | ALN(128) | Y | 미결 | `view_device_v2`.serial_no | SERIALNUMBER 와 동일 원천. 중복 적재 여부 미정 |
@@ -88,7 +88,7 @@ SELECT
     h.name AS hardware_name,
     v.name AS vendor_name
 FROM view_device_v2 d
-LEFT JOIN view_hardware_v1 h ON d.hardware_fk = h.hardware_pk
+LEFT JOIN view_hardware_v2 h ON d.hardware_fk = h.hardware_pk
 LEFT JOIN view_vendor_v1 v ON h.vendor_fk = v.vendor_pk
 WHERE d.type IN ('virtual', 'physical')
   AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)

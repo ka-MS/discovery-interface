@@ -38,7 +38,7 @@
 
 | 경로 | 도달하는 자식 컬럼 |
 | --- | --- |
-| `view_device_v2.hardware_fk` → `view_hardware_v1.vendor_fk` | `DEPLOYEDASSET.MANUFACTURER` |
+| `view_device_v2.hardware_fk` → `view_hardware_v2.vendor_fk` | `DEPLOYEDASSET.MANUFACTURER` |
 | `view_part_v1.partmodel_fk` → `view_partmodel_v1.vendor_fk` | `DPACPU`, `DPADISK`, `DPAMEDIAADAPTER` |
 | `view_deviceos_v1.os_fk` → `view_os_v1.vendor_fk` | `DPAOS.MANUFACTURER` |
 | `view_netport_v1.vendor_fk` | `DPANETADAPTER.MANUFACTURER` |
@@ -100,7 +100,7 @@ computer AS (
 ),
 names AS (
     SELECT v.name FROM target t
-    JOIN view_hardware_v1 h ON h.hardware_pk = t.hardware_fk
+    JOIN view_hardware_v2 h ON h.hardware_pk = t.hardware_fk
     JOIN view_vendor_v1 v ON v.vendor_pk = h.vendor_fk
     UNION
     SELECT v.name FROM view_part_v1 p

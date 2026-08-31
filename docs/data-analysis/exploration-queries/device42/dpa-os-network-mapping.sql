@@ -90,7 +90,7 @@ WITH target AS (
 counted AS (
     SELECT t.device_pk, COUNT(i.ipaddress_pk) AS ip_cnt
     FROM target t
-    LEFT JOIN view_ipaddress_v1 i ON i.device_fk = t.device_pk
+    LEFT JOIN view_ipaddress_v2 i ON t.device_pk = ANY(i.device_fks)
     GROUP BY t.device_pk
 )
 SELECT ip_cnt, COUNT(*) AS device_cnt
@@ -104,8 +104,8 @@ WITH src AS (
         i.netport_fk, i.last_discovered, d.name AS device_name,
         CAST(b.gateway AS VARCHAR) AS gateway, b.mask_bits,
         b.name AS subnet_name
-    FROM view_ipaddress_v1 i
-    JOIN view_device_v2 d ON d.device_pk = i.device_fk
+    FROM view_ipaddress_v2 i
+    JOIN view_device_v2 d ON d.device_pk = ANY(i.device_fks)
     LEFT JOIN view_subnet_v1 b ON b.subnet_pk = i.subnet_fk
     WHERE d.type IN ('virtual', 'physical')
       AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)
@@ -124,17 +124,17 @@ UNION ALL SELECT 'last_discovered', COUNT(last_discovered), 0 FROM src
 UNION ALL SELECT 'ipv6', COUNT(NULLIF(POSITION(':' IN ip_address), 0)), 0 FROM src;
 
 -- name: tcpip-sample
-SELECT i.device_fk, d.name AS device_name,
+SELECT d.device_pk AS device_fk, d.name AS device_name,
     CAST(i.ip_address AS VARCHAR) AS ip_address, i.label,
     b.name AS subnet_name, CAST(b.gateway AS VARCHAR) AS gateway, b.mask_bits
-FROM view_ipaddress_v1 i
-JOIN view_device_v2 d ON d.device_pk = i.device_fk
+FROM view_ipaddress_v2 i
+JOIN view_device_v2 d ON d.device_pk = ANY(i.device_fks)
 LEFT JOIN view_subnet_v1 b ON b.subnet_pk = i.subnet_fk
 WHERE d.type IN ('virtual', 'physical')
   AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)
   AND (d.network_device = false OR d.network_device IS NULL)
   AND (d.physicalsubtype IS NULL OR d.physicalsubtype <> 'Network Printer')
-ORDER BY i.device_fk, i.ip_address
+ORDER BY d.device_pk, i.ip_address
 LIMIT 60;
 
 -- name: printer-source
@@ -142,7 +142,7 @@ SELECT d.device_pk, d.name, d.serial_no, d.ram, d.ram_size_type,
     d.hard_disk_size, d.hard_disk_size_type, d.os_name, d.os_version,
     d.details, CAST(d.ip_addresses AS VARCHAR) AS ip_addresses,
     (SELECT COUNT(*) FROM view_netport_v1 n WHERE n.device_fk = d.device_pk) AS netport_cnt,
-    (SELECT COUNT(*) FROM view_ipaddress_v1 i WHERE i.device_fk = d.device_pk) AS ip_cnt,
+    (SELECT COUNT(*) FROM view_ipaddress_v2 i WHERE d.device_pk = ANY(i.device_fks)) AS ip_cnt,
     (SELECT COUNT(*) FROM view_part_v1 p WHERE p.device_fk = d.device_pk) AS part_cnt
 FROM view_device_v2 d
 WHERE d.physicalsubtype = 'Network Printer'
@@ -155,7 +155,7 @@ SELECT d.device_pk, n.port, n.hwaddress,
     CAST(b.gateway AS VARCHAR) AS gateway, b.mask_bits
 FROM view_device_v2 d
 LEFT JOIN view_netport_v1 n ON n.device_fk = d.device_pk
-LEFT JOIN view_ipaddress_v1 i ON i.device_fk = d.device_pk
+LEFT JOIN view_ipaddress_v2 i ON d.device_pk = ANY(i.device_fks)
 LEFT JOIN view_subnet_v1 b ON b.subnet_pk = i.subnet_fk
 WHERE d.physicalsubtype = 'Network Printer';
 
@@ -170,8 +170,8 @@ WHERE d.physicalsubtype = 'Network Printer';
 -- name: tcpip-netmask
 WITH src AS (
     SELECT b.name AS subnet_name, b.mask_bits
-    FROM view_ipaddress_v1 i
-    JOIN view_device_v2 d ON d.device_pk = i.device_fk
+    FROM view_ipaddress_v2 i
+    JOIN view_device_v2 d ON d.device_pk = ANY(i.device_fks)
     LEFT JOIN view_subnet_v1 b ON b.subnet_pk = i.subnet_fk
     WHERE d.type IN ('virtual', 'physical')
       AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)

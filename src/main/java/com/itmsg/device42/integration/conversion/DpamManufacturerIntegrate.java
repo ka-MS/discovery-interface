@@ -168,7 +168,7 @@ public class DpamManufacturerIntegrate implements ConversionIntegrationTask {
             ),
             names AS (
                 SELECT v.name FROM target t
-                JOIN view_hardware_v1 h ON h.hardware_pk = t.hardware_fk
+                JOIN view_hardware_v2 h ON h.hardware_pk = t.hardware_fk
                 JOIN view_vendor_v1 v ON v.vendor_pk = h.vendor_fk
                 UNION
                 SELECT v.name FROM view_part_v1 p

@@ -34,9 +34,10 @@ WITH target AS (
     JOIN view_partmodel_v1 pm ON pm.partmodel_pk = p.partmodel_fk
     WHERE pm.type_name = 'Hard Disk'
     UNION ALL
-    SELECT 'DPALOGICALDRIVE', CAST(m.mountpoint_pk AS VARCHAR), CAST(m.device_fk AS VARCHAR)
-    FROM view_mountpoint_v1 m
-    JOIN computer c ON c.device_pk = m.device_fk
+    SELECT DISTINCT ON (m.mountpoint_pk)
+           'DPALOGICALDRIVE', CAST(m.mountpoint_pk AS VARCHAR), CAST(c.device_pk AS VARCHAR)
+    FROM view_mountpoint_v2 m
+    JOIN computer c ON c.device_pk = ANY(m.device_fks)
     WHERE LOWER(COALESCE(m.fstype_name, '')) NOT IN ('overlay', 'devtmpfs', 'efivarfs')
     UNION ALL
     SELECT 'DPAMEDIAADAPTER', CAST(p.part_pk AS VARCHAR), CAST(p.device_fk AS VARCHAR)
@@ -57,9 +58,10 @@ WITH target AS (
     FROM view_softwareinuse_v1 u
     JOIN computer c ON c.device_pk = u.device_fk
     UNION ALL
-    SELECT 'DPATCPIP', CAST(i.ipaddress_pk AS VARCHAR), CAST(i.device_fk AS VARCHAR)
-    FROM view_ipaddress_v1 i
-    JOIN computer c ON c.device_pk = i.device_fk
+    SELECT DISTINCT ON (i.ipaddress_pk)
+           'DPATCPIP', CAST(i.ipaddress_pk AS VARCHAR), CAST(c.device_pk AS VARCHAR)
+    FROM view_ipaddress_v2 i
+    JOIN computer c ON c.device_pk = ANY(i.device_fks)
     UNION ALL
     SELECT 'DPANETDEVICE', CAST(device_pk AS VARCHAR), CAST(device_pk AS VARCHAR)
     FROM target
@@ -101,7 +103,7 @@ WITH target AS (
 ), values AS (
     SELECT 'MANUFACTURER' AS domain, v.name AS value
     FROM target t
-    JOIN view_hardware_v1 h ON h.hardware_pk = t.hardware_fk
+    JOIN view_hardware_v2 h ON h.hardware_pk = t.hardware_fk
     JOIN view_vendor_v1 v ON v.vendor_pk = h.vendor_fk
     UNION
     SELECT 'MANUFACTURER', v.name

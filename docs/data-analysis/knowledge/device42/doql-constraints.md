@@ -34,7 +34,7 @@ Device42 접근은 PostgreSQL 직접 접속이 아니라 DOQL REST API
   ```
 
 - `inet` 타입 컬럼에 문자열 함수를 그대로 쓰면 500 이다.
-  `view_ipaddress_v1.ip_address` 와 `view_subnet_v1.gateway` 가 해당한다.
+  `view_ipaddress_v2.ip_address` 와 `view_subnet_v1.gateway` 가 해당한다.
   `LENGTH`, `NULLIF`, `POSITION` 앞에 `CAST(... AS VARCHAR)` 를 넣는다.
   단 캐스팅 결과에는 `/32` 접미가 붙는다. 주소 값만 필요하면 `HOST()` 를 쓴다.
 
