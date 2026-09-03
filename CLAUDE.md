@@ -34,7 +34,7 @@ CLI 인자로 넘기는 잡 이름은 Spring 빈 이름이다: `asset`, `ci`, `s
 
 ## 로컬 사전 준비물
 
-`src/main/resources/application.yaml`은 저장소에 있으며 값이 모두 `${...}` 환경변수 플레이스홀더다. 실제 자격정보는 git 미추적인 `config/application.env` 에 두고 `run.sh` 가 주입한다. 이 파일이 없으면 `run.sh` 가 멈춘다. 벤더 D42 JDBC jar와 `config/` 나머지는 저장소에 포함돼 있다. 애플리케이션에는 설정 폴백이 없다.
+`src/main/resources/application.yaml`은 저장소에 있으며 값이 모두 `${...}` 환경변수 플레이스홀더다. 실제 자격정보는 git 미추적인 `config/application.yaml` 에 두며 Spring Boot가 외부 설정으로 자동 로드한다. 이 파일이 없으면 `run.sh` 가 멈춘다. 벤더 D42 JDBC jar와 `config/` 나머지는 저장소에 포함돼 있다. 애플리케이션에는 설정 폴백이 없다.
 
 ```bash
 ./run.sh asset software conversion   # 잡을 인자 순서대로 실행

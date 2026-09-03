@@ -30,4 +30,5 @@ dependencies {
 tasks.named('test') {
     useJUnitPlatform()
     systemProperty 'jdk.net.hosts.file', file('config/device42-test-hosts').absolutePath
+    systemProperty 'spring.config.location', 'classpath:/application.yaml'
 }

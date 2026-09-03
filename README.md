@@ -28,23 +28,28 @@ git clone https://github.com/ka-MS/discovery-interface.git
 cd discovery-interface
 ```
 
-프로젝트 루트의 `config/application.env`에 실행 환경에 맞는 접속정보를 설정합니다.
-이 파일은 자격정보 보호를 위해 Git에서 제외됩니다.
+프로젝트 루트의 `config/application.yaml`에 실행 환경에 맞는 접속정보를 설정합니다.
+Spring Boot가 이 파일을 외부 설정으로 자동 로드하며, 자격정보 보호를 위해 Git에서는 제외됩니다.
 
-```bash
-MAXIMO_JDBC_URL=
-MAXIMO_JDBC_USERNAME=
-MAXIMO_JDBC_PASSWORD=
+```yaml
+spring:
+  datasource:
+    url: "jdbc:db2://<host>:<port>/<database>"
+    username: "<username>"
+    password: "<password>"
 
-DEVICE42_REST_BASE_URL=
-DEVICE42_REST_USERNAME=
-DEVICE42_REST_PASSWORD=
-DEVICE42_TRUSTSTORE=
-DEVICE42_TRUSTSTORE_PASSWORD=
-
-DEVICE42_JDBC_URL=
-DEVICE42_JDBC_USERNAME=
-DEVICE42_JDBC_PASSWORD=
+device42:
+  doql:
+    rest:
+      base-url: "https://<host>"
+      username: "<username>"
+      password: "<password>"
+      truststore: "config/d42-truststore.p12"
+      truststore-password: "<password>"
+    jdbc:
+      url: "jdbc:doql://<host>"
+      username: "<username>"
+      password: "<password>"
 ```
 
 ## 🔧 연계 작업 실행
@@ -63,12 +68,6 @@ DEVICE42_JDBC_PASSWORD=
 | `asset` | 컴퓨터, CPU, 디스크, OS, 네트워크 등의 자산정보 연계 |
 | `software` | 설치 소프트웨어 및 라이선스 대상 소프트웨어 연계 |
 | `ci` | CI 연계용 작업 진입점 |
-
-다른 환경 파일을 사용하려면 `APP_ENV_FILE`을 지정합니다.
-
-```bash
-APP_ENV_FILE=config/application-prod.env ./run.sh asset
-```
 
 ## 🧪 테스트 및 빌드
 
@@ -90,6 +89,6 @@ Device42와 Maximo 간 데이터 구조, 테이블별 매핑, 검증 쿼리는
 
 ## 🔐 보안 유의사항
 
-- `config/application.env`와 실제 운영 자격정보는 저장소에 커밋하지 않습니다.
-- truststore 경로와 비밀번호는 환경변수로 관리합니다.
-- 운영 실행 전 Device42 및 Maximo 접속 대상과 스키마를 반드시 확인합니다.
+- `config/application.yaml`과 실제 운영 자격정보는 저장소에 커밋하지 않습니다.
+- truststore 경로와 비밀번호는 외부 설정 파일이나 운영 환경의 Secret으로 관리합니다.
+- 운영 실행 전 Device42 및 Maximo 접속 대상과 `MAXIMO` 스키마 접근 권한을 확인합니다.
