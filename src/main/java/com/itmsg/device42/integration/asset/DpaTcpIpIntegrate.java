@@ -1,6 +1,6 @@
 package com.itmsg.device42.integration.asset;
 
-import com.itmsg.device42.dto.device42.Device42DpaTcpIpSource;
+import com.itmsg.device42.dto.device42.asset.IpAddressSource;
 import com.itmsg.device42.dto.maximo.DpaTcpIpUpsert;
 import com.itmsg.device42.config.Device42ConnectionFactory;
 import org.slf4j.Logger;
@@ -53,7 +53,7 @@ public class DpaTcpIpIntegrate implements AssetIntegrationTask {
         for (long offset = 0; offset < totalCount; offset += batchSize) {
             int limit = (int) Math.min(batchSize, totalCount - offset);
 
-            List<Device42DpaTcpIpSource> data = getData(offset, limit);
+            List<IpAddressSource> data = getData(offset, limit);
 
             List<DpaTcpIpUpsert> mappedData = mapData(data);
 
@@ -76,17 +76,17 @@ public class DpaTcpIpIntegrate implements AssetIntegrationTask {
         }
     }
 
-    public List<Device42DpaTcpIpSource> getData(long offset, int limit) {
+    public List<IpAddressSource> getData(long offset, int limit) {
         String query = SOURCE_QUERY + "LIMIT %d OFFSET %d".formatted(limit, offset);
 
         try (Connection connection = connectionFactory.openConnection();
              Statement statement = connection.createStatement();
              ResultSet resultSet = statement.executeQuery(query)) {
 
-            List<Device42DpaTcpIpSource> rows = new ArrayList<>(limit);
+            List<IpAddressSource> rows = new ArrayList<>(limit);
 
             while (resultSet.next()) {
-                rows.add(new Device42DpaTcpIpSource(
+                rows.add(new IpAddressSource(
                         resultSet.getLong("ipaddress_pk"),
                         resultSet.getLong("device_fk"),
                         resultSet.getString("device_name"),
@@ -105,11 +105,11 @@ public class DpaTcpIpIntegrate implements AssetIntegrationTask {
         }
     }
 
-    private List<DpaTcpIpUpsert> mapData(List<Device42DpaTcpIpSource> data) {
+    private List<DpaTcpIpUpsert> mapData(List<IpAddressSource> data) {
         LocalDateTime applyDateTime = LocalDateTime.now();
         List<DpaTcpIpUpsert> mappedData = new ArrayList<>(data.size());
 
-        for (Device42DpaTcpIpSource source : data) {
+        for (IpAddressSource source : data) {
             mappedData.add(new DpaTcpIpUpsert(
                     source.ipAddressPk(),
                     source.deviceFk(),

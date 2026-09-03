@@ -1,6 +1,6 @@
 package com.itmsg.device42.integration.asset;
 
-import com.itmsg.device42.dto.device42.Device42DpaNetDeviceSource;
+import com.itmsg.device42.dto.device42.asset.NetworkDeviceSource;
 import com.itmsg.device42.dto.maximo.DpaNetDeviceUpsert;
 import com.itmsg.device42.config.Device42ConnectionFactory;
 import org.slf4j.Logger;
@@ -45,7 +45,7 @@ public class DpaNetDeviceIntegrate implements AssetIntegrationTask {
 
         for (long offset = 0; offset < totalCount; offset += DEFAULT_BATCH_SIZE) {
             int limit = (int) Math.min(DEFAULT_BATCH_SIZE, totalCount - offset);
-            List<Device42DpaNetDeviceSource> sourceData = getData(offset, limit);
+            List<NetworkDeviceSource> sourceData = getData(offset, limit);
 
             List<DpaNetDeviceUpsert> mappedData = mapData(sourceData);
 
@@ -64,16 +64,16 @@ public class DpaNetDeviceIntegrate implements AssetIntegrationTask {
         }
     }
 
-    public List<Device42DpaNetDeviceSource> getData(long offset, int limit) {
+    public List<NetworkDeviceSource> getData(long offset, int limit) {
         String query = DEVICE_QUERY + "LIMIT %d OFFSET %d".formatted(limit, offset);
 
         try (Connection connection = connectionFactory.openConnection();
              Statement statement = connection.createStatement();
              ResultSet resultSet = statement.executeQuery(query)) {
 
-            List<Device42DpaNetDeviceSource> devices = new ArrayList<>(limit);
+            List<NetworkDeviceSource> devices = new ArrayList<>(limit);
             while (resultSet.next()) {
-                devices.add(new Device42DpaNetDeviceSource(
+                devices.add(new NetworkDeviceSource(
                         resultSet.getInt("device_pk"),
                         resultSet.getString("os_version"),
                         resultSet.getString("mac"),
@@ -89,11 +89,11 @@ public class DpaNetDeviceIntegrate implements AssetIntegrationTask {
         }
     }
 
-    private List<DpaNetDeviceUpsert> mapData(List<Device42DpaNetDeviceSource> sourceData) {
+    private List<DpaNetDeviceUpsert> mapData(List<NetworkDeviceSource> sourceData) {
         LocalDateTime applyDateTime = LocalDateTime.now();
         List<DpaNetDeviceUpsert> mappedData = new ArrayList<>(sourceData.size());
 
-        for (Device42DpaNetDeviceSource source : sourceData) {
+        for (NetworkDeviceSource source : sourceData) {
             mappedData.add(new DpaNetDeviceUpsert(
                     source.devicePk().longValue(),
                     source.macAddress(),

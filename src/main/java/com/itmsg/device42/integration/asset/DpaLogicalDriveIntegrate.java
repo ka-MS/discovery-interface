@@ -1,6 +1,6 @@
 package com.itmsg.device42.integration.asset;
 
-import com.itmsg.device42.dto.device42.Device42DpaLogicalDriveSource;
+import com.itmsg.device42.dto.device42.asset.LogicalDriveSource;
 import com.itmsg.device42.dto.maximo.DpaLogicalDriveUpsert;
 import com.itmsg.device42.config.Device42ConnectionFactory;
 import org.slf4j.Logger;
@@ -59,7 +59,7 @@ public class DpaLogicalDriveIntegrate implements AssetIntegrationTask {
         for (long offset = 0; offset < totalCount; offset += batchSize) {
             int limit = (int) Math.min(batchSize, totalCount - offset);
 
-            List<Device42DpaLogicalDriveSource> data = getData(offset, limit);
+            List<LogicalDriveSource> data = getData(offset, limit);
 
             List<DpaLogicalDriveUpsert> mappedData = mapData(data);
 
@@ -82,17 +82,17 @@ public class DpaLogicalDriveIntegrate implements AssetIntegrationTask {
         }
     }
 
-    public List<Device42DpaLogicalDriveSource> getData(long offset, int limit) {
+    public List<LogicalDriveSource> getData(long offset, int limit) {
         String query = SOURCE_QUERY + "LIMIT %d OFFSET %d".formatted(limit, offset);
 
         try (Connection connection = connectionFactory.openConnection();
              Statement statement = connection.createStatement();
              ResultSet resultSet = statement.executeQuery(query)) {
 
-            List<Device42DpaLogicalDriveSource> rows = new ArrayList<>(limit);
+            List<LogicalDriveSource> rows = new ArrayList<>(limit);
 
             while (resultSet.next()) {
-                rows.add(new Device42DpaLogicalDriveSource(
+                rows.add(new LogicalDriveSource(
                         resultSet.getLong("mountpoint_pk"),
                         resultSet.getLong("device_fk"),
                         resultSet.getString("mountpoint"),
@@ -113,11 +113,11 @@ public class DpaLogicalDriveIntegrate implements AssetIntegrationTask {
         }
     }
 
-    private List<DpaLogicalDriveUpsert> mapData(List<Device42DpaLogicalDriveSource> data) {
+    private List<DpaLogicalDriveUpsert> mapData(List<LogicalDriveSource> data) {
         LocalDateTime applyDateTime = LocalDateTime.now();
         List<DpaLogicalDriveUpsert> mappedData = new ArrayList<>(data.size());
 
-        for (Device42DpaLogicalDriveSource source : data) {
+        for (LogicalDriveSource source : data) {
             mappedData.add(new DpaLogicalDriveUpsert(
                     source.mountPointPk(),
                     source.deviceFk(),

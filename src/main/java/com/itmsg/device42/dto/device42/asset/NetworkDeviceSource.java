@@ -1,6 +1,6 @@
-package com.itmsg.device42.dto.device42;
+package com.itmsg.device42.dto.device42.asset;
 
-public record Device42DpaNetDeviceSource(
+public record NetworkDeviceSource(
         Integer devicePk,
         String osVersion,
         String macAddress,

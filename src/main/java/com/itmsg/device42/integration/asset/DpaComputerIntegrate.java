@@ -1,6 +1,6 @@
 package com.itmsg.device42.integration.asset;
 
-import com.itmsg.device42.dto.device42.Device42DpaComputerSource;
+import com.itmsg.device42.dto.device42.asset.ComputerHardwareSource;
 import com.itmsg.device42.dto.maximo.DpaComputer;
 import com.itmsg.device42.config.Device42ConnectionFactory;
 import org.slf4j.Logger;
@@ -54,7 +54,7 @@ public class DpaComputerIntegrate implements AssetIntegrationTask {
 
         for (long offset = 0; offset < totalCount; offset += batchSize) {
             int limit = (int) Math.min(batchSize, totalCount - offset);
-            List<Device42DpaComputerSource> data = getData(offset, limit);
+            List<ComputerHardwareSource> data = getData(offset, limit);
 
             List<DpaComputer> mappedData = mapData(data);
 
@@ -73,16 +73,16 @@ public class DpaComputerIntegrate implements AssetIntegrationTask {
         }
     }
 
-    public List<Device42DpaComputerSource> getData(long offset, int limit) {
+    public List<ComputerHardwareSource> getData(long offset, int limit) {
         String query = DEVICE_QUERY + "LIMIT %d OFFSET %d".formatted(limit, offset);
 
         try (Connection connection = connectionFactory.openConnection();
              Statement statement = connection.createStatement();
              ResultSet resultSet = statement.executeQuery(query)) {
 
-            List<Device42DpaComputerSource> computers = new ArrayList<>(limit);
+            List<ComputerHardwareSource> computers = new ArrayList<>(limit);
             while (resultSet.next()) {
-                computers.add(new Device42DpaComputerSource(
+                computers.add(new ComputerHardwareSource(
                         resultSet.getInt("device_pk"),
                         resultSet.getString("bios_name"),
                         resultSet.getString("bios_version"),
@@ -102,11 +102,11 @@ public class DpaComputerIntegrate implements AssetIntegrationTask {
         }
     }
 
-    private List<DpaComputer> mapData(List<Device42DpaComputerSource> data) {
+    private List<DpaComputer> mapData(List<ComputerHardwareSource> data) {
         LocalDateTime applyDateTime = LocalDateTime.now();
         List<DpaComputer> mappedData = new ArrayList<>(data.size());
 
-        for (Device42DpaComputerSource source : data) {
+        for (ComputerHardwareSource source : data) {
             mappedData.add(new DpaComputer(
                     (long) source.devicePk(),
                     null,

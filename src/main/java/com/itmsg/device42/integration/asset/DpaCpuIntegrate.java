@@ -1,6 +1,6 @@
 package com.itmsg.device42.integration.asset;
 
-import com.itmsg.device42.dto.device42.Device42DpaCpuSource;
+import com.itmsg.device42.dto.device42.asset.ProcessorSource;
 import com.itmsg.device42.dto.maximo.DpaCpuUpsert;
 import com.itmsg.device42.config.Device42ConnectionFactory;
 import org.slf4j.Logger;
@@ -56,7 +56,7 @@ public class DpaCpuIntegrate implements AssetIntegrationTask {
         for (long offset = 0; offset < totalCount; offset += batchSize) {
             int limit = (int) Math.min(batchSize, totalCount - offset);
 
-            List<Device42DpaCpuSource> data = getData(offset, limit);
+            List<ProcessorSource> data = getData(offset, limit);
 
             List<DpaCpuUpsert> mappedData = mapData(data);
 
@@ -79,17 +79,17 @@ public class DpaCpuIntegrate implements AssetIntegrationTask {
         }
     }
 
-    public List<Device42DpaCpuSource> getData(long offset, int limit) {
+    public List<ProcessorSource> getData(long offset, int limit) {
         String query = SOURCE_QUERY + "LIMIT %d OFFSET %d".formatted(limit, offset);
 
         try (Connection connection = connectionFactory.openConnection();
              Statement statement = connection.createStatement();
              ResultSet resultSet = statement.executeQuery(query)) {
 
-            List<Device42DpaCpuSource> rows = new ArrayList<>(limit);
+            List<ProcessorSource> rows = new ArrayList<>(limit);
 
             while (resultSet.next()) {
-                rows.add(new Device42DpaCpuSource(
+                rows.add(new ProcessorSource(
                         resultSet.getLong("part_pk"),
                         resultSet.getLong("device_fk"),
                         resultSet.getString("slot"),
@@ -111,11 +111,11 @@ public class DpaCpuIntegrate implements AssetIntegrationTask {
         }
     }
 
-    private List<DpaCpuUpsert> mapData(List<Device42DpaCpuSource> data) {
+    private List<DpaCpuUpsert> mapData(List<ProcessorSource> data) {
         LocalDateTime applyDateTime = LocalDateTime.now();
         List<DpaCpuUpsert> mappedData = new ArrayList<>(data.size());
 
-        for (Device42DpaCpuSource source : data) {
+        for (ProcessorSource source : data) {
             mappedData.add(new DpaCpuUpsert(
                     source.partPk(),
                     source.deviceFk(),

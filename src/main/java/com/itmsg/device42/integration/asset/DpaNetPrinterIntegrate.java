@@ -1,6 +1,6 @@
 package com.itmsg.device42.integration.asset;
 
-import com.itmsg.device42.dto.device42.Device42DpaNetPrinterSource;
+import com.itmsg.device42.dto.device42.asset.NetworkPrinterSource;
 import com.itmsg.device42.dto.maximo.DpaNetPrinterUpsert;
 import com.itmsg.device42.config.Device42ConnectionFactory;
 import org.slf4j.Logger;
@@ -47,7 +47,7 @@ public class DpaNetPrinterIntegrate implements AssetIntegrationTask {
 
         for (long offset = 0; offset < totalCount; offset += DEFAULT_BATCH_SIZE) {
             int limit = (int) Math.min(DEFAULT_BATCH_SIZE, totalCount - offset);
-            List<Device42DpaNetPrinterSource> sourceData = getData(offset, limit);
+            List<NetworkPrinterSource> sourceData = getData(offset, limit);
 
             List<DpaNetPrinterUpsert> mappedData = mapData(sourceData);
 
@@ -66,16 +66,16 @@ public class DpaNetPrinterIntegrate implements AssetIntegrationTask {
         }
     }
 
-    public List<Device42DpaNetPrinterSource> getData(long offset, int limit) {
+    public List<NetworkPrinterSource> getData(long offset, int limit) {
         String query = DEVICE_QUERY + "LIMIT %d OFFSET %d".formatted(limit, offset);
 
         try (Connection connection = connectionFactory.openConnection();
              Statement statement = connection.createStatement();
              ResultSet resultSet = statement.executeQuery(query)) {
 
-            List<Device42DpaNetPrinterSource> printers = new ArrayList<>(limit);
+            List<NetworkPrinterSource> printers = new ArrayList<>(limit);
             while (resultSet.next()) {
-                printers.add(new Device42DpaNetPrinterSource(
+                printers.add(new NetworkPrinterSource(
                         resultSet.getInt("device_pk"),
                         resultSet.getBigDecimal("ram"),
                         resultSet.getString("ram_size_type"),
@@ -93,11 +93,11 @@ public class DpaNetPrinterIntegrate implements AssetIntegrationTask {
         }
     }
 
-    private List<DpaNetPrinterUpsert> mapData(List<Device42DpaNetPrinterSource> sourceData) {
+    private List<DpaNetPrinterUpsert> mapData(List<NetworkPrinterSource> sourceData) {
         LocalDateTime applyDateTime = LocalDateTime.now();
         List<DpaNetPrinterUpsert> mappedData = new ArrayList<>(sourceData.size());
 
-        for (Device42DpaNetPrinterSource source : sourceData) {
+        for (NetworkPrinterSource source : sourceData) {
             mappedData.add(new DpaNetPrinterUpsert(
                     source.devicePk().longValue(),
                     roundCurrentRam(source.currentRam()),

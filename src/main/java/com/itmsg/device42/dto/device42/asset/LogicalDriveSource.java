@@ -1,8 +1,8 @@
-package com.itmsg.device42.dto.device42;
+package com.itmsg.device42.dto.device42.asset;
 
 import java.math.BigDecimal;
 
-public record Device42DpaLogicalDriveSource(
+public record LogicalDriveSource(
         Long mountPointPk,
         Long deviceFk,
         String mountPoint,

@@ -1,6 +1,6 @@
 package com.itmsg.device42.integration.asset;
 
-import com.itmsg.device42.dto.device42.Device42DpaDiskSource;
+import com.itmsg.device42.dto.device42.asset.DiskSource;
 import com.itmsg.device42.dto.maximo.DpaDiskUpsert;
 import com.itmsg.device42.config.Device42ConnectionFactory;
 import org.slf4j.Logger;
@@ -56,7 +56,7 @@ public class DpaDiskIntegrate implements AssetIntegrationTask {
         for (long offset = 0; offset < totalCount; offset += batchSize) {
             int limit = (int) Math.min(batchSize, totalCount - offset);
 
-            List<Device42DpaDiskSource> data = getData(offset, limit);
+            List<DiskSource> data = getData(offset, limit);
 
             List<DpaDiskUpsert> mappedData = mapData(data);
 
@@ -79,17 +79,17 @@ public class DpaDiskIntegrate implements AssetIntegrationTask {
         }
     }
 
-    public List<Device42DpaDiskSource> getData(long offset, int limit) {
+    public List<DiskSource> getData(long offset, int limit) {
         String query = SOURCE_QUERY + "LIMIT %d OFFSET %d".formatted(limit, offset);
 
         try (Connection connection = connectionFactory.openConnection();
              Statement statement = connection.createStatement();
              ResultSet resultSet = statement.executeQuery(query)) {
 
-            List<Device42DpaDiskSource> rows = new ArrayList<>(limit);
+            List<DiskSource> rows = new ArrayList<>(limit);
 
             while (resultSet.next()) {
-                rows.add(new Device42DpaDiskSource(
+                rows.add(new DiskSource(
                         resultSet.getLong("part_pk"),
                         resultSet.getLong("device_fk"),
                         resultSet.getString("serial_no"),
@@ -112,11 +112,11 @@ public class DpaDiskIntegrate implements AssetIntegrationTask {
         }
     }
 
-    private List<DpaDiskUpsert> mapData(List<Device42DpaDiskSource> data) {
+    private List<DpaDiskUpsert> mapData(List<DiskSource> data) {
         LocalDateTime applyDateTime = LocalDateTime.now();
         List<DpaDiskUpsert> mappedData = new ArrayList<>(data.size());
 
-        for (Device42DpaDiskSource source : data) {
+        for (DiskSource source : data) {
             mappedData.add(new DpaDiskUpsert(
                     source.partPk(),
                     source.deviceFk(),

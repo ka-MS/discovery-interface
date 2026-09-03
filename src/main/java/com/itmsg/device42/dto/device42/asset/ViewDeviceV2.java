@@ -1,4 +1,4 @@
-package com.itmsg.device42.dto.device42;
+package com.itmsg.device42.dto.device42.asset;
 
 import java.sql.Date;
 

@@ -1,6 +1,6 @@
 package com.itmsg.device42.integration.asset;
 
-import com.itmsg.device42.dto.device42.Device42DpaOsSource;
+import com.itmsg.device42.dto.device42.asset.OperatingSystemSource;
 import com.itmsg.device42.dto.maximo.DpaOsUpsert;
 import com.itmsg.device42.config.Device42ConnectionFactory;
 import org.slf4j.Logger;
@@ -53,7 +53,7 @@ public class DpaOsIntegrate implements AssetIntegrationTask {
         for (long offset = 0; offset < totalCount; offset += batchSize) {
             int limit = (int) Math.min(batchSize, totalCount - offset);
 
-            List<Device42DpaOsSource> data = getData(offset, limit);
+            List<OperatingSystemSource> data = getData(offset, limit);
 
             List<DpaOsUpsert> mappedData = mapData(data);
 
@@ -76,17 +76,17 @@ public class DpaOsIntegrate implements AssetIntegrationTask {
         }
     }
 
-    public List<Device42DpaOsSource> getData(long offset, int limit) {
+    public List<OperatingSystemSource> getData(long offset, int limit) {
         String query = SOURCE_QUERY + "LIMIT %d OFFSET %d".formatted(limit, offset);
 
         try (Connection connection = connectionFactory.openConnection();
              Statement statement = connection.createStatement();
              ResultSet resultSet = statement.executeQuery(query)) {
 
-            List<Device42DpaOsSource> rows = new ArrayList<>(limit);
+            List<OperatingSystemSource> rows = new ArrayList<>(limit);
 
             while (resultSet.next()) {
-                rows.add(new Device42DpaOsSource(
+                rows.add(new OperatingSystemSource(
                         resultSet.getLong("deviceos_pk"),
                         resultSet.getLong("device_fk"),
                         resultSet.getString("os_name"),
@@ -105,11 +105,11 @@ public class DpaOsIntegrate implements AssetIntegrationTask {
         }
     }
 
-    private List<DpaOsUpsert> mapData(List<Device42DpaOsSource> data) {
+    private List<DpaOsUpsert> mapData(List<OperatingSystemSource> data) {
         LocalDateTime applyDateTime = LocalDateTime.now();
         List<DpaOsUpsert> mappedData = new ArrayList<>(data.size());
 
-        for (Device42DpaOsSource source : data) {
+        for (OperatingSystemSource source : data) {
             mappedData.add(new DpaOsUpsert(
                     source.deviceosPk(),
                     source.deviceFk(),

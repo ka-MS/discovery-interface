@@ -9,7 +9,6 @@ spring:
     username: test
     password: test
     hikari:
-      schema: MAXIMO
       maximum-pool-size: 1
       minimum-idle: 0
 
@@ -28,4 +27,3 @@ device42:
       url: jdbc:d42://localhost/
       username: test
       password: test
-      schema: public

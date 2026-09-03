@@ -1,6 +1,6 @@
 package com.itmsg.device42.integration.asset;
 
-import com.itmsg.device42.dto.device42.Device42DpaMediaAdapterSource;
+import com.itmsg.device42.dto.device42.asset.MediaAdapterSource;
 import com.itmsg.device42.dto.maximo.DpaMediaAdapterUpsert;
 import com.itmsg.device42.config.Device42ConnectionFactory;
 import org.slf4j.Logger;
@@ -54,7 +54,7 @@ public class DpaMediaAdapterIntegrate implements AssetIntegrationTask {
         for (long offset = 0; offset < totalCount; offset += batchSize) {
             int limit = (int) Math.min(batchSize, totalCount - offset);
 
-            List<Device42DpaMediaAdapterSource> data = getData(offset, limit);
+            List<MediaAdapterSource> data = getData(offset, limit);
 
             List<DpaMediaAdapterUpsert> mappedData = mapData(data);
 
@@ -77,17 +77,17 @@ public class DpaMediaAdapterIntegrate implements AssetIntegrationTask {
         }
     }
 
-    public List<Device42DpaMediaAdapterSource> getData(long offset, int limit) {
+    public List<MediaAdapterSource> getData(long offset, int limit) {
         String query = SOURCE_QUERY + "LIMIT %d OFFSET %d".formatted(limit, offset);
 
         try (Connection connection = connectionFactory.openConnection();
              Statement statement = connection.createStatement();
              ResultSet resultSet = statement.executeQuery(query)) {
 
-            List<Device42DpaMediaAdapterSource> rows = new ArrayList<>(limit);
+            List<MediaAdapterSource> rows = new ArrayList<>(limit);
 
             while (resultSet.next()) {
-                rows.add(new Device42DpaMediaAdapterSource(
+                rows.add(new MediaAdapterSource(
                         resultSet.getLong("part_pk"),
                         resultSet.getLong("device_fk"),
                         resultSet.getString("serial_no"),
@@ -107,11 +107,11 @@ public class DpaMediaAdapterIntegrate implements AssetIntegrationTask {
         }
     }
 
-    private List<DpaMediaAdapterUpsert> mapData(List<Device42DpaMediaAdapterSource> data) {
+    private List<DpaMediaAdapterUpsert> mapData(List<MediaAdapterSource> data) {
         LocalDateTime applyDateTime = LocalDateTime.now();
         List<DpaMediaAdapterUpsert> mappedData = new ArrayList<>(data.size());
 
-        for (Device42DpaMediaAdapterSource source : data) {
+        for (MediaAdapterSource source : data) {
             mappedData.add(new DpaMediaAdapterUpsert(
                     source.partPk(),
                     source.deviceFk(),

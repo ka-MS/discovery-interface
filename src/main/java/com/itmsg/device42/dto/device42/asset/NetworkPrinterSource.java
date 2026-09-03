@@ -1,8 +1,8 @@
-package com.itmsg.device42.dto.device42;
+package com.itmsg.device42.dto.device42.asset;
 
 import java.math.BigDecimal;
 
-public record Device42DpaNetPrinterSource(
+public record NetworkPrinterSource(
         Integer devicePk,
         BigDecimal currentRam,
         String ramUnit,

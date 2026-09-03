@@ -1,6 +1,6 @@
-package com.itmsg.device42.dto.device42;
+package com.itmsg.device42.dto.device42.asset;
 
-public record Device42DpaTcpIpSource(
+public record IpAddressSource(
         Long ipAddressPk,
         Long deviceFk,
         String deviceName,

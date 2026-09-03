@@ -7,7 +7,6 @@ spring:
     username: ${MAXIMO_JDBC_USERNAME}
     password: ${MAXIMO_JDBC_PASSWORD}
     hikari:
-      schema: ${MAXIMO_JDBC_SCHEMA}
       maximum-pool-size: 1
       minimum-idle: 0
 
@@ -26,4 +25,3 @@ device42:
       url: ${DEVICE42_JDBC_URL}
       username: ${DEVICE42_JDBC_USERNAME}
       password: ${DEVICE42_JDBC_PASSWORD}
-      schema: ${DEVICE42_JDBC_SCHEMA}

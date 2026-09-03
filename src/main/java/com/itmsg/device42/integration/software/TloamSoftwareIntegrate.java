@@ -1,6 +1,6 @@
 package com.itmsg.device42.integration.software;
 
-import com.itmsg.device42.dto.device42.Device42TloamSoftwareSource;
+import com.itmsg.device42.dto.device42.software.SoftwareProductSource;
 import com.itmsg.device42.dto.maximo.TloamSoftwareUpsert;
 import com.itmsg.device42.config.Device42ConnectionFactory;
 import org.slf4j.Logger;
@@ -54,7 +54,7 @@ public class TloamSoftwareIntegrate implements SoftwareIntegrationTask {
         for (long offset = 0; offset < totalCount; offset += batchSize) {
             int limit = (int) Math.min(batchSize, totalCount - offset);
 
-            List<Device42TloamSoftwareSource> data = getData(offset, limit);
+            List<SoftwareProductSource> data = getData(offset, limit);
 
             List<TloamSoftwareUpsert> mappedData = mapData(data);
 
@@ -77,17 +77,17 @@ public class TloamSoftwareIntegrate implements SoftwareIntegrationTask {
         }
     }
 
-    public List<Device42TloamSoftwareSource> getData(long offset, int limit) {
+    public List<SoftwareProductSource> getData(long offset, int limit) {
         String query = SOURCE_QUERY + "LIMIT %d OFFSET %d".formatted(limit, offset);
 
         try (Connection connection = connectionFactory.openConnection();
              Statement statement = connection.createStatement();
              ResultSet resultSet = statement.executeQuery(query)) {
 
-            List<Device42TloamSoftwareSource> rows = new ArrayList<>(limit);
+            List<SoftwareProductSource> rows = new ArrayList<>(limit);
 
             while (resultSet.next()) {
-                rows.add(new Device42TloamSoftwareSource(
+                rows.add(new SoftwareProductSource(
                         resultSet.getString("software_name"),
                         resultSet.getString("version"),
                         resultSet.getString("manufacturer")
@@ -103,10 +103,10 @@ public class TloamSoftwareIntegrate implements SoftwareIntegrationTask {
         }
     }
 
-    private List<TloamSoftwareUpsert> mapData(List<Device42TloamSoftwareSource> data) {
+    private List<TloamSoftwareUpsert> mapData(List<SoftwareProductSource> data) {
         List<TloamSoftwareUpsert> mappedData = new ArrayList<>(data.size());
 
-        for (Device42TloamSoftwareSource source : data) {
+        for (SoftwareProductSource source : data) {
             String softwareName = defaultUnknown(source.softwareName());
             String manufacturer = defaultUnknown(source.manufacturer());
             String version = trimToNull(source.version());

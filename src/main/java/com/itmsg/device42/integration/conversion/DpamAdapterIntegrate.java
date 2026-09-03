@@ -1,6 +1,6 @@
 package com.itmsg.device42.integration.conversion;
 
-import com.itmsg.device42.dto.device42.Device42AdapterNameSource;
+import com.itmsg.device42.dto.device42.conversion.AdapterModelSource;
 import com.itmsg.device42.dto.maximo.DpamAdapterUpsert;
 import com.itmsg.device42.config.Device42ConnectionFactory;
 import org.slf4j.Logger;
@@ -50,7 +50,7 @@ public class DpamAdapterIntegrate implements ConversionIntegrationTask {
         for (long offset = 0; offset < totalCount; offset += batchSize) {
             int limit = (int) Math.min(batchSize, totalCount - offset);
 
-            List<Device42AdapterNameSource> data = getData(offset, limit);
+            List<AdapterModelSource> data = getData(offset, limit);
 
             List<DpamAdapterUpsert> mappedData = mapData(data);
 
@@ -73,17 +73,17 @@ public class DpamAdapterIntegrate implements ConversionIntegrationTask {
         }
     }
 
-    public List<Device42AdapterNameSource> getData(long offset, int limit) {
+    public List<AdapterModelSource> getData(long offset, int limit) {
         String query = SOURCE_QUERY + "LIMIT %d OFFSET %d".formatted(limit, offset);
 
         try (Connection connection = connectionFactory.openConnection();
              Statement statement = connection.createStatement();
              ResultSet resultSet = statement.executeQuery(query)) {
 
-            List<Device42AdapterNameSource> rows = new ArrayList<>(limit);
+            List<AdapterModelSource> rows = new ArrayList<>(limit);
 
             while (resultSet.next()) {
-                rows.add(new Device42AdapterNameSource(resultSet.getString("name")));
+                rows.add(new AdapterModelSource(resultSet.getString("name")));
             }
 
             return rows;
@@ -95,10 +95,10 @@ public class DpamAdapterIntegrate implements ConversionIntegrationTask {
         }
     }
 
-    private List<DpamAdapterUpsert> mapData(List<Device42AdapterNameSource> data) {
+    private List<DpamAdapterUpsert> mapData(List<AdapterModelSource> data) {
         List<DpamAdapterUpsert> mappedData = new ArrayList<>(data.size());
 
-        for (Device42AdapterNameSource source : data) {
+        for (AdapterModelSource source : data) {
             String name = trimToNull(source.modelName());
             if (name != null) {
                 mappedData.add(new DpamAdapterUpsert(name));

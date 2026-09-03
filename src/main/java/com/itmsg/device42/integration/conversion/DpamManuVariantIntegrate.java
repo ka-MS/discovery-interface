@@ -1,6 +1,6 @@
 package com.itmsg.device42.integration.conversion;
 
-import com.itmsg.device42.dto.device42.Device42ManufacturerSource;
+import com.itmsg.device42.dto.device42.conversion.ManufacturerSource;
 import com.itmsg.device42.dto.maximo.DpamManuVariantUpsert;
 import com.itmsg.device42.config.Device42ConnectionFactory;
 import org.slf4j.Logger;
@@ -50,7 +50,7 @@ public class DpamManuVariantIntegrate implements ConversionIntegrationTask {
         for (long offset = 0; offset < totalCount; offset += batchSize) {
             int limit = (int) Math.min(batchSize, totalCount - offset);
 
-            List<Device42ManufacturerSource> data = getData(offset, limit);
+            List<ManufacturerSource> data = getData(offset, limit);
 
             List<DpamManuVariantUpsert> mappedData = mapData(data);
 
@@ -73,17 +73,17 @@ public class DpamManuVariantIntegrate implements ConversionIntegrationTask {
         }
     }
 
-    public List<Device42ManufacturerSource> getData(long offset, int limit) {
+    public List<ManufacturerSource> getData(long offset, int limit) {
         String query = SOURCE_QUERY + "LIMIT %d OFFSET %d".formatted(limit, offset);
 
         try (Connection connection = connectionFactory.openConnection();
              Statement statement = connection.createStatement();
              ResultSet resultSet = statement.executeQuery(query)) {
 
-            List<Device42ManufacturerSource> rows = new ArrayList<>(limit);
+            List<ManufacturerSource> rows = new ArrayList<>(limit);
 
             while (resultSet.next()) {
-                rows.add(new Device42ManufacturerSource(resultSet.getString("name")));
+                rows.add(new ManufacturerSource(resultSet.getString("name")));
             }
 
             return rows;
@@ -95,10 +95,10 @@ public class DpamManuVariantIntegrate implements ConversionIntegrationTask {
         }
     }
 
-    private List<DpamManuVariantUpsert> mapData(List<Device42ManufacturerSource> data) {
+    private List<DpamManuVariantUpsert> mapData(List<ManufacturerSource> data) {
         List<DpamManuVariantUpsert> mappedData = new ArrayList<>(data.size());
 
-        for (Device42ManufacturerSource source : data) {
+        for (ManufacturerSource source : data) {
             String variant = trimToNull(source.vendorName());
             if (variant != null) {
                 mappedData.add(new DpamManuVariantUpsert(variant, variant));

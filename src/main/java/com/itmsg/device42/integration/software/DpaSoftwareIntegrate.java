@@ -1,6 +1,6 @@
 package com.itmsg.device42.integration.software;
 
-import com.itmsg.device42.dto.device42.Device42DpaSoftwareSource;
+import com.itmsg.device42.dto.device42.software.InstalledSoftwareSource;
 import com.itmsg.device42.dto.maximo.DpaSoftwareUpsert;
 import com.itmsg.device42.config.Device42ConnectionFactory;
 import org.slf4j.Logger;
@@ -56,7 +56,7 @@ public class DpaSoftwareIntegrate implements SoftwareIntegrationTask {
         for (long offset = 0; offset < totalCount; offset += batchSize) {
             int limit = (int) Math.min(batchSize, totalCount - offset);
 
-            List<Device42DpaSoftwareSource> data = getData(offset, limit);
+            List<InstalledSoftwareSource> data = getData(offset, limit);
 
             List<DpaSoftwareUpsert> mappedData = mapData(data);
 
@@ -79,17 +79,17 @@ public class DpaSoftwareIntegrate implements SoftwareIntegrationTask {
         }
     }
 
-    public List<Device42DpaSoftwareSource> getData(long offset, int limit) {
+    public List<InstalledSoftwareSource> getData(long offset, int limit) {
         String query = SOURCE_QUERY + "LIMIT %d OFFSET %d".formatted(limit, offset);
 
         try (Connection connection = connectionFactory.openConnection();
              Statement statement = connection.createStatement();
              ResultSet resultSet = statement.executeQuery(query)) {
 
-            List<Device42DpaSoftwareSource> rows = new ArrayList<>(limit);
+            List<InstalledSoftwareSource> rows = new ArrayList<>(limit);
 
             while (resultSet.next()) {
-                rows.add(new Device42DpaSoftwareSource(
+                rows.add(new InstalledSoftwareSource(
                         resultSet.getLong("softwareinuse_pk"),
                         resultSet.getLong("device_fk"),
                         resultSet.getString("software_name"),
@@ -111,11 +111,11 @@ public class DpaSoftwareIntegrate implements SoftwareIntegrationTask {
         }
     }
 
-    private List<DpaSoftwareUpsert> mapData(List<Device42DpaSoftwareSource> data) {
+    private List<DpaSoftwareUpsert> mapData(List<InstalledSoftwareSource> data) {
         LocalDateTime applyDateTime = LocalDateTime.now();
         List<DpaSoftwareUpsert> mappedData = new ArrayList<>(data.size());
 
-        for (Device42DpaSoftwareSource source : data) {
+        for (InstalledSoftwareSource source : data) {
             mappedData.add(new DpaSoftwareUpsert(
                     source.softwareInUsePk(),
                     source.deviceFk(),

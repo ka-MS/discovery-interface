@@ -1,6 +1,6 @@
 package com.itmsg.device42.integration.asset;
 
-import com.itmsg.device42.dto.device42.Device42DpaNetAdapterSource;
+import com.itmsg.device42.dto.device42.asset.NetworkInterfaceSource;
 import com.itmsg.device42.dto.maximo.DpaNetAdapterUpsert;
 import com.itmsg.device42.config.Device42ConnectionFactory;
 import org.slf4j.Logger;
@@ -58,7 +58,7 @@ public class DpaNetAdapterIntegrate implements AssetIntegrationTask {
         for (long offset = 0; offset < totalCount; offset += batchSize) {
             int limit = (int) Math.min(batchSize, totalCount - offset);
 
-            List<Device42DpaNetAdapterSource> data = getData(offset, limit);
+            List<NetworkInterfaceSource> data = getData(offset, limit);
 
             List<DpaNetAdapterUpsert> mappedData = mapData(data);
 
@@ -81,17 +81,17 @@ public class DpaNetAdapterIntegrate implements AssetIntegrationTask {
         }
     }
 
-    public List<Device42DpaNetAdapterSource> getData(long offset, int limit) {
+    public List<NetworkInterfaceSource> getData(long offset, int limit) {
         String query = SOURCE_QUERY + "LIMIT %d OFFSET %d".formatted(limit, offset);
 
         try (Connection connection = connectionFactory.openConnection();
              Statement statement = connection.createStatement();
              ResultSet resultSet = statement.executeQuery(query)) {
 
-            List<Device42DpaNetAdapterSource> rows = new ArrayList<>(limit);
+            List<NetworkInterfaceSource> rows = new ArrayList<>(limit);
 
             while (resultSet.next()) {
-                rows.add(new Device42DpaNetAdapterSource(
+                rows.add(new NetworkInterfaceSource(
                         resultSet.getLong("netport_pk"),
                         resultSet.getLong("device_fk"),
                         resultSet.getString("port"),
@@ -113,11 +113,11 @@ public class DpaNetAdapterIntegrate implements AssetIntegrationTask {
         }
     }
 
-    private List<DpaNetAdapterUpsert> mapData(List<Device42DpaNetAdapterSource> data) {
+    private List<DpaNetAdapterUpsert> mapData(List<NetworkInterfaceSource> data) {
         LocalDateTime applyDateTime = LocalDateTime.now();
         List<DpaNetAdapterUpsert> mappedData = new ArrayList<>(data.size());
 
-        for (Device42DpaNetAdapterSource source : data) {
+        for (NetworkInterfaceSource source : data) {
             mappedData.add(new DpaNetAdapterUpsert(
                     source.netportPk(),
                     source.deviceFk(),

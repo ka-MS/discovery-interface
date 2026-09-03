@@ -1,6 +1,6 @@
 package com.itmsg.device42.integration.conversion;
 
-import com.itmsg.device42.dto.device42.Device42ProcessorNameSource;
+import com.itmsg.device42.dto.device42.conversion.ProcessorModelSource;
 import com.itmsg.device42.dto.maximo.DpamProcVariantUpsert;
 import com.itmsg.device42.config.Device42ConnectionFactory;
 import org.slf4j.Logger;
@@ -50,7 +50,7 @@ public class DpamProcVariantIntegrate implements ConversionIntegrationTask {
         for (long offset = 0; offset < totalCount; offset += batchSize) {
             int limit = (int) Math.min(batchSize, totalCount - offset);
 
-            List<Device42ProcessorNameSource> data = getData(offset, limit);
+            List<ProcessorModelSource> data = getData(offset, limit);
 
             List<DpamProcVariantUpsert> mappedData = mapData(data);
 
@@ -73,17 +73,17 @@ public class DpamProcVariantIntegrate implements ConversionIntegrationTask {
         }
     }
 
-    public List<Device42ProcessorNameSource> getData(long offset, int limit) {
+    public List<ProcessorModelSource> getData(long offset, int limit) {
         String query = SOURCE_QUERY + "LIMIT %d OFFSET %d".formatted(limit, offset);
 
         try (Connection connection = connectionFactory.openConnection();
              Statement statement = connection.createStatement();
              ResultSet resultSet = statement.executeQuery(query)) {
 
-            List<Device42ProcessorNameSource> rows = new ArrayList<>(limit);
+            List<ProcessorModelSource> rows = new ArrayList<>(limit);
 
             while (resultSet.next()) {
-                rows.add(new Device42ProcessorNameSource(resultSet.getString("name")));
+                rows.add(new ProcessorModelSource(resultSet.getString("name")));
             }
 
             return rows;
@@ -95,10 +95,10 @@ public class DpamProcVariantIntegrate implements ConversionIntegrationTask {
         }
     }
 
-    private List<DpamProcVariantUpsert> mapData(List<Device42ProcessorNameSource> data) {
+    private List<DpamProcVariantUpsert> mapData(List<ProcessorModelSource> data) {
         List<DpamProcVariantUpsert> mappedData = new ArrayList<>(data.size());
 
-        for (Device42ProcessorNameSource source : data) {
+        for (ProcessorModelSource source : data) {
             String variant = trimToNull(source.modelName());
             if (variant != null) {
                 mappedData.add(new DpamProcVariantUpsert(variant, variant));

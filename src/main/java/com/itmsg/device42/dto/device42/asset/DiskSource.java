@@ -1,8 +1,8 @@
-package com.itmsg.device42.dto.device42;
+package com.itmsg.device42.dto.device42.asset;
 
 import java.math.BigDecimal;
 
-public record Device42DpaDiskSource(
+public record DiskSource(
         Long partPk,
         Long deviceFk,
         String serialNumber,

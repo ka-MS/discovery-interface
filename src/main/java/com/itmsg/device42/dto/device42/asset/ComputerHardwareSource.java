@@ -1,8 +1,8 @@
-package com.itmsg.device42.dto.device42;
+package com.itmsg.device42.dto.device42.asset;
 
 import java.math.BigDecimal;
 
-public record Device42DpaComputerSource(
+public record ComputerHardwareSource(
         Integer devicePk,
         String biosName,
         String biosVersion,

@@ -1,6 +1,6 @@
-package com.itmsg.device42.dto.device42;
+package com.itmsg.device42.dto.device42.asset;
 
-public record Device42DpaMediaAdapterSource(
+public record MediaAdapterSource(
         Long partPk,
         Long deviceFk,
         String serialNo,

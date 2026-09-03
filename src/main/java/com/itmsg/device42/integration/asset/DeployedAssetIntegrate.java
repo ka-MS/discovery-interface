@@ -1,6 +1,6 @@
 package com.itmsg.device42.integration.asset;
 
-import com.itmsg.device42.dto.device42.Device42DeployedAssetSource;
+import com.itmsg.device42.dto.device42.asset.DeviceSource;
 import com.itmsg.device42.dto.maximo.DeployedAsset;
 import com.itmsg.device42.config.Device42ConnectionFactory;
 import org.slf4j.Logger;
@@ -11,7 +11,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 import java.sql.*;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -48,7 +47,7 @@ public class DeployedAssetIntegrate implements AssetIntegrationTask {
         for (long offset = 0; offset < totalCount; offset += batchSize) {
             int limit = (int) Math.min(batchSize, totalCount - offset);
 
-            List<Device42DeployedAssetSource> data = getData(offset, limit);
+            List<DeviceSource> data = getData(offset, limit);
 
             List<DeployedAsset> mappedData = mapData(data);
 
@@ -71,7 +70,7 @@ public class DeployedAssetIntegrate implements AssetIntegrationTask {
         }
     }
 
-    public List<Device42DeployedAssetSource> getData(long offset, int limit) {
+    public List<DeviceSource> getData(long offset, int limit) {
 
         String query = DEVICE_QUERY + "LIMIT %d OFFSET %d".formatted(limit, offset);
 
@@ -79,10 +78,10 @@ public class DeployedAssetIntegrate implements AssetIntegrationTask {
              Statement statement = connection.createStatement();
              ResultSet resultSet = statement.executeQuery(query)) {
 
-            List<Device42DeployedAssetSource> devices = new ArrayList<>(limit);
+            List<DeviceSource> devices = new ArrayList<>(limit);
 
             while (resultSet.next()) {
-                devices.add(new Device42DeployedAssetSource(
+                devices.add(new DeviceSource(
                         resultSet.getInt("device_pk"),
                         resultSet.getString("name"),
                         resultSet.getString("type"),
@@ -95,13 +94,7 @@ public class DeployedAssetIntegrate implements AssetIntegrationTask {
                         resultSet.getString("hardware_name"),
                         resultSet.getString("vendor_name"),
                         resultSet.getBoolean("in_service"),
-                        getNullableLocalDateTime(resultSet, "last_discovered"),
-                        resultSet.getBigDecimal("ram"),
-                        resultSet.getString("ram_size_type"),
-                        resultSet.getInt("total_cpus"),
-                        resultSet.getInt("core_per_cpu"),
-                        resultSet.getString("bios_version"),
-                        getNullableLocalDate(resultSet, "bios_release_date")
+                        getNullableLocalDateTime(resultSet, "last_discovered")
                 ));
             }
 
@@ -114,11 +107,11 @@ public class DeployedAssetIntegrate implements AssetIntegrationTask {
         }
     }
 
-    private List<DeployedAsset> mapData(List<Device42DeployedAssetSource> data) {
+    private List<DeployedAsset> mapData(List<DeviceSource> data) {
         LocalDateTime applyDateTime = LocalDateTime.now();
         List<DeployedAsset> mappedData = new ArrayList<>(data.size());
 
-        for (Device42DeployedAssetSource source : data) {
+        for (DeviceSource source : data) {
             String assetClass;
 
             if (Boolean.TRUE.equals(source.networkDevice())) {
@@ -236,11 +229,6 @@ public class DeployedAssetIntegrate implements AssetIntegrationTask {
             return value == null ? null : value.toLocalDateTime();
     }
 
-    private static LocalDate getNullableLocalDate(ResultSet resultSet, String column) throws SQLException {
-        Date value = resultSet.getDate(column);
-        return value == null ? null : value.toLocalDate();
-    }
-
     private static final String DEVICE_FILTER = """
             d.type IN ('virtual', 'physical')
             AND (
@@ -273,13 +261,7 @@ public class DeployedAssetIntegrate implements AssetIntegrationTask {
                 h.name AS hardware_name,
                 v.name AS vendor_name,
                 d.in_service,
-                d.last_discovered,
-                d.ram,
-                d.ram_size_type,
-                d.total_cpus,
-                d.core_per_cpu,
-                d.bios_version,
-                d.bios_release_date
+                d.last_discovered
             FROM view_device_v2 d
             LEFT JOIN view_hardware_v2 h
                 ON d.hardware_fk = h.hardware_pk

@@ -1,6 +1,6 @@
 package com.itmsg.device42.integration.conversion;
 
-import com.itmsg.device42.dto.device42.Device42OsNameSource;
+import com.itmsg.device42.dto.device42.conversion.OperatingSystemNameSource;
 import com.itmsg.device42.dto.maximo.DpamOsVariantUpsert;
 import com.itmsg.device42.config.Device42ConnectionFactory;
 import org.slf4j.Logger;
@@ -50,7 +50,7 @@ public class DpamOsVariantIntegrate implements ConversionIntegrationTask {
         for (long offset = 0; offset < totalCount; offset += batchSize) {
             int limit = (int) Math.min(batchSize, totalCount - offset);
 
-            List<Device42OsNameSource> data = getData(offset, limit);
+            List<OperatingSystemNameSource> data = getData(offset, limit);
 
             List<DpamOsVariantUpsert> mappedData = mapData(data);
 
@@ -73,17 +73,17 @@ public class DpamOsVariantIntegrate implements ConversionIntegrationTask {
         }
     }
 
-    public List<Device42OsNameSource> getData(long offset, int limit) {
+    public List<OperatingSystemNameSource> getData(long offset, int limit) {
         String query = SOURCE_QUERY + "LIMIT %d OFFSET %d".formatted(limit, offset);
 
         try (Connection connection = connectionFactory.openConnection();
              Statement statement = connection.createStatement();
              ResultSet resultSet = statement.executeQuery(query)) {
 
-            List<Device42OsNameSource> rows = new ArrayList<>(limit);
+            List<OperatingSystemNameSource> rows = new ArrayList<>(limit);
 
             while (resultSet.next()) {
-                rows.add(new Device42OsNameSource(resultSet.getString("name")));
+                rows.add(new OperatingSystemNameSource(resultSet.getString("name")));
             }
 
             return rows;
@@ -95,10 +95,10 @@ public class DpamOsVariantIntegrate implements ConversionIntegrationTask {
         }
     }
 
-    private List<DpamOsVariantUpsert> mapData(List<Device42OsNameSource> data) {
+    private List<DpamOsVariantUpsert> mapData(List<OperatingSystemNameSource> data) {
         List<DpamOsVariantUpsert> mappedData = new ArrayList<>(data.size());
 
-        for (Device42OsNameSource source : data) {
+        for (OperatingSystemNameSource source : data) {
             String variant = trimToNull(source.osName());
             if (variant != null) {
                 mappedData.add(new DpamOsVariantUpsert(variant, variant));

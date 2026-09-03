@@ -74,7 +74,7 @@ DB가 두 개이고, 의도적으로 서로 다르게 구성돼 있다.
 
 ### 미완성 영역
 
-`DpaOsIntegrate`, `ActCiIntegrate`, `DpaSoftwareIntegrate` 는 본문이 비어 있거나 하드코딩된 스텁이다. `dto/device42/Device.java`, `ViewDeviceV2.java` 는 Device42 스키마 컬럼을 그대로 덤프한 미사용 코드다. 새 DOQL 쿼리를 작성할 때 컬럼 참고용으로는 쓸 만하지만, 살아 있는 코드가 아니다.
+`DpaOsIntegrate`, `ActCiIntegrate`, `DpaSoftwareIntegrate` 는 본문이 비어 있거나 하드코딩된 스텁이다. `dto/device42/asset/ViewDeviceV2.java` 는 Device42 스키마 컬럼을 그대로 덤프한 미사용 코드다. 새 DOQL 쿼리를 작성할 때 컬럼 참고용으로는 쓸 만하지만, 살아 있는 코드가 아니다.
 
 현재 구현된 자식은 `DPACOMPUTER`, `DPANETDEVICE`, `DPANETPRINTER`, `DPACPU`다. 나머지 DPA 자식은 매핑 문서만 있고 구현되지 않았다.
 

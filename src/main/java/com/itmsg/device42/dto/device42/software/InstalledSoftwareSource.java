@@ -1,8 +1,8 @@
-package com.itmsg.device42.dto.device42;
+package com.itmsg.device42.dto.device42.software;
 
 import java.time.LocalDateTime;
 
-public record Device42DpaSoftwareSource(
+public record InstalledSoftwareSource(
         Long softwareInUsePk,
         Long deviceFk,
         String softwareName,
