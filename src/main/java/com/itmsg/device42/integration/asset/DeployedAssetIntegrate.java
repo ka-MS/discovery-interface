@@ -1,7 +1,7 @@
 package com.itmsg.device42.integration.asset;
 
 import com.itmsg.device42.dto.device42.asset.DeviceSource;
-import com.itmsg.device42.dto.maximo.DeployedAsset;
+import com.itmsg.device42.dto.maximo.asset.DeployedAssetUpsert;
 import com.itmsg.device42.config.Device42ConnectionFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,7 +49,7 @@ public class DeployedAssetIntegrate implements AssetIntegrationTask {
 
             List<DeviceSource> data = getData(offset, limit);
 
-            List<DeployedAsset> mappedData = mapData(data);
+            List<DeployedAssetUpsert> mappedData = mapData(data);
 
             putData(mappedData);
         }
@@ -107,9 +107,9 @@ public class DeployedAssetIntegrate implements AssetIntegrationTask {
         }
     }
 
-    private List<DeployedAsset> mapData(List<DeviceSource> data) {
+    private List<DeployedAssetUpsert> mapData(List<DeviceSource> data) {
         LocalDateTime applyDateTime = LocalDateTime.now();
-        List<DeployedAsset> mappedData = new ArrayList<>(data.size());
+        List<DeployedAssetUpsert> mappedData = new ArrayList<>(data.size());
 
         for (DeviceSource source : data) {
             String assetClass;
@@ -133,7 +133,7 @@ public class DeployedAssetIntegrate implements AssetIntegrationTask {
                     ? "UNKNOWN"
                     : source.name();
 
-            mappedData.add(new DeployedAsset(
+            mappedData.add(new DeployedAssetUpsert(
                     (long) source.devicePk(),
                     nodeName,
                     "UNKNOWN",
@@ -180,11 +180,11 @@ public class DeployedAssetIntegrate implements AssetIntegrationTask {
         return mappedData;
     }
 
-    public void putData(List<DeployedAsset> datas) {
+    public void putData(List<DeployedAssetUpsert> datas) {
         maximoJdbcTemplate.execute(
                 MERGE_DEPLOYED_ASSET_QUERY,
                 (PreparedStatement statement) -> {
-                    for (DeployedAsset asset : datas) {
+                    for (DeployedAssetUpsert asset : datas) {
                         try {
                             statement.setLong(1, asset.nodeId());
                             statement.setString(2, asset.sourceId());

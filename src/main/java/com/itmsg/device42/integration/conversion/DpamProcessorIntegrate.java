@@ -1,7 +1,7 @@
 package com.itmsg.device42.integration.conversion;
 
 import com.itmsg.device42.dto.device42.conversion.ProcessorModelSource;
-import com.itmsg.device42.dto.maximo.DpamProcessorUpsert;
+import com.itmsg.device42.dto.maximo.conversion.DpamProcessorUpsert;
 import com.itmsg.device42.config.Device42ConnectionFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -1,7 +1,7 @@
 package com.itmsg.device42.integration.asset;
 
 import com.itmsg.device42.dto.device42.asset.ProcessorSource;
-import com.itmsg.device42.dto.maximo.DpaCpuUpsert;
+import com.itmsg.device42.dto.maximo.asset.DpaCpuUpsert;
 import com.itmsg.device42.config.Device42ConnectionFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

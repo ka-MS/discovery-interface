@@ -1,7 +1,7 @@
 package com.itmsg.device42.integration.asset;
 
 import com.itmsg.device42.dto.device42.asset.IpAddressSource;
-import com.itmsg.device42.dto.maximo.DpaTcpIpUpsert;
+import com.itmsg.device42.dto.maximo.asset.DpaTcpIpUpsert;
 import com.itmsg.device42.config.Device42ConnectionFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

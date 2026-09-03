@@ -1,7 +1,7 @@
 package com.itmsg.device42.integration.software;
 
 import com.itmsg.device42.dto.device42.software.SoftwareProductSource;
-import com.itmsg.device42.dto.maximo.TloamSoftwareUpsert;
+import com.itmsg.device42.dto.maximo.software.TloamSoftwareUpsert;
 import com.itmsg.device42.config.Device42ConnectionFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

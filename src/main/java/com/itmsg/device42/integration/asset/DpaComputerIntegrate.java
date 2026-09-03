@@ -1,7 +1,7 @@
 package com.itmsg.device42.integration.asset;
 
 import com.itmsg.device42.dto.device42.asset.ComputerHardwareSource;
-import com.itmsg.device42.dto.maximo.DpaComputer;
+import com.itmsg.device42.dto.maximo.asset.DpaComputerUpsert;
 import com.itmsg.device42.config.Device42ConnectionFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,7 +56,7 @@ public class DpaComputerIntegrate implements AssetIntegrationTask {
             int limit = (int) Math.min(batchSize, totalCount - offset);
             List<ComputerHardwareSource> data = getData(offset, limit);
 
-            List<DpaComputer> mappedData = mapData(data);
+            List<DpaComputerUpsert> mappedData = mapData(data);
 
             putData(mappedData);
         }
@@ -102,12 +102,12 @@ public class DpaComputerIntegrate implements AssetIntegrationTask {
         }
     }
 
-    private List<DpaComputer> mapData(List<ComputerHardwareSource> data) {
+    private List<DpaComputerUpsert> mapData(List<ComputerHardwareSource> data) {
         LocalDateTime applyDateTime = LocalDateTime.now();
-        List<DpaComputer> mappedData = new ArrayList<>(data.size());
+        List<DpaComputerUpsert> mappedData = new ArrayList<>(data.size());
 
         for (ComputerHardwareSource source : data) {
-            mappedData.add(new DpaComputer(
+            mappedData.add(new DpaComputerUpsert(
                     (long) source.devicePk(),
                     null,
                     null,
@@ -155,11 +155,11 @@ public class DpaComputerIntegrate implements AssetIntegrationTask {
         return mappedData;
     }
 
-    public void putData(List<DpaComputer> data) {
+    public void putData(List<DpaComputerUpsert> data) {
         maximoJdbcTemplate.execute(
                 MERGE_DPA_COMPUTER_QUERY,
                 (PreparedStatement statement) -> {
-                    for (DpaComputer computer : data) {
+                    for (DpaComputerUpsert computer : data) {
                         try {
                             statement.setLong(1, computer.nodeId());
                             statement.setString(2, computer.biosName());

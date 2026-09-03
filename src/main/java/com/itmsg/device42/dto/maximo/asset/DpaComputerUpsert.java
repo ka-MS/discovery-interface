@@ -1,9 +1,9 @@
-package com.itmsg.device42.dto.maximo;
+package com.itmsg.device42.dto.maximo.asset;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-public record DpaComputer(
+public record DpaComputerUpsert(
         Long nodeId,
         String logonName,
         LocalDateTime swLastScanDate,

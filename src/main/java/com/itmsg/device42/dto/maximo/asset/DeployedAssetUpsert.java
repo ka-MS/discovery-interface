@@ -1,8 +1,8 @@
-package com.itmsg.device42.dto.maximo;
+package com.itmsg.device42.dto.maximo.asset;
 
 import java.time.LocalDateTime;
 
-public record DeployedAsset(
+public record DeployedAssetUpsert(
         Long nodeId,
         String nodeName,
         String domainName,

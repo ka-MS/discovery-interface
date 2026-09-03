@@ -1,4 +1,4 @@
-package com.itmsg.device42.dto.maximo;
+package com.itmsg.device42.dto.maximo.asset;
 
 import java.time.LocalDateTime;
 
