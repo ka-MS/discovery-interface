@@ -32,8 +32,6 @@ public class AssetIntegrationJob implements IntegrationJob {
                 log.info("{} 작업을 시작합니다.", taskName);
                 i++;
 
-//                if(i == 3) break;
-
                 task.integrate();
 
                 log.info("{} 작업이 완료되었습니다.", taskName);

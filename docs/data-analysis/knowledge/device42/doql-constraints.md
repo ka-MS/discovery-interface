@@ -33,6 +33,9 @@ Device42 접근은 PostgreSQL 직접 접속이 아니라 DOQL REST API
   -- 통과: WITH counted AS ( SELECT ... ) SELECT ... FROM counted
   ```
 
+- JSON 컬럼은 `->>` 와 `LATERAL jsonb_object_keys()` 가 동작하지만
+  `CAST(details AS VARCHAR) <> '{}'` 는 500 이다. 비어 있는지는 키 개수로
+  판정한다. 상세는 `json-columns.md` 참조.
 - `inet` 타입 컬럼에 문자열 함수를 그대로 쓰면 500 이다.
   `view_ipaddress_v2.ip_address` 와 `view_subnet_v1.gateway` 가 해당한다.
   `LENGTH`, `NULLIF`, `POSITION` 앞에 `CAST(... AS VARCHAR)` 를 넣는다.

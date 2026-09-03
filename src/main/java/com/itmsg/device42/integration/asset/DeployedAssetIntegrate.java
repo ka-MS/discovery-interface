@@ -146,7 +146,7 @@ public class DeployedAssetIntegrate implements AssetIntegrationTask {
                     "Device42",
                     0,
                     String.valueOf(source.devicePk()),
-                    null,
+                    assetClass,
                     assetClass,
                     null,
                     null,
@@ -199,12 +199,13 @@ public class DeployedAssetIntegrate implements AssetIntegrationTask {
                             statement.setTimestamp(11, toTimestamp(asset.hwLastScanDate()));
                             statement.setString(12, asset.hwDetectionTool());
                             statement.setObject(13, asset.supportsSnmp(), Types.INTEGER);
-                            statement.setString(14, asset.assetClass());
-                            statement.setTimestamp(15, toTimestamp(asset.createDate()));
-                            statement.setTimestamp(16, toTimestamp(asset.changeDate()));
-                            statement.setString(17, asset.tloamStatus());
-                            statement.setString(18, asset.tloamNrsManufacturer());
-                            statement.setString(19, asset.tloamNrsUuid());
+                            statement.setString(14, asset.systemRole());
+                            statement.setString(15, asset.assetClass());
+                            statement.setTimestamp(16, toTimestamp(asset.createDate()));
+                            statement.setTimestamp(17, toTimestamp(asset.changeDate()));
+                            statement.setString(18, asset.tloamStatus());
+                            statement.setString(19, asset.tloamNrsManufacturer());
+                            statement.setString(20, asset.tloamNrsUuid());
                             statement.executeUpdate();
                         } catch (SQLException e) {
                             log.error(
@@ -275,7 +276,7 @@ public class DeployedAssetIntegrate implements AssetIntegrationTask {
     private static final String MERGE_DEPLOYED_ASSET_QUERY = """
             MERGE INTO MAXIMO.DEPLOYEDASSET AS target
             USING (
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ) AS source (
                 NODEID,
                 SOURCEID,
@@ -290,6 +291,7 @@ public class DeployedAssetIntegrate implements AssetIntegrationTask {
                 HWLASTSCANDATE,
                 HWDETECTIONTOOL,
                 SUPPORTSSNMP,
+                SYSTEMROLE,
                 ASSETCLASS,
                 CREATEDATE,
                 CHANGEDATE,
@@ -310,6 +312,7 @@ public class DeployedAssetIntegrate implements AssetIntegrationTask {
                     HWLASTSCANDATE = source.HWLASTSCANDATE,
                     HWDETECTIONTOOL = source.HWDETECTIONTOOL,
                     SUPPORTSSNMP = source.SUPPORTSSNMP,
+                    SYSTEMROLE = source.SYSTEMROLE,
                     ASSETCLASS = source.ASSETCLASS,
                     CHANGEDATE = source.CHANGEDATE,
                     TLOAMSTATUS = source.TLOAMSTATUS,
@@ -330,6 +333,7 @@ public class DeployedAssetIntegrate implements AssetIntegrationTask {
                     HWLASTSCANDATE,
                     HWDETECTIONTOOL,
                     SUPPORTSSNMP,
+                    SYSTEMROLE,
                     ASSETCLASS,
                     CREATEDATE,
                     CHANGEDATE,
@@ -351,6 +355,7 @@ public class DeployedAssetIntegrate implements AssetIntegrationTask {
                     source.HWLASTSCANDATE,
                     source.HWDETECTIONTOOL,
                     source.SUPPORTSSNMP,
+                    source.SYSTEMROLE,
                     source.ASSETCLASS,
                     source.CREATEDATE,
                     source.CHANGEDATE,

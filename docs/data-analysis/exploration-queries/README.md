@@ -70,8 +70,13 @@ Maximo 는 한 대뿐이라 `DB_ACCESS_ENV` 없이 기본 파일을 쓴다.
 | `device42/dpa-os-network-source-shapes.sql` | OS·IP·서브넷·프린터 원천 뷰 컬럼 형태 |
 | `device42/dpa-os-network-mapping.sql` | OS·TCP/IP·프린터의 대상 원천과 값 분포 |
 | `device42/dpa-software-mapping.sql` | 소프트웨어의 COMPUTER 대상 원천, 자연키 유일성 |
+| `device42/json-column-shapes.sql` | JSON 컬럼의 키 집합과 성격. 수집 방식별 차이 |
 | `device42/dpacpu-integration-source.sql` | DPACPU 구현 원천 조건·반환 컬럼 검증 |
 | `device42/vendor-master-source.sql` | 벤더 뷰 사용처와 정규화 상태. 제조사 변환 대상 원천 |
+| `device42/ci-target-candidates.sql` | CI 본체 후보 View의 서버별 건수, PK 유일성, 컬럼 형태 |
+| `device42/ci-target-relations.sql` | CI 본체 후보 사이의 FK 충전율과 실제 조인 성공 건수 |
+| `device42/ci-target-profiles.sql` | Resource·Service Instance 등 범위 결정용 유형·상태 분포 |
+| `device42/ci-target-overlaps.sql` | 범용 View와 전용 View의 동일 개체 중복 여부 |
 | `device42/view-version-probe.sql` | 뷰 최고 버전 확인, 물리 서브타입·파트타입 마스터 |
 | `maximo/table-description.sql` | 테이블 한글 설명 |
 | `maximo/column-skeleton.sql` | 컬럼 매핑표 앞 4열 생성 |

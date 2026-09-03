@@ -81,6 +81,31 @@ Maximo UI 는 `DPA*` 자식 테이블을 직접 읽지 않는다. 자식 위에 
 
 현재 MERGE는 조회된 원천만 INSERT 또는 UPDATE한다. Device42에서 사라진 부모나
 자식은 Maximo에 그대로 남는다. 삭제할지 비활성화할지 별도로 결정한다.
+
+## ISSUE-8 Actual CI 대상 범위
+
+**상태:** 논의 필요.
+
+Device42의 본체 후보 View가 모두 별도 Actual CI를 뜻하지 않는다. 조사 결과는
+`data-mapping/ci/ci-targets.md`에 있다.
+
+확인된 중복 표현은 다음과 같다.
+
+- Database 전용 View는 `view_resource_v2`와 PK와 이름이 전건 일치한다.
+- Kubernetes Cluster·Deployment·Node·Service 전용 View는
+  `view_resource_v2`와 PK, identifier, 이름이 전건 일치한다.
+- Cloud Instance는 Device와 전건 1:1로 연결되지만 PK와 이름은 전건 동일하지 않다.
+- Database Instance는 Application Component와 연결되지만 PK와 이름은 다르다.
+
+### 남은 결정
+
+- Actual CI로 관리할 개체 유형
+- `view_resource_v2`의 유형별 포함 목록
+- Cloud Instance와 Database Instance를 별도 CI로 만들지 여부
+- Application Group의 상태별 포함 기준
+- Service Instance의 적재 단위와 상태별 포함 기준
+- Subnet, VLAN, VRF를 Actual CI로 관리할지 여부
+
 ## ISSUE-10 전력·설비 서브타입의 적재 제외 범위
 
 **상태:** 정책 정의 대기.

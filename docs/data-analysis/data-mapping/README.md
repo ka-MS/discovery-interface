@@ -20,6 +20,10 @@
 | `software/tloamsoftware.md` | `integration/software/TloamSoftwareIntegrate.java` |
 | `software/dpasoftware.md` | `integration/software/DpaSoftwareIntegrate.java` |
 
+CI는 `ci/README.md`에서 시작한다. 현재 `ci/ci-targets.md`에서 Device42 개체별
+Actual CI 포함 범위와 대표 Source를 조사하고 있다. 대상 범위를 확정한 뒤
+`ACTCI`, `ACTCISPEC`, `ACTCIRELATION` 매핑 문서를 작성한다.
+
 ## 변환 데이터
 
 자식 테이블이 Maximo UI 에 보이려면 변환 변형에 값이 등록되어 있어야 한다.
