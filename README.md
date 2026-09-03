@@ -54,12 +54,40 @@ device42:
 
 ## 🔧 연계 작업 실행
 
+### 실행 스크립트 사용
+
+`run.sh`는 설정 파일 존재 여부를 확인한 뒤 Gradle `bootRun`을 실행합니다.
+
 ```bash
-# 단일 작업 실행
+# 단일 작업
 ./run.sh asset
 
-# 여러 작업을 순서대로 실행
+# 여러 작업
 ./run.sh conversion asset software
+```
+
+### Gradle로 직접 실행
+
+```bash
+# 단일 작업
+./gradlew bootRun --args="asset"
+
+# 여러 작업
+./gradlew bootRun --args="conversion asset software"
+```
+
+### 실행 가능한 JAR로 실행
+
+```bash
+# JAR 생성
+./gradlew bootJar
+
+# 단일 작업
+java -jar build/libs/discovery-interface-0.0.1-SNAPSHOT.jar asset
+
+# 여러 작업
+java -jar build/libs/discovery-interface-0.0.1-SNAPSHOT.jar \
+  conversion asset software
 ```
 
 | 작업 | 설명 |
@@ -77,9 +105,6 @@ device42:
 
 # 실행 가능한 JAR 빌드
 ./gradlew bootJar
-
-# 빌드 결과 실행
-java -jar build/libs/discovery-interface-0.0.1-SNAPSHOT.jar asset
 ```
 
 ## 📚 데이터 매핑 문서
