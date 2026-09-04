@@ -14,68 +14,73 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `data-mapping/` — 테이블 단위 매핑 정본. 문서 한 장이 구현 클래스 하나에 대응한다.
 - `exploration-queries/` — 재사용 조회 쿼리.
 
-미결·정책 대기 항목의 정본은 `docs/data-analysis/open-issues.md` 하나다. 다른 문서는 이슈 ID와 한 줄 요약만 참조한다.
+데이터 분석의 미결·정책 대기 항목의 정본은 `docs/data-analysis/open-issues.md` 하나다. 다른 문서는 이슈 ID와 한 줄 요약만 참조한다.
 
 **DOQL 뷰는 높은 버전을 쓴다.** `view_hardware_v2`, `view_ipaddress_v2`, `view_mountpoint_v2` 처럼 `_v2` 가 있으면 무조건 그쪽이다. 낮은 버전은 컬럼이 빠져 있거나 행이 적다. 카탈로그 조회가 막혀 있어 버전 확인은 개별로 찔러 보는 수밖에 없다. 확인 쿼리는 `docs/data-analysis/exploration-queries/device42/view-version-probe.sql` 이고, 목록은 `docs/data-analysis/knowledge/device42/views.md` 버전 규칙 절에 있다. `device_fks` 배열 조인은 같은 원천 PK 가 여러 행이 되어 MERGE 키를 깨뜨릴 수 있다. `DISTINCT ON` 으로 장비 하나만 남긴다. 근거는 `close-issues.md` ISSUE-9.
 
-**Device42 는 두 대다.** `192.168.2.68` 은 소프트웨어·파트·마운트가, `192.168.1.35` 는 네트워크·OS 가 넓다. 같은 뷰라도 건수가 크게 다르므로 한 대만 보고 결론을 내지 않는다. 조사 결과를 문서에 옮길 때 어느 서버 관측인지 함께 적는다. 전환은 `DB_ACCESS_ENV` 로 서버별 접속 파일을 지정한다. `connections.env` 는 편집하지 않는다. 상세는 `docs/data-analysis/knowledge/device42/servers.md` 에 있다.
+**Device42 는 두 대다.** `192.168.2.68` 은 소프트웨어·파트·마운트가, `192.168.1.35` 는 네트워크·OS 가 넓다. 데모서버는 두대지만 실제로 ETL에 사용되는 서버는 한대이기 때문에 두 서버의 데이터 합쳐짐으로써의 중복 데이터 문제는 무시한다. 같은 뷰라도 건수가 크게 다르므로 한 대만 보고 결론을 내지 않는다. 조사 결과를 문서에 옮길 때 어느 서버 관측인지 함께 적는다. 전환은 `DB_ACCESS_ENV` 로 서버별 접속 파일을 지정한다. `connections.env` 는 편집하지 않는다. 상세는 `docs/data-analysis/knowledge/device42/servers.md` 에 있다.
 
-## 명령어
+## 에이전트 규칙
 
-```bash
-./gradlew build          # 컴파일 + 테스트
-./gradlew test           # 테스트만
-./gradlew test --tests 'DiscoveryInterfaceApplicationTests.contextLoads'   # 단일 테스트
-./gradlew bootRun --args='asset'                                          # 잡 실행
-java -jar build/libs/discovery-interface-0.0.1-SNAPSHOT.jar asset ci      # 여러 개를 인자 순서대로 실행
-```
+1. 코딩 전에 생각하기
 
-CLI 인자로 넘기는 잡 이름은 Spring 빈 이름이다: `asset`, `ci`, `software`. 등록되지 않은 인자는 아무 경고 없이 무시된다.
+중요한 가정을 숨기지 않고, 잘못 선택했을 때의 비용을 기준으로 질문합니다.
 
-## 로컬 사전 준비물
+구현 전에:
 
-`src/main/resources/application.yaml`은 저장소에 있으며 값이 모두 `${...}` 환경변수 플레이스홀더다. 실제 자격정보는 git 미추적인 `config/application.yaml` 에 두며 Spring Boot가 외부 설정으로 자동 로드한다. 이 파일이 없으면 `run.sh` 가 멈춘다. 벤더 D42 JDBC jar와 `config/` 나머지는 저장소에 포함돼 있다. 애플리케이션에는 설정 폴백이 없다.
+관련 코드·테스트·기존 패턴을 먼저 확인합니다.
+결과에 큰 영향을 주거나 되돌리기 어려운 사항은 묻습니다.
+영향이 작고 쉽게 되돌릴 수 있는 사항은 가정을 밝히고 진행합니다.
+해석에 따라 결과가 달라진다면 선택지와 절충점을 제시합니다.
+더 단순한 방법이 있다면 말하고, 요청한 방식에 문제가 있다면 근거를 들어 설명합니다.
 
-```bash
-./run.sh asset software conversion   # 잡을 인자 순서대로 실행
-```
+구현 중 가정이 틀렸음이 드러나면 계획을 수정합니다.
 
-`config/d42-truststore.p12` 는 Device42 REST TLS 연결에 쓰인다. `config/device42-test-hosts` 는 REST 호스트명 `Device42Demo` 를 Device42 IP로 매핑하며, `build.gradle` 의 `jdk.net.hosts.file` 시스템 프로퍼티로 테스트에 주입된다. truststore 인증서가 해당 호스트명으로 발급돼 있어서, 실제 DNS 항목 없이도 이 hosts 파일 덕분에 TLS 검증이 통과한다.
+2. 단순함 우선
 
-`local/db-access-kit/` 은 원천 조사용 DB 접속 패키지다. 실행기·인증서·실제 자격정보가 들어 있고 git에 추적되지 않는다. 폴더 내용을 응답, 로그, 커밋에 옮기지 않는다. 실행 규칙은 `local/db-access-kit/AGENTS.md` 를 따른다. 조회 쿼리는 `docs/data-analysis/exploration-queries/` 에 있고, 실행 결과는 `local/db-access-kit/work/` 아래에만 둔다.
+요구사항을 완전하게 해결하는 최소한의 코드를 작성합니다.
 
-## 아키텍처
+요청받지 않은 기능을 추가하지 않습니다.
+미래 가능성만을 위해 추상화나 설정을 만들지 않습니다.
+한 번만 쓰는 코드에 불필요한 계층을 만들지 않습니다.
+단, 기존 프로젝트의 구조와 관례는 합리적인 범위에서 따릅니다.
+현실적으로 발생 가능한 오류와 필수적인 보안·정합성 처리는 생략하지 않습니다.
+코드 줄 수보다 전체 시스템의 이해·변경 비용을 기준으로 단순함을 판단합니다.
 
-DB가 두 개이고, 의도적으로 서로 다르게 구성돼 있다.
+스스로 묻습니다.
 
-- **Maximo (DB2)** — 표준 Spring `spring.datasource` 를 사용하고 `maximoJdbcTemplate` 로 노출된다 ([MaximoDatabaseConfig.java](src/main/java/com/itmsg/device42/config/MaximoDatabaseConfig.java)). Hikari 풀은 커넥션 1개로 제한돼 있다.
-- **Device42 (DOQL)** — 의도적으로 Spring `DataSource` 가 *아니다*. [Device42ConnectionFactory](src/main/java/com/itmsg/device42/config/Device42ConnectionFactory.java) 가 쿼리마다 raw `DriverManager` 커넥션을 연다. 드라이버 클래스는 빈 생성 시점에 리플렉션으로 로드된다. Device42 DOQL 엔드포인트가 커넥션 풀링을 견디지 못하기 때문에, 모든 조회가 자기 커넥션을 열고 닫는다.
+이 구현은 현재 요구사항보다 앞서 나가거나 불필요하게 복잡하지 않은가?
 
-잡 디스패치: [JobRunner](src/main/java/com/itmsg/device42/integration/JobRunner.java) 는 `CommandLineRunner` 로, `Map<String, IntegrationJob>` 을 주입받아(Spring이 모든 `IntegrationJob` 빈을 이름을 키로 주입) `args` 에 지정된 잡만 실행한다. **잡 추가 = `IntegrationJob` 구현체에 `@Component("<이름>")` 붙이기.** 별도로 갱신할 등록 목록이 없다.
+3. 외과적으로 변경하기
 
-`asset` 잡 내부에서는 [AssetIntegrationJob](src/main/java/com/itmsg/device42/integration/asset/AssetIntegrationJob.java) 이 `List<AssetIntegrationTask>` 를 `@Order` 순서대로 실행하며, **태스크가 실패해도 다음 태스크를 계속 진행한다**. `DeployedAssetIntegrate`가 부모를 먼저 만들고 자식 태스크가 뒤따른다. 부모와 자식 모두 Device42 PK를 Maximo ID로 직접 사용하므로 별도 부모 키 조회는 하지 않는다.
+요청을 해결하고 정합성을 유지하는 데 필요한 부분만 변경합니다.
 
-### 모든 태스크가 따르는 ETL 형태
+기존 코드를 수정할 때:
 
-`getTotalCount()` → `DEFAULT_BATCH_SIZE` 단위로 `getData(offset, limit)` 루프 → `mapData()` (Device42 레코드 → Maximo 레코드) → `putData()` (DB2 `MERGE`). 새 태스크도 이 형태를 유지할 것.
+주변 코드, 주석, 포맷을 겸사겸사 개선하지 않습니다.
+망가지지 않은 코드를 이유 없이 리팩터링하지 않습니다.
+기존 스타일을 따르되, 정확성·보안·요구사항과 충돌하면 필요한 범위에서 수정합니다.
+사용자 변경사항과 관련 없는 코드를 되돌리거나 삭제하지 않습니다.
+원래부터 있던 죽은 코드는 언급만 하고 삭제하지 않습니다.
+근본 원인 해결에 필요한 리팩터링은 최소 범위에서 허용합니다.
+내 변경으로 불필요해진 import, 변수, 함수는 제거합니다.
 
-- 페이징은 상수 쿼리 문자열에 `LIMIT %d OFFSET %d` 를 이어 붙이는 방식이다. 원천 SQL은 각 클래스 하단의 `private static final String` 텍스트 블록에 모여 있고, 공통 `DEVICE_FILTER` 를 조합해 만들기 때문에 건수 쿼리와 데이터 쿼리의 조건이 어긋날 수 없다.
-- `DEPLOYEDASSET.NODEID = device_pk`, 자식 `NODEID = device_fk`다. 1:N 자식의 자체 ID도 원천 레코드 PK를 직접 사용한다. 각 대상 ID를 키로 `MERGE`하므로 재실행해도 멱등하다. Maximo 시퀀스와 `DISCOVERY.SOURCE_TARGET_MAP`은 사용하지 않는다.
-- `putData` 는 `SQLException` 을 **행 단위로** 잡아 로그를 남기고 계속 진행한다. 잘못된 행 하나가 배치 전체를 중단시켜서는 안 된다.
+검사 기준:
 
-조회 실패는 `IllegalStateException` 을 던지고, 쓰기 실패는 로그만 남긴다. 이 비대칭은 의도적이다. 원천 쿼리가 깨지면 배치 자체가 무의미하지만, 행 하나가 깨진 건 그렇지 않다.
+변경된 모든 줄은 요청을 구현하거나 그에 따른 정합성을 유지하는 데 필요해야 합니다.
 
-### 컨벤션
+## 커밋 메시지
 
-- 로그 메시지와 예외 메시지는 **한글**로 작성한다. 식별자, SQL, 주석은 영어다. 이 규칙을 따를 것.
-- DTO는 모두 `record` 다. `dto/device42/*` 는 Device42 원천 컬럼을, `dto/maximo/*` 는 Maximo 테이블 전체 형태를 반영한다(상당수 필드는 `null` 로 남는다 — MERGE 문에 들어가는 부분집합만 실제로 기록된다).
-- JDBC null은 명시적으로 처리해야 한다. `getNullableLocalDateTime` / `getNullableInteger` 헬퍼 참고. nullable 숫자 컬럼에서 `ResultSet.getInt` 가 NULL을 `0` 으로 돌려주는 문제를 피하기 위한 것이다.
-- 운영 적재는 단일 Device42를 사용하며 원천 PK를 Maximo ID로 직접 사용한다. 조사 쿼리에서 특정 행을 지정할 때만 PK 리터럴을 쓰지 않고 조건식이나 이름을 사용한다.
+형식은 <유형>: <짧은 설명>을 사용한다.
 
-### 미완성 영역
+* 기능 추가: feat: 자산 동기화 기능 추가
+* 버그 수정: fix: 중복 데이터 저장 오류 수정
+* 문서 변경: docs: 배치 실행 절차 추가
+* 구조 리팩터링: refactor: 자산 매핑 로직 분리
+* 릴리스·설정·도구 변경: chore: 빌드 설정 업데이트
+* 테스트 변경: test: 자산 검증 테스트 추가
 
-`DpaOsIntegrate`, `ActCiIntegrate`, `DpaSoftwareIntegrate` 는 본문이 비어 있거나 하드코딩된 스텁이다. `dto/device42/asset/ViewDeviceV2.java` 는 Device42 스키마 컬럼을 그대로 덤프한 미사용 코드다. 새 DOQL 쿼리를 작성할 때 컬럼 참고용으로는 쓸 만하지만, 살아 있는 코드가 아니다.
-
-현재 구현된 자식은 `DPACOMPUTER`, `DPANETDEVICE`, `DPANETPRINTER`, `DPACPU`다. 나머지 DPA 자식은 매핑 문서만 있고 구현되지 않았다.
-
-Device42→Maximo 필드 매핑의 기준 문서는 `docs/data-analysis/data-mapping/` 이다. `mapData` 로직을 바꾸기 전에 해당 테이블 문서를 확인할 것. `local/데이터매핑표v14.xlsx` 는 이 문서 체계 이전의 자료이며 참고용으로만 남아 있다.
+접두어는 영문으로, 제목과 본문은 한글로 작성한다.
+커밋 작성자 이름과 이메일은 기존 Git 설정값을 사용한다.
+커밋 하나에는 한 가지 목적만 포함한다. 
+제목에는 변경한 내용이 명확히 드러나도록 작성하고, 변경 이유나 주의사항이 필요한 경우 본문에 작성한다.
