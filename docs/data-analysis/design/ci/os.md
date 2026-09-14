@@ -14,7 +14,7 @@
 OS는 관측상 장비당 정확히 1개다. 두 서버 모두 `MAX(장비당 OS 수)=1`이고 2개 이상인 장비가 없다.
 다중성만 보면 Computer 스펙으로도 담을 수 있다. 그럼에도 독립 CI로 두는 이유는 두 가지다.
 
-- 원천이 `eol`·`eos`를 48/22, 47/22건 갖는다. 사업 범위 「나. H/W, S/W, 네트워크, 라이선스 등 IT자산별 EOS 관리」의 대상이며, EOS는 Computer가 아니라 OS에 붙는 속성이다.
+- 원천이 `eol`·`eos`를 48/22, 47/22건 갖는다. 날짜형이라 빈 문자열 문제가 없다. 사업 범위 「나. H/W, S/W, 네트워크, 라이선스 등 IT자산별 EOS 관리」의 대상이며, EOS는 Computer가 아니라 OS에 붙는 속성이다.
 - OS 제품·제조사·버전이 `view_os_v1` → `view_vendor_v1`로 별도 마스터를 이룬다. Computer 스펙으로 평탄화하면 이 참조가 사라진다.
 
 ## 2. 분류 선택 — SYS.OPERATINGSYSTEM
@@ -39,8 +39,8 @@ ESXi·Windows(10/11/Server)·macOS·FreeBSD·Solaris·Cisco IOS·VxWorks·Samsun
 | ASSETATTRID | 자료형 | 원천 | 채택 | 비고 |
 | --- | --- | --- | --- | --- |
 | OPERATINGSYSTEM_OSNAME | ALN | `o.os_name` | 채택 | 전건 보유 |
-| OPERATINGSYSTEM_OSVERSION | ALN | `o.os_version` | 채택 | 82 / 77건 |
-| OPERATINGSYSTEM_KERNELVERSION | ALN | `o.os_version_no` | 채택 | 전건. 커널·빌드 문자열 |
+| OPERATINGSYSTEM_OSVERSION | ALN | `o.os_version` | 채택 | 41 / 37건. 공백 제외 |
+| OPERATINGSYSTEM_KERNELVERSION | ALN | `o.os_version_no` | 채택 | 23 / 19건. 공백 제외 |
 | OPERATINGSYSTEM_KERNELARCHITECTURE | ALN | `o.os_arch_name` | 채택 | 21 / 19건 |
 | OPERATINGSYSTEM_VERSIONSTRING | ALN | `o.os_name` | 보류 | OSNAME과 중복. 한쪽만 쓴다 |
 | OPERATINGSYSTEM_NAME | ALN | `o.os_name` | 보류 | 본체 ACTCINAME과 중복 |

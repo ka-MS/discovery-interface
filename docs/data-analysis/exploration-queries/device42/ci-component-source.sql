@@ -186,3 +186,43 @@ FROM view_deviceos_v1 o
 JOIN view_os_v1 m ON m.os_pk = o.os_fk
 LEFT JOIN view_vendor_v1 v ON v.vendor_pk = m.vendor_fk
 GROUP BY m.category_name, v.name, m.name ORDER BY COUNT(*) DESC;
+
+-- name: capacity-sample
+SELECT m.mountpoint, m.fstype_name, m.capacity, m.free_capacity
+FROM view_mountpoint_v2 m WHERE m.capacity IS NOT NULL
+ORDER BY m.capacity DESC LIMIT 10;
+
+-- name: disk-size-sample
+SELECT pm.name, pm.hdsize, pm.hdsize_unit, pm.hddtype_name, p.firmware, p.serial_no
+FROM view_part_v1 p JOIN view_partmodel_v1 pm ON pm.partmodel_pk = p.partmodel_fk
+WHERE pm.type_name = 'Hard Disk' ORDER BY pm.hdsize DESC LIMIT 10;
+
+-- name: ip-sample
+SELECT HOST(i.ip_address) AS ip_host, CAST(i.ip_address AS VARCHAR) AS ip_cast,
+    i.label, b.mask_bits, i.netport_fk, i.is_shared
+FROM view_ipaddress_v2 i LEFT JOIN view_subnet_v1 b ON b.subnet_pk = i.subnet_fk
+LIMIT 5;
+
+-- name: text-coverage-nonblank
+SELECT 'os' AS entity, COUNT(*) AS row_count,
+    COUNT(NULLIF(TRIM(o.os_name), '')) AS f1, COUNT(NULLIF(TRIM(o.os_version), '')) AS f2,
+    COUNT(NULLIF(TRIM(o.os_version_no), '')) AS f3, COUNT(NULLIF(TRIM(o.os_arch_name), '')) AS f4,
+    0 AS f5, 0 AS f6
+FROM view_deviceos_v1 o
+UNION ALL
+SELECT 'filesystem', COUNT(*),
+    COUNT(NULLIF(TRIM(m.mountpoint), '')), COUNT(NULLIF(TRIM(m.filesystem), '')),
+    COUNT(NULLIF(TRIM(m.fstype_name), '')), COUNT(NULLIF(TRIM(m.label), '')),
+    COUNT(NULLIF(TRIM(m.identifier), '')), 0
+FROM view_mountpoint_v2 m
+UNION ALL
+SELECT 'disk', COUNT(*),
+    COUNT(NULLIF(TRIM(p.serial_no), '')), COUNT(NULLIF(TRIM(p.firmware), '')),
+    COUNT(NULLIF(TRIM(pm.name), '')), COUNT(NULLIF(TRIM(pm.hddtype_name), '')),
+    COUNT(NULLIF(TRIM(pm.hdsize_unit), '')), COUNT(pm.hdsize)
+FROM view_part_v1 p JOIN view_partmodel_v1 pm ON pm.partmodel_pk = p.partmodel_fk
+WHERE pm.type_name = 'Hard Disk'
+UNION ALL
+SELECT 'ip', COUNT(*),
+    COUNT(NULLIF(TRIM(i.label), '')), 0, 0, 0, 0, 0
+FROM view_ipaddress_v2 i;

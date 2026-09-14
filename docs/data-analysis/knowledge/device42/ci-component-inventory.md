@@ -80,13 +80,17 @@ OS는 두 서버 차이가 크다. `.68`은 30%, `.35`는 80%다. 한쪽으로 �
 
 ## 4. 값 보유율
 
+원천에는 NULL 대신 **빈 문자열**을 쓰는 컬럼이 있다. 문자열 컬럼은
+`COUNT(NULLIF(TRIM(x), ''))`로 세어 공백을 제외했다. 단순 `COUNT()`로 세면
+빈 문자열이 보유로 잡혀 실제보다 크게 나온다.
+
 ### OS — 88 / 79행
 
 | 필드 | 보유 | 비고 |
 | --- | ---: | --- |
 | os_name | 88 / 79 | 전건. 제조사·제품·버전을 합친 정규화 문자열 |
-| os_version | 82 / 77 | 시장 버전 |
-| os_version_no | 88 / 79 | 전건. 커널·빌드 문자열 |
+| os_version | 41 / 37 | 시장 버전. 절반 이하 |
+| os_version_no | 23 / 19 | 커널·빌드 문자열. 4분의 1 수준 |
 | os_arch_name | 21 / 19 | `64-bit` 형태 |
 | os_fk | 88 / 79 | 전건. OS 제품 참조 |
 | eol | 48 / 22 | 지원 종료일 |
@@ -119,7 +123,7 @@ OS는 두 서버 차이가 크다. `.68`은 30%, `.35`는 80%다. 한쪽으로 �
 | ip_address | 297 / 543 | 전건. `inet` 타입 |
 | subnet_fk | 297 / 543 | 전건 |
 | last_discovered | 297 / 543 | 전건 |
-| label | 289 / 463 | |
+| label | 55 / 59 | 공백 제외. 대부분 빈 문자열 |
 | netport_fk | 78 / 103 | 포트 연결은 4분의 1 수준 |
 | is_shared | 6 / 16 | 공유 표시 |
 | subnet.mask_bits | 297 / 543 | 전건 |
@@ -133,13 +137,13 @@ OS는 두 서버 차이가 크다. `.68`은 30%, `.35`는 80%다. 한쪽으로 �
 
 | 필드 | 보유 | 비고 |
 | --- | ---: | --- |
-| serial_no | 23 / 19 | 전건 |
+| serial_no | 13 / 3 | 공백 제외. `.35`는 3건뿐 |
 | pcount | 23 / 19 | 전건. **값이 전부 1** |
-| firmware | 23 / 19 | 전건 |
+| firmware | **0 / 0** | 전건 빈 문자열. 채울 값 없음 |
 | partmodel.name | 23 / 19 | 전건. 모델명 |
 | partmodel.hdsize | 23 / 19 | 전건 |
 | partmodel.hdsize_unit | 23 / 19 | 전건 |
-| partmodel.hddtype_name | 10 / 2 | 낮다 |
+| partmodel.hddtype_name | 10 / 2 | 낮다. `SSD`는 1 / 0건 |
 | partmodel.media_type_name | 0 / 0 | 전건 없음 |
 | partmodel.vendor_fk | 0 / 0 | 전건 없음. 제조사 보강 불가 |
 
@@ -164,3 +168,16 @@ OS는 `first_added`·`last_edited`, Filesystem·Disk는 `first_added`·`last_upd
 
 **제조사 보강 가능 여부가 갈린다.** OS는 `view_os_v1.vendor_fk`로 연결되지만,
 Disk는 `view_partmodel_v1.vendor_fk`가 두 서버 모두 전건 비어 있어 제조사를 채울 수 없다.
+
+
+## 6. 단위와 표본 값
+
+`view_mountpoint_v2.capacity`에 단위 컬럼이 없다. 표본에서 NTFS `C:\`가 1,952,708이고
+같은 장비의 물리 디스크가 2TB급이므로 **MB 단위**로 해석된다. 다른 단위 근거는 없다.
+
+`view_partmodel_v1.hdsize`는 `hdsize_unit`과 짝이며 GB·TB가 섞인다.
+`.68`은 GB 21건·TB 2건, `.35`는 GB 19건이다.
+
+`view_ipaddress_v2.ip_address`는 `inet`이다. `CAST(... AS VARCHAR)`는 `192.168.2.127/32`처럼
+실제 프리픽스가 아닌 `/32`를 붙인다. 주소만 필요하면 `HOST()`를 쓴다.
+프리픽스 길이는 `view_subnet_v1.mask_bits`에서 가져온다. 표본에서 22·16·32가 관측된다.
