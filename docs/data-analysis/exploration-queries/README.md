@@ -78,9 +78,10 @@ Maximo 는 한 대뿐이라 `DB_ACCESS_ENV` 없이 기본 파일을 쓴다.
 | `device42/ci-target-profiles.sql` | Resource·Service Instance 등 범위 결정용 유형·상태 분포 |
 | `device42/ci-target-overlaps.sql` | 범용 View와 전용 View의 동일 개체 중복 여부 |
 | `device42/view-version-probe.sql` | 뷰 최고 버전 확인, 물리 서브타입·파트타입 마스터 |
+| `device42/subtype-census.sql` | type·물리/가상 서브타입·자산 타입 전수와 배치 플래그 서명, 서브타입별 장비·하드웨어 건수 |
 | `maximo/table-description.sql` | 테이블 한글 설명 |
 | `maximo/column-skeleton.sql` | 컬럼 매핑표 앞 4열 생성 |
-| `maximo/dpa-child-coverage.sql` | DPA 자식 테이블 노드 커버리지, ASSETCLASS 분포, Device42 부모 목록 |
+| `maximo/dpa-child-coverage.sql` | DPA 자식 테이블 노드 커버리지, ASSETCLASS 분포, Device42 부모 목록, NODEID 보유 자식 전수 |
 | `maximo/dpa-key-structure.sql` | DPA 기본키 구조와 Device42 자식 적재 건수 |
 | `maximo/source-target-map-structure.sql` | 현행 미사용 SOURCE_TARGET_MAP의 잔존 상태 검증 |
 | `maximo/dpa-hardware-existing-values.sql` | 세 DPA 하드웨어 자식의 기존값 관례 |
