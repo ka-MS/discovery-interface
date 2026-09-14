@@ -109,6 +109,8 @@ java -jar build/libs/discovery-interface-0.0.1-SNAPSHOT.jar \
 
 ## 📚 데이터 매핑 문서
 
+수집 요구사항의 기준은 [사업 추진 범위](docs/requirements/business-scope.md)에 정리되어 있습니다.
+
 Device42와 Maximo 간 데이터 구조, 테이블별 매핑, 검증 쿼리는
 [`docs/data-analysis`](docs/data-analysis/README.md)에서 확인할 수 있습니다.
 
