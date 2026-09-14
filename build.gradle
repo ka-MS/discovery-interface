@@ -24,6 +24,7 @@ dependencies {
     implementation files('libs/d42-jdbc-driver-1.0.2-jar-with-dependencies.jar')
     runtimeOnly 'com.ibm.db2:jcc'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'com.h2database:h2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 

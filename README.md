@@ -95,7 +95,9 @@ java -jar build/libs/discovery-interface-0.0.1-SNAPSHOT.jar \
 | `conversion` | 제조사, 프로세서, OS, 어댑터 등의 변환 기준정보 연계 |
 | `asset` | 컴퓨터, CPU, 디스크, OS, 네트워크 등의 자산정보 연계 |
 | `software` | 설치 소프트웨어 및 라이선스 대상 소프트웨어 연계 |
-| `ci` | CI 연계용 작업 진입점 |
+| `ci` | Computer 본체(ACTCI)·스펙(ACTCISPEC) 연계 |
+
+CI 실행 전 설정과 BIOS 날짜 속성 등록은 [Computer CI 실행 준비](docs/data-analysis/data-mapping/ci/types/computer-run.md)를 따른다.
 
 ## 🧪 테스트 및 빌드
 
