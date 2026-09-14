@@ -1,0 +1,93 @@
+# Filesystem
+
+> Target: MAXIMO.ACTCI · MAXIMO.ACTCISPEC
+> 원천·메타데이터 확인: 2026-09-15 · D42 .68 / .35 · Maximo BLUDB
+> 구현: 없음 · 상태: 매핑 작성 완료. 적재 구현·실제 Maximo 검증은 미착수.
+> 분류 선택 이유·관계 추천안·선별 기준은 [Filesystem 수집 설계](../../../design/ci/filesystem.md)에 있다.
+
+공통 컬럼 정의는 [ACTCI](../actci.md), [ACTCISPEC](../actcispec.md)가 소유한다.
+
+## 1. 대상과 식별자
+
+| 항목 | 값 |
+| --- | --- |
+| 대상 | `view_mountpoint_v2` 전 행. 117 / 141건 전건 Computer 연결 |
+| 분류 | `SYS.FILESYSTEM` 한 개. 로컬·원격·컨테이너를 구분하지 않는다 |
+| ACTCINUM | `D42:MOUNTPOINT:<mountpoint_pk>` |
+| 스펙 참조 | ACTCINUM·CLASSSTRUCTUREID는 본체와 동일, REFOBJECTID=ACTCIID |
+| 관계 | 확정하지 않는다. 추천안은 설계 문서 |
+
+`SYS.LOCALFILESYSTEM`을 쓰지 않는다. 원천에 nfs·nfs4·overlay·VMFS·squashfs가 섞여 있어
+로컬 분류가 사실과 어긋난다. 두 분류의 속성 집합은 동일하다.
+
+## 2. 원천과 조회 조건
+
+`device_fks`가 배열이므로 `= ANY(...)`로 조인한다. 관측상 원소가 항상 1개지만
+같은 원천 PK가 여러 행이 되는 것을 막기 위해 `DISTINCT ON`을 유지한다. 근거는 ISSUE-9.
+
+```sql
+WITH computer AS (
+    SELECT d.device_pk, d.last_discovered
+    FROM view_device_v2 d
+    WHERE d.type IN ('physical', 'virtual')
+      AND (d.network_device = false OR d.network_device IS NULL)
+      AND (
+          (d.type = 'physical' AND d.physicalsubtype IN
+              ('Generic', 'Rackable', 'Blade', 'WorkStation', 'ThinClient', 'Laptop'))
+          OR
+          (d.type = 'virtual' AND d.virtualsubtype IN
+              ('Internal VM', 'Amazon EC2 Instance', 'VMWare', 'Hyper-V'))
+      )
+)
+SELECT DISTINCT ON (m.mountpoint_pk)
+    m.mountpoint_pk, c.device_pk AS device_fk,
+    'D42:MOUNTPOINT:' || CAST(m.mountpoint_pk AS varchar) AS source_id,
+    NULLIF(TRIM(m.mountpoint), '') AS mountpoint,
+    NULLIF(TRIM(m.fstype_name), '') AS fstype_name,
+    NULLIF(TRIM(m.filesystem), '') AS filesystem,
+    NULLIF(TRIM(m.label), '') AS label,
+    m.capacity, m.free_capacity, c.last_discovered
+FROM view_mountpoint_v2 m
+JOIN computer c ON c.device_pk = ANY(m.device_fks)
+ORDER BY m.mountpoint_pk, c.device_pk
+LIMIT %d OFFSET %d
+```
+
+2026-09-15 두 서버에서 실행해 통과를 확인했다.
+컨테이너·가상 파일시스템 제외 조건은 아직 넣지 않았다. 5절 참조.
+
+## 3. 본체 매핑
+
+| Target 컬럼 | 한글명 | 구분 | Source | 변환·조건 |
+| --- | --- | --- | --- | --- |
+| ACTCINUM | 실제 CI 번호 | 변환 | `m.mountpoint_pk` | `'D42:MOUNTPOINT:' || pk` |
+| ACTCINAME | 실제 CI 이름 | 직접 | `m.mountpoint` | 전건. 192자 초과 가능. 5절 |
+| CLASSSTRUCTUREID | 분류 | 변환 | 상수 분류명 | `SYS.FILESYSTEM` 조회값 |
+| DESCRIPTION | 설명 | 원천없음 | – | 원천에 메모 필드가 없다 |
+| LASTSCANDT | 최종 발견 시각 | 변환 | `c.last_discovered` | 부모 Computer 값. 마운트 원천에 없음 |
+| HASLD | 상세 설명 있음 | 상수 | – | 0 |
+| CHANGEBY | 변경자 | 상수 | – | `Device42` |
+| CHANGEDATE | 변경 날짜 | 변환 | 매핑 시각 | JVM 기본 시간대 |
+| LANGCODE | 언어 코드 | 상수 | – | `KO` |
+
+## 4. 속성 매핑
+
+분류 `SYS.FILESYSTEM`. 값이 없는 속성은 행을 만들지 않는다.
+
+| ASSETATTRID | 한글 의미 | 값 컬럼 | 구분 | Source | 변환·조건 |
+| --- | --- | --- | --- | --- | --- |
+| FILESYSTEM_MOUNTPOINT | 마운트 지점 | ALNVALUE | 직접 | `m.mountpoint` | 전건. 254자 초과 시 처리 미결 |
+| FILESYSTEM_TYPE | 파일시스템 유형 | ALNVALUE | 직접 | `m.fstype_name` | 115 / 141건 |
+| FILESYSTEM_CAPACITY | 용량 | NUMVALUE | 변환 | `m.capacity` | 114 / 140건. MB 해석. 5절 |
+| FILESYSTEM_AVAILABLESPACE | 사용 가능 공간 | NUMVALUE | 변환 | `m.free_capacity` | 106 / 129건. MB 해석 |
+
+## 5. 미대응·미결
+
+| 항목 | 상태 |
+| --- | --- |
+| 컨테이너·가상 파일시스템 | `overlay` 38 / 62건, `devtmpfs` 9 / 10건, `squashfs` 0 / 8건. 경로에 컨테이너 ID가 들어가 재기동 시 바뀐다. 제외 추천이나 목록 미확정. ISSUE-8 |
+| 마운트 경로 길이 | 컨테이너 경로가 약 130자다. ACTCINAME 192자·ALNVALUE 254자 한계에 근접. 절단·생략 규칙 필요. ISSUE-11 |
+| 용량 단위 | 원천에 단위 컬럼 없음. 표본상 MB로 해석된다. `MEASUREUNITID='MBYTE'` 지정 추천. ISSUE-11 |
+| `m.filesystem` | 93 / 133건 보유하나 대응 속성 없음. 추가 등록 필요. 이번 범위 제외 추천 |
+| `m.label` | 24 / 8건. `MODELOBJECT_LABEL` 채택 여부 미정 |
+| 관계 | `RELATION.CONTAINS`(Computer→Filesystem) 추천. `USEWITH`가 CI라 미검증. ISSUE-11 |
