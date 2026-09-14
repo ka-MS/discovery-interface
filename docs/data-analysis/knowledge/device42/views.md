@@ -4,8 +4,10 @@
 > 재조회 docs/data-analysis/exploration-queries/device42/view-counts.sql
 > 벤더 절만 2026-08-28 · 양쪽 서버
 > 재조회 docs/data-analysis/exploration-queries/device42/vendor-master-source.sql
-> 버전 규칙·마스터 뷰 절 2026-08-31
+> 버전 규칙 절 2026-08-31
 > 재조회 docs/data-analysis/exploration-queries/device42/view-version-probe.sql
+> 마스터 뷰 절 2026-09-11 · 양쪽 서버
+> 재조회 docs/data-analysis/exploration-queries/device42/subtype-census.sql
 
 실재가 확인된 뷰와 device 연결 키다. 카탈로그 조회가 막혀 있어
 개별 확인으로 얻은 목록이다.
@@ -117,10 +119,28 @@ MAC 전용 뷰는 없다. MAC 은 `view_netport_v1.hwaddress` 에만 있으며 �
 | --- | ---: | --- | --- |
 | `view_physicalsubtype_v2` | 15 | `physicalsubtype_pk` | `physicalsubtype_name` |
 | `view_parttype_v2` | 13 | `parttype_pk` | `name` |
+| `view_assettype_v1` | 20 | `assettype_pk` | `name` |
+| `view_pdumodel_v1` | 1 | `pdumodel_pk` | `name` |
+| `view_objectcategory_v1` | 0 | `objectcategory_pk` | `name` |
 
 `view_physicalsubtype_v2` 는 배치 가능 위치 플래그를 함께 준다.
-`storage_room`, `server_room`, `building`, `rack`, `chassis`. 15종 중
-`building = f` 인 것은 `CRAC`(6) 과 `Environment Monitor`(15) 둘뿐이다.
+`storage_room`, `server_room`, `building`, `rack`, `chassis`. 값별 서명은
+`device-types.md` 참조.
+
+`view_assettype_v1` 은 device 가 아닌 자산의 타입이다. `physicalsubtype` 과
+별개 체계이고 같은 배치 플래그에 `location`·`device_relation` 을 더 준다.
+전력·설비 계열이 여기 있다. `AC`(14), `Breaker Panel`(15), `DMARC`(18),
+`Sensor`(20), `Window`(21), `Door`(22) 다. `TAP Module`(17) 은 `physicalsubtype`
+의 `TAP`(8) 과 짝이다. `assettype_pk` 는 1~22 중 11·12 가 빠져 있다.
+`device_relation` 이 참인 것은 `Software`(8) 과 `Fabric Extender`(16) 뿐이다.
+
+본체인 `view_asset_v1` 은 양쪽 서버 0행이라 적재 대상이 없다.
+
+`view_objectcategory_v1` 은 양쪽 서버 0행이고 `view_device_v2.objectcategory_fk`
+도 전건 비어 있다.
+
+`view_pdumodel_v1` 은 `view_pdu_v1` 의 모델 사전이다. 양쪽 서버 1행이며 PDU
+장비 1건에 대응한다.
 
 `view_parttype_v2` 의 `parttype_pk` 는 1~14 중 11 이 빠져 있다.
 `support_ports` 가 참인 것은 NIC·HBA·SCSI·Serial Bus·GPU·fan·psu 와
@@ -145,6 +165,17 @@ MAC 주소는 `view_netport_v1.hwaddress` 에 있다. 커스텀필드 값은
 
 `view_display_v1`, `view_monitor_v1` 부재는 192.168.1.35와 192.168.2.68
 양쪽에서 확인했다.
+
+타입 계열에서 없는 것들이다. 2026-09-11 확인.
+
+`view_virtualsubtype_v1`, `view_virtualsubtype_v2`, `view_devicetype_v1`,
+`view_devicesubtype_v1`, `view_devicesubtype_v2`, `view_devicecategory_v1`,
+`view_deviceclass_v1`, `view_subtype_v1`, `view_hardwaretype_v1`,
+`view_usagetype_v1`
+
+`virtualsubtype` 에는 마스터 뷰가 없다. `view_device_v2.usage_type` 은 전건
+`Permanent` 다. `devicecategory_fk` 컬럼은 `view_pdu_v1` 에만 있고
+`view_device_v2` 에는 없다.
 
 ## 건수
 

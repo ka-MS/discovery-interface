@@ -26,6 +26,26 @@
 
 합계 293개 속성. 14개 테이블 모두 한글명이 전건 제공된다.
 
+## 매핑하지 않는 자식
+
+> 관측 2026-09-11
+> 재조회 docs/data-analysis/exploration-queries/maximo/dpa-child-coverage.sql
+
+`NODEID` 를 가진 비뷰 영속 `DPA*` 자식은 전부 19개다. 위 13개 외 6개는 매핑
+대상이 아니다.
+
+| 테이블 | 한글명 |
+| --- | --- |
+| DPACOMMDEVICE | 배치된 자산 컴퓨터 통신 디바이스 |
+| DPAFILE | 배치된 자산 컴퓨터 파일 |
+| DPAIMAGEDEVICE | 배치된 자산 컴퓨터 이미지 디바이스 |
+| DPAIPX | 배치된 자산 컴퓨터 IPX |
+| DPANETDEVCARD | 배치된 자산 네트워크 디바이스 네트워크 디바이스 카드 |
+| DPAUSERINFO | 배치된 자산 컴퓨터 사용자 |
+
+19개 전부 컴퓨터·네트워크 디바이스·네트워크 프린터 계열이다. 전력·설비에
+대응하는 자식은 없다.
+
 이 중 17개는 `PERSISTENT = 0` 인 비영속 속성으로 DB 컬럼이 아니다. 적재 대상은
 276개다. 비영속 속성은 10개 테이블에 분포하며 대부분 수치 컬럼의 문자열 표기
 (`VRAMSIZE`, `VMAXSPEED` 등)다. `DEPLOYEDASSET`, `DPAOS`, `DPATCPIP`,
