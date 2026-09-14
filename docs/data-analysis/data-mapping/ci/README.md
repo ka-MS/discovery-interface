@@ -2,16 +2,36 @@
 
 Device42 개체를 Maximo Actual CI로 적재하는 매핑 정본이다.
 
-> **CI 대상과 대표 Source를 먼저 확정한 뒤 `ACTCI`, `ACTCISPEC`, `ACTCIRELATION`을 매핑한다.**
+> **공통 Target 규약과 유형별 원천 매핑을 분리한다. 같은 규칙은 한 곳에만 둔다.**
 
 ## 읽는 순서
 
-1. `ci-targets.md` — CI 후보, 중복 View, 포함·제외 범위
-2. 대상 확정 후 `ACTCI` 본체 매핑
-3. 본체 매핑 후 `ACTCISPEC`, `ACTCIRELATION` 매핑
+1. [CI 모델](../../knowledge/maximo/ci-model.md) — Actual CI와 CI 비교, 참조 경로
+2. [CI 분류 모델](../../knowledge/maximo/ci-classification.md) — CLASSSTRUCTURE·CLASSSPEC 컬럼과 적용 범위
+3. [ci-targets.md](ci-targets.md) — CI 후보, 중복 View, 포함·제외 범위
+4. [ACTCI](actci.md), [ACTCISPEC](actcispec.md), [ACTCIRELATION](actcirelation.md) — 테이블별 컬럼 매핑
+5. [Database](types/database.md), [Database Instance](types/database-instance.md) — 유형별 조회·분류·속성·관계
 
-현재는 `ci-targets.md` 조사 단계다. 세 대상 테이블의 컬럼 매핑 문서는 대상
-범위가 확정된 뒤 작성한다.
+Computer 본체·스펙 매핑은 [Computer](types/computer.md)에서 시작한다.
+수집 항목·원천 연결·표본 근거는 [Computer 연관 수집 원천](../../knowledge/device42/computer-inventory.md)에 있다.
+실제 분류·스펙·관계 정의는 [Computer 관련 분류 조사](../../knowledge/maximo/computer-classification-specs.md),
+수집 대상·스펙 추천안은 [Computer CI 수집 설계](../../design/ci/computer.md)에 있다.
+
+DB·Instance 전체 원천 컬럼과 참조 구조는 [원천 구조](../../knowledge/device42/database-model.md)에 있다.
+
+공통 7열 표는 전체 컬럼·참조 규칙을 소유한다. 유형 문서 본문에는 실제 조회 SQL과
+본체·속성 매핑을 작성한다. 관계 SQL과 정의는 출발 유형 문서에만 둔다.
+
+## 유형별 진행
+
+| 유형 | 문서 | 상태 |
+| --- | --- | --- |
+| Computer | [computer.md](types/computer.md) | 본체·스펙 저장 구현 및 자동 테스트 완료. [실행 준비](types/computer-run.md)의 설정·BIOS 날짜 속성 등록 후 실제 적재·UI 검증 필요 |
+| Database | [database.md](types/database.md) | 원천 10컬럼 사용처·SQL 작성; 본체 이름·메모·분류, 이름 속성 대응. 추가 속성·적용 설정·필수값 미결 |
+| Database Instance | [database-instance.md](types/database-instance.md) | 원천 9컬럼·Resource 보강·SQL 작성; 본체 이름·메모·분류, 이름·제품명·버전 문자열 속성 대응. 추가 속성·관계·필수값 미결 |
+
+기준정보 보완과 나머지 정책은 [ISSUE-8·11](../../open-issues.md)에 둔다.
+Computer 본체·속성은 구현했다. 관계 및 다른 CI 유형의 적재 구현, 실제 Maximo 적재·UI 검증은 미완료다.
 
 ## Target
 
@@ -23,7 +43,8 @@ Device42 개체를 Maximo Actual CI로 적재하는 매핑 정본이다.
 
 ## 원칙
 
+- CI 수집·매핑은 D42 원천을 기준으로 정의하며, DPA 테이블·적재 결과·변환 규칙에 의존하지 않는다. 공통 원천 사실은 knowledge에서 참조한다.
 - View 하나를 CI 유형 하나로 간주하지 않는다.
 - 같은 개체를 표현하는 범용 View와 전용 View는 대표 Source 하나로 합친다.
 - 본체, 속성, 관계, 비대상을 구분한다.
-- 포함·제외가 결정되지 않은 후보는 `../../open-issues.md`에 둔다.
+- 수집 구성 후보·대조표는 `../../design/ci/`에 두고, 남은 포함·제외 결정은 `../../open-issues.md`에서 추적한다.

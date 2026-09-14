@@ -8,13 +8,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 데이터 분석 문서
 
-원천·타겟 구조와 매핑은 `docs/data-analysis/` 에 있다. 매핑 관련 작업을 시작하기 전에 [docs/data-analysis/README.md](docs/data-analysis/README.md) 를 먼저 읽는다. 세 계층으로 나뉜다.
+수집 범위와 CI 조사·설계를 정할 때는 [사업 추진 범위](docs/requirements/business-scope.md)를 먼저 읽는다. 사용자 제공 원문의 수집 요구사항과 CI 관리 단위에 대한 해석·미결 사항을 구분한다.
+
+원천·타겟 구조와 설계·매핑은 `docs/data-analysis/` 에 있다. 관련 작업을 시작하기 전에 [docs/data-analysis/README.md](docs/data-analysis/README.md) 를 먼저 읽는다. 역할별로 나뉜다.
 
 - `knowledge/` — 관측 사실. 수치는 스냅샷이며 상단에 관측 시점과 재조회 쿼리를 명시한다.
+- `design/` — 수집 구성안·대조표·선택 이유. 검토안과 결정된 내용을 구분하며, CI 유형별 설계는 `design/ci/<유형>.md`에 둔다.
 - `data-mapping/` — 테이블 단위 매핑 정본. 문서 한 장이 구현 클래스 하나에 대응한다.
-- `exploration-queries/` — 재사용 조회 쿼리.
+  CI는 예외로 Target별 공통 규약과 CI 유형별 원천 매핑을 분리한다. 형식은 데이터 분석 README를 따른다.
+- `exploration-queries/` — 조사·검색용 재사용 쿼리. 실제 매핑 SQL은 매핑 문서 본문에 둔다.
 
-데이터 분석의 미결·정책 대기 항목의 정본은 `docs/data-analysis/open-issues.md` 하나다. 다른 문서는 이슈 ID와 한 줄 요약만 참조한다.
+데이터 분석의 미결·정책 대기 항목의 정본은 `docs/data-analysis/open-issues.md` 하나다. 이슈에는 남은 결정·상태와 관련 설계 링크를 두고, 상세 설계안·대조표를 복사하지 않는다. 다른 문서는 이슈 ID와 한 줄 요약으로 미결 상태를 참조한다. 확정된 필드 매핑·변환·SQL은 `data-mapping/`에 둔다.
 
 **DOQL 뷰는 높은 버전을 쓴다.** `view_hardware_v2`, `view_ipaddress_v2`, `view_mountpoint_v2` 처럼 `_v2` 가 있으면 무조건 그쪽이다. 낮은 버전은 컬럼이 빠져 있거나 행이 적다. 카탈로그 조회가 막혀 있어 버전 확인은 개별로 찔러 보는 수밖에 없다. 확인 쿼리는 `docs/data-analysis/exploration-queries/device42/view-version-probe.sql` 이고, 목록은 `docs/data-analysis/knowledge/device42/views.md` 버전 규칙 절에 있다. `device_fks` 배열 조인은 같은 원천 PK 가 여러 행이 되어 MERGE 키를 깨뜨릴 수 있다. `DISTINCT ON` 으로 장비 하나만 남긴다. 근거는 `close-issues.md` ISSUE-9.
 

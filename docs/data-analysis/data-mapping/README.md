@@ -1,6 +1,7 @@
 # 데이터 매핑
 
-테이블 단위로 정리한다. 문서 한 장이 구현 클래스 하나에 대응한다.
+기본은 테이블 단위이며 문서 한 장이 구현 클래스 하나에 대응한다.
+CI는 [문서 예외 규칙](../README.md#ci-매핑-문서-예외)에 따라 공통 Target 규약과 유형별 매핑을 분리한다.
 
 | 문서 | 구현 |
 | --- | --- |
@@ -20,9 +21,11 @@
 | `software/tloamsoftware.md` | `integration/software/TloamSoftwareIntegrate.java` |
 | `software/dpasoftware.md` | `integration/software/DpaSoftwareIntegrate.java` |
 
-CI는 `ci/README.md`에서 시작한다. 현재 `ci/ci-targets.md`에서 Device42 개체별
-Actual CI 포함 범위와 대표 Source를 조사하고 있다. 대상 범위를 확정한 뒤
-`ACTCI`, `ACTCISPEC`, `ACTCIRELATION` 매핑 문서를 작성한다.
+CI는 [ci/README.md](ci/README.md)에서 시작한다. `ACTCI`, `ACTCISPEC`,
+`ACTCIRELATION`의 Target 구조와 분류·속성 템플릿 조사는 완료했다.
+Computer의 DPA와 독립된 수집·본체·스펙 매핑 및 SQL은 [Computer](ci/types/computer.md)에 있다. 저장 구현·자동 테스트는 완료했으며, 실행 설정·추가 속성 등록과 실제 적재 검증은 남아 있다.
+DB·DB Instance의 전체 원천 컬럼별 사용처와 실제 SQL은 `ci/types/`에 있다.
+일반 DB·DB Server 분류는 확정했으며, 추가 속성·관계·식별자·공통 적재 정책은 미결이다.
 
 ## 변환 데이터
 
