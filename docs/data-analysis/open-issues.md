@@ -187,10 +187,11 @@ compatibility_level의 일반 분류 속성 대응은 미정이며, DB 제품 �
 본체·스펙 대응 및 SQL은 [Computer 매핑](data-mapping/ci/types/computer.md), 관계 구성안은 [수집 설계](design/ci/computer.md)에 둔다.
 등록된 분류·스펙·관계는 [분류 조사 결과](knowledge/maximo/computer-classification-specs.md)에서 확인했다.
 
-- BIOS 출시일 원문용 COMPUTERSYSTEM_BIOSRELEASEDATE(ALN)와 두 ACTCI 분류 템플릿·적용 설정 등록. 현재 미등록이며 업무 테이블 변경은 수행하지 않았다.
+- BIOS 출시일 원문용 COMPUTERSYSTEM_BIOSRELEASEDATE(ALN) 전역 속성 정의 준비 및 UI·승격 검증. 현재 미등록이다. 명시적 추가 속성 경로는 구현했으며 템플릿 등록 시 기존 경로가 우선한다. 기준정보·업무 행 변경은 수행하지 않았다.
+- 사용 분류 enum 기반 공통 캐시와 명시적 추가 속성 처리: [캐시 설계](design/ci/definition-cache.md). 실제 Maximo에서 새 캐시 SQL·추가 속성 경로의 동작 확인은 후속 검증.
 - sourceId=`D42:<원천 개체 종류>:<원천 PK>` 기반 본체·스펙 저장을 구현했다. 신규 숫자 ID는 각 Maximo 시퀀스 NEXT VALUE를 사용하며 기존 ID를 유지한다. 실제 Maximo 동시 채번·적재 검증은 남아 있다.
 - FQDN·SIGNATURE 대응과 MANAGEDSYSTEMNAME·SYSTEMBOARDUUID 원천 보강. 매핑 규칙에 따른 단위 표시·승격 후 전달 및 조건부 CPU·MAC 보강의 UI 확인.
-- 계정·언어·시간대는 명시적 실행 설정으로 구현했다. 현재 예외 전달·빈 스펙 생략 등의 동작은 [실행 준비](data-mapping/ci/types/computer-run.md)에 기록했다. 재시도·삭제·분류 변경 등 운영 정책 확장은 후속 결정이며 설치 SW의 경로 보강도 후속 유형에서 진행.
+- CI 전용 설정을 제거하고 기존 asset의 getData → mapData → putData 형태로 통일했다. 현재 상수·시간대·건별 오류 처리와 롤백 보류는 [실행 준비](data-mapping/ci/types/computer-run.md)에 기록했다. 재시도·삭제·분류 변경 등 운영 정책 확장은 후속 결정이며 설치 SW의 경로 보강도 후속 유형에서 진행.
 - 관계의 방향·카디널리티·SWAPPED 적용과 IP 직접 연결·SW의 OS 연결 조건 검증.
 
 ### DB·Instance 원천별 남은 판단

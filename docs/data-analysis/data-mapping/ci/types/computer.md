@@ -3,7 +3,7 @@
 > Target: MAXIMO.ACTCI · MAXIMO.ACTCISPEC
 > 원천·메타데이터 확인: 2026-09-14 · D42 .68 / .35 · Maximo BLUDB
 > 구현: ComputerCiIntegrate · 상태: 수집·ACTCI·ACTCISPEC 저장 및 자동 테스트 완료. 실제 Maximo 적재·UI 검증은 미완료.
-> 실행 설정·추가 속성 등록·현재 처리 동작은 [실행 준비](computer-run.md)를 따른다. 미대응 항목은 아래 표에 구분한다.
+> 실행 방법·추가 속성 등록·현재 처리 동작은 [실행 준비](computer-run.md)를 따른다. 미대응 항목은 아래 표에 구분한다.
 
 ## 1. 대상과 식별자
 
@@ -21,7 +21,8 @@ DPA 적재 결과나 변환 규칙에 의존하지 않는다.
 | 스펙 참조 | ACTCINUM·CLASSSTRUCTUREID는 본체와 동일, REFOBJECTID=ACTCIID |
 | 스펙 선택 | CI.COMPUTERSYSTEM의 18개를 대조 기준으로 사용하고 BIOS·CPU 코어 수 추가 |
 
-분류명으로 CLASSSTRUCTUREID를 조회한다. 환경별 ID를 상수로 고정하지 않는다.
+CiClassification에 사용할 분류명을 명시하고, CI 실행 시작 시 공통 캐시로 CLASSSTRUCTUREID를 조회한다.
+환경별 숫자·문자열 ID를 상수로 고정하지 않는다. ComputerSpec에는 전체 ASSETATTRID를 명시한다.
 CI 분류의 CLASSSPECID를 ACTCISPEC에 복사하지 않는다.
 
 ## 2. 원천과 조회 조건
@@ -61,11 +62,11 @@ CI 분류의 CLASSSPECID를 ACTCISPEC에 복사하지 않는다.
 | ACTCINAME | 실제 CI 이름 | 직접 | d.name | 원문; 임의 대문자 변환·절단 없음 |
 | CLASSSTRUCTUREID | 분류 | 변환 | d.type → 분류명 | 1절의 ACTCI 적용 분류 조회 |
 | DESCRIPTION | 설명 | 직접 | d.notes | 원문; 상세 설명으로 자동 분리하지 않음 |
-| LASTSCANDT | 최종 발견 시각 | 변환 | d.last_discovered | ci.zone-id 시간대로 변환. 누락·파싱 오류는 현재 예외 전달 |
+| LASTSCANDT | 최종 발견 시각 | 변환 | d.last_discovered | JVM 기본 시간대로 변환. 파싱 실패는 해당 Computer 생략, 누락은 NULL 전달 |
 | HASLD | 상세 설명 있음 | 상수 | — | 상세 설명 미사용 시 0 |
-| CHANGEBY | 변경자 | 상수 | ci.change-by | 실행 설정; 실제 Maximo 계정 지정 |
-| CHANGEDATE | 변경 날짜 | 변환 | 저장 시각 | ci.zone-id 기준. 본체·스펙이 같은 시각 사용 |
-| LANGCODE | 언어 코드 | 상수 | ci.lang-code | 실행 설정; 원천 이름의 언어로 추정하지 않음 |
+| CHANGEBY | 변경자 | 상수 | `Device42` | 연계 식별 문자열. Maximo 사용자 계정 검증은 하지 않음 |
+| CHANGEDATE | 변경 날짜 | 변환 | 매핑 시각 | JVM 기본 시간대. 같은 배치의 본체·스펙이 같은 시각 사용 |
+| LANGCODE | 언어 코드 | 상수 | `KO` | 코드 상수. 원천 이름의 언어로 추정하지 않음 |
 | GUID / CCIDISGUID | 발견 ID / 통합 ID | 미결 | 직접 대응 미확정 | 신규는 미설정, 기존 값은 유지. d.uuid는 UUID 스펙에 대응 |
 | EXTENDEDINSTANCES | 확장 인스턴스 | 원천없음 | — | 이번 매핑에서 사용하지 않음 |
 | PLUSPCUSTOMER | 기본 고객 | 원천없음 | — | D42 customer_fk와 Maximo 고객 코드 대응 없음 |
@@ -118,7 +119,11 @@ GBYTE·MBYTE·GHZ·MHZ는 Maximo에 등록되어 있다. 단위 누락·미지�
 IBM CDM 원래 단위와 동일하다고 가정하지 않으며 승격·후속 연계도 값과 단위를 함께 처리해야 한다.
 
 **추가 속성 등록 전제:** `COMPUTERSYSTEM_BIOSRELEASEDATE`는 이번 문서에서 정한 ALN 속성명이며 현재 미등록이다.
-ASSETATTRIBUTE와 두 ACTCI 분류의 CLASSSPEC·ACTCI용 적용 설정을 등록한 후 사용한다.
+ASSETATTRIBUTE에 전역 ALN 정의가 정확히 한 건 있어야 사용한다. 분류 템플릿이 없으면
+명시적 추가 속성으로 CLASSSPECID=NULL, DISPLAYSEQUENCE=180, MANDATORY=0을 사용한다.
+SECTION·LINKEDTOATTRIBUTE·LINKEDTOSECTION은 NULL, 단위는 속성 정의를 따른다.
+기존 템플릿이 있으면 그 설정을 우선하며, 잘못된 적용 설정을 추가 경로로 우회하지 않는다.
+다른 분류의 템플릿 ID를 빌려오지 않는다. 템플릿 없는 속성의 실제 UI·승격은 미검증이다.
 기존 `COMPUTERSYSTEM_BIOSDATE`는 NUMERIC이고 날짜 인코딩 규약은 확인되지 않아 사용하지 않는다.
 이는 ACTCISPEC 테이블의 새 컬럼이 아니라 속성 정의와 값 행을 추가하는 작업이다.
 
@@ -127,6 +132,7 @@ ASSETATTRIBUTE와 두 ACTCI 분류의 CLASSSPEC·ACTCI용 적용 설정을 등�
 ### D42 원천
 
 아래 SQL은 수집·매핑용 SELECT이며 미결 항목의 값을 생성하지 않는다.
+구현은 같은 대상 조건으로 COUNT를 조회한 뒤 아래 SQL에 LIMIT·OFFSET을 붙여 100건씩 처리한다.
 model_count·arch_count·default_port_count는 복수 값 때문에 보강을 생략했는지 구분하는 진단값이며 스펙이 아니다.
 
 ```sql
@@ -163,8 +169,6 @@ WITH computer AS (
 )
 SELECT d.device_pk, d.type,
     'D42:DEVICE:' || CAST(d.device_pk AS varchar) AS source_id,
-    CASE d.type WHEN 'physical' THEN 'SYS.COMPUTERSYSTEM'
-                WHEN 'virtual' THEN 'SYS.VIRTUALCOMPUTERSYSTEM' END AS classification_id,
     d.name, d.notes, d.serial_no, d.uuid, d.last_discovered,
     h.name AS model, v.name AS manufacturer,
     d.ram, d.ram_size_type, d.total_cpus, d.core_per_cpu,
@@ -187,63 +191,59 @@ LEFT JOIN primary_port pp ON pp.device_fk = d.device_pk
 ORDER BY d.device_pk;
 ```
 
-### Maximo 분류·스펙 템플릿
+### Maximo 공통 캐시 조회
 
-속성별 기대 자료형은 4절 값 컬럼과 대조한다. 동일 분류·속성·섹션의 템플릿이 하나이고
-ACTCI 적용 설정이 있는지 확인한다. BIOSRELEASEDATE는 기준정보 등록 전 결과에 나오지 않는다.
-4절에서 미결·원천없음인 속성은 템플릿이 조회되어도 값을 적재하지 않는다.
+CiDefinitionLoader가 CI 실행 시작 시 아래 정의를 조회한다. 실제 코드의 분류명 IN 목록은
+CiClassification.values()에서 생성하고, 스펙은 앞에서 조회한 분류 ID 목록을 바인딩한다.
+아래 SQL은 현재 enum의 두 분류로 재조회할 수 있는 형태다.
 
 ```sql
-SELECT s.CLASSIFICATIONID, s.CLASSSTRUCTUREID,
-    c.CLASSSPECID, c.ASSETATTRID, a.DATATYPE, c.SECTION,
-    c.MEASUREUNITID, c.DOMAINID, c.LINKEDTOATTRIBUTE, c.LINKEDTOSECTION,
-    u.SEQUENCE, u.MANDATORY, u.USEINSPEC
+SELECT s.CLASSIFICATIONID,s.CLASSSTRUCTUREID
 FROM MAXIMO.CLASSSTRUCTURE s
-JOIN MAXIMO.CLASSUSEWITH w
-  ON w.CLASSSTRUCTUREID = s.CLASSSTRUCTUREID AND w.OBJECTNAME = 'ACTCI'
-JOIN MAXIMO.CLASSSPEC c ON c.CLASSSTRUCTUREID = s.CLASSSTRUCTUREID
-JOIN MAXIMO.ASSETATTRIBUTE a
-  ON a.ASSETATTRIBUTEID = c.ASSETATTRIBUTEID AND a.ASSETATTRID = c.ASSETATTRID
-JOIN MAXIMO.CLASSSPECUSEWITH u
-  ON u.CLASSSPECID = c.CLASSSPECID AND u.OBJECTNAME = 'ACTCI'
-WHERE s.CLASSIFICATIONID IN ('SYS.COMPUTERSYSTEM', 'SYS.VIRTUALCOMPUTERSYSTEM')
-  AND c.ASSETATTRID IN (
-    'COMPUTERSYSTEM_ARCHITECTURE',
-    'COMPUTERSYSTEM_CPUSPEED',
-    'COMPUTERSYSTEM_CPUTYPE',
-    'COMPUTERSYSTEM_FQDN',
-    'COMPUTERSYSTEM_MANAGEDSYSTEMNAME',
-    'COMPUTERSYSTEM_MANUFACTURER',
-    'COMPUTERSYSTEM_MEMORYSIZE',
-    'COMPUTERSYSTEM_MODEL',
-    'COMPUTERSYSTEM_NAME',
-    'COMPUTERSYSTEM_NUMCPUS',
-    'COMPUTERSYSTEM_PRIMARYMACADDRESS',
-    'COMPUTERSYSTEM_SERIALNUMBER',
-    'COMPUTERSYSTEM_SIGNATURE',
-    'COMPUTERSYSTEM_SYSTEMBOARDUUID',
-    'COMPUTERSYSTEM_TYPE',
-    'COMPUTERSYSTEM_UUID',
-    'COMPUTERSYSTEM_VIRTUAL',
-    'COMPUTERSYSTEM_VMID',
-    'COMPUTERSYSTEM_BIOSMANUFACTURER',
-    'COMPUTERSYSTEM_ROMVERSION',
-    'COMPUTERSYSTEM_BIOSRELEASEDATE',
-    'COMPUTERSYSTEM_CPUCORESINSTALLED')
-ORDER BY s.CLASSIFICATIONID, c.ASSETATTRID;
+WHERE s.CLASSIFICATIONID IN ('SYS.COMPUTERSYSTEM','SYS.VIRTUALCOMPUTERSYSTEM')
+  AND EXISTS (
+      SELECT 1 FROM MAXIMO.CLASSUSEWITH u
+      WHERE u.CLASSSTRUCTUREID=s.CLASSSTRUCTUREID AND u.OBJECTNAME='ACTCI'
+  );
+```
+
+ASSETATTRIBUTE는 이름 중복을 보존하도록 숫자 ASSETATTRIBUTEID로 캐싱한다.
+
+```sql
+SELECT ASSETATTRIBUTEID,ASSETATTRID,DATATYPE,MEASUREUNITID,ORGID,SITEID
+FROM MAXIMO.ASSETATTRIBUTE;
+```
+
+설정이 없는 템플릿도 조회하여 존재 여부를 기록한다. 정상 템플릿에는 속성 ID·이름의 일치와
+ACTCI 적용 설정·표시 순서·필수 여부가 필요하다. 비정상 템플릿을 추가 경로로 우회하지 않는다.
+
+```sql
+SELECT c.CLASSSTRUCTUREID,c.CLASSSPECID,c.ASSETATTRID,c.ASSETATTRIBUTEID,
+    c.SECTION,c.MEASUREUNITID,c.LINKEDTOATTRIBUTE,c.LINKEDTOSECTION,
+    u.SEQUENCE,u.MANDATORY
+FROM MAXIMO.CLASSSPEC c
+LEFT JOIN MAXIMO.CLASSSPECUSEWITH u
+  ON u.CLASSSPECID=c.CLASSSPECID AND u.OBJECTNAME='ACTCI' AND u.USEINSPEC=1
+  AND u.CLASSSTRUCTUREID=c.CLASSSTRUCTUREID AND u.ASSETATTRID=c.ASSETATTRID
+  AND (u.SECTION=c.SECTION OR (u.SECTION IS NULL AND c.SECTION IS NULL))
+WHERE c.CLASSSTRUCTUREID IN (SELECT s.CLASSSTRUCTUREID FROM MAXIMO.CLASSSTRUCTURE s
+    WHERE s.CLASSIFICATIONID IN ('SYS.COMPUTERSYSTEM','SYS.VIRTUALCOMPUTERSYSTEM')
+      AND EXISTS (SELECT 1 FROM MAXIMO.CLASSUSEWITH w
+          WHERE w.CLASSSTRUCTUREID=s.CLASSSTRUCTUREID AND w.OBJECTNAME='ACTCI'));
 ```
 
 ACTCISPEC의 부모·템플릿 참조는 [공통 매핑](../actcispec.md)을 적용한다.
 MEMORYSIZE·CPUSPEED의 MEASUREUNITID는 4절의 명시적 단위 매핑을 우선한다.
 구현은 ACTCINUM 및 속성 키로 기존 ID를 조회한 뒤 UPDATE 또는 INSERT한다.
-본체·스펙을 장비별 트랜잭션으로 묶으며 실제 저장 SQL은 ComputerCiIntegrate에 있다.
+mapData에서 본체·스펙 DTO를 만들고 putData에서 본체 ID를 확보한 뒤 스펙을 저장한다.
+명시적 트랜잭션·롤백은 적용하지 않으며 실제 저장 SQL은 ComputerCiIntegrate의 상수로 분리한다.
 
 ## 6. 검증과 남은 작업
 
 두 D42 서버에서 5절 원천 SQL의 실행·장비 키 중복 여부와 원천 필드·단위·CPU/포트 보강을 확인했다.
 Maximo에서 분류·속성 타입·적용 설정·단위 코드를 대조했다. 실제 업무 테이블 쓰기는 수행하지 않았다.
 코드의 원천·정의 조회 SQL도 읽기 전용으로 확인했다. H2 Db2 모드에서 부모·템플릿 연결,
-재실행·롤백·페이징·정의 누락을 테스트했으며 전체 테스트와 실행 JAR 빌드를 통과했다.
+재실행·페이징·정의 누락·건별 오류 후 계속 처리를 테스트했다. 현재 검증 상태는 [실행 준비](computer-run.md#검증)를 따른다.
 
 [ISSUE-11](../../../open-issues.md#issue-11-actual-ci-분류속성관계와-식별자-매핑)에서
 추가 속성 등록, 미대응 속성, 실제 적재 검증과 후속 운영 정책을 추적한다.
