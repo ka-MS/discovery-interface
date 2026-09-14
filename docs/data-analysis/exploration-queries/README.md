@@ -1,6 +1,7 @@
 # 탐색 쿼리
 
-Device42와 Maximo 원천을 반복 조회하는 재사용 쿼리다. 실행기는
+Device42와 Maximo 데이터를 조사·검색하는 재사용 쿼리다. 매핑 SQL의 정본이 아니며,
+실제 매핑 SQL은 매핑 문서 본문에 작성한다. 실행기는
 `local/db-access-kit/scripts/` 에 있다.
 
 ## 실행
@@ -64,6 +65,8 @@ Maximo 는 한 대뿐이라 `DB_ACCESS_ENV` 없이 기본 파일을 쓴다.
 | `device42/view-counts.sql` | 뷰별 건수, 파트 타입 분포 |
 | `device42/device-related-inventory.sql` | 장비 한 대의 연관 자원 건수 |
 | `device42/source-coverage-by-subtype.sql` | subtype별 원천 가용성, 식별자 충전율 |
+| `device42/computer-collection-inventory.sql` | DPA에 의존하지 않는 Computer 연관 수집 항목·값 보유율·원천 연결 쌍 조사 |
+| `device42/computer-identity-memory.sql` | Computer 식별 후보 중복, RAM 슬롯·장비 총량/파트 합계, 파트 수량 검증 |
 | `device42/etl-target-simulation.sql` | 현행 필터 적용 시 적재 대상과 제외 대상 |
 | `device42/dpa-hardware-source-shapes.sql` | 논리 드라이브·네트워크·GPU 원천 뷰 컬럼 형태 |
 | `device42/dpa-hardware-mapping.sql` | 논리 드라이브·네트워크·GPU의 COMPUTER 대상 원천과 값 분포 |
@@ -77,10 +80,27 @@ Maximo 는 한 대뿐이라 `DB_ACCESS_ENV` 없이 기본 파일을 쓴다.
 | `device42/ci-target-relations.sql` | CI 본체 후보 사이의 FK 충전율과 실제 조인 성공 건수 |
 | `device42/ci-target-profiles.sql` | Resource·Service Instance 등 범위 결정용 유형·상태 분포 |
 | `device42/ci-target-overlaps.sql` | 범용 View와 전용 View의 동일 개체 중복 여부 |
+| `device42/ci-source-values.sql` | CI 후보 필드의 충전율·길이·단위, PK 충돌, DB 호스트 연결 |
+| `device42/ci-db-mapping.sql` | DB·DB Instance 유형별 원천 투영, 관계 쌍, 조인·값 변환 검증 |
+| `device42/ci-db-source-analysis.sql` | DB·Instance 전체 컬럼, 숫자 변환, Resource 보강, 참조값 차이 조사 |
+| `device42/ci-db-resource-details.sql` | Instance Resource의 JSON 버전 문자열과 중복 값 조사 |
 | `device42/view-version-probe.sql` | 뷰 최고 버전 확인, 물리 서브타입·파트타입 마스터 |
 | `device42/subtype-census.sql` | type·물리/가상 서브타입·자산 타입 전수와 배치 플래그 서명, 서브타입별 장비·하드웨어 건수 |
+| `device42/computer-ci-mapping-audit.sql` | Computer 단위·BIOS·CPU 모델/아키텍처·기본 포트 원천 재대조 |
 | `maximo/table-description.sql` | 테이블 한글 설명 |
 | `maximo/column-skeleton.sql` | 컬럼 매핑표 앞 4열 생성 |
+| `maximo/ci-target-structure.sql` | Actual CI·CI·분류·템플릿의 컬럼, 키, 관계, 시퀀스 |
+| `maximo/ci-identifier-storage.sql` | ACTCIID/ACTCINUM 타입·인덱스·CHECK·트리거·자동 번호·속성 클래스 확인 |
+| `maximo/ci-classification-audit.sql` | 기존 CI 참조 정합성, ACTCI/CI 분류·속성 적용 범위 |
+| `maximo/ci-classification-templates.sql` | 분류 계층, 대표 속성 템플릿, 관계 정의, 분류명 검색 |
+| `maximo/computer-classification-discovery.sql` | 전체 CI/ACTCI 분류 계층·적용 객체 및 CPU·RAM·BIOS 속성 탐색 |
+| `maximo/computer-classification-specs.sql` | Computer 관련 분류의 실제 스펙·타입·단위·적용 설정과 정확한 분류쌍 관계 대조 |
+| `maximo/computer-ci-mapping-audit.sql` | BIOS 속성 정의·자료형과 메모리·속도 단위 코드 재대조 |
+| `maximo/ci-load-prerequisites.sql` | CI 적재·추가 속성 등록에 필요한 필수 컬럼·시퀀스·적용 설정 확인 |
+| `maximo/ci-definition-coverage.sql` | ACTCI 분류별 속성 적용·속성 ID 누락, 대표 분류쌍 규칙 |
+| `maximo/ci-db-target-mapping.sql` | 일반 DB·DB Server의 속성 설정과 분류쌍 관계 규칙 |
+| `maximo/ci-db-spec-analysis.sql` | 일반 DB·DB Server의 전체 속성명·타입·적용 설정 조사 |
+| `maximo/ci-relation-rules.sql` | RELATION·RELATIONRULES 구조, 적용 범위와 기존 CI 규칙 일치 여부 |
 | `maximo/dpa-child-coverage.sql` | DPA 자식 테이블 노드 커버리지, ASSETCLASS 분포, Device42 부모 목록, NODEID 보유 자식 전수 |
 | `maximo/dpa-key-structure.sql` | DPA 기본키 구조와 Device42 자식 적재 건수 |
 | `maximo/source-target-map-structure.sql` | 현행 미사용 SOURCE_TARGET_MAP의 잔존 상태 검증 |
