@@ -60,7 +60,7 @@ AND (
 **Interfaces:**
 - Produces: 네 유형 뷰의 실제 컬럼 목록. Task 2 이후 모든 쿼리가 이 컬럼명을 쓴다. 특히 `view_part_v1`의 PK 컬럼명은 기존 문서에 없으므로 여기서 확정한다.
 
-- [ ] **Step 1: 형태 조회 쿼리 작성**
+- [x] **Step 1: 형태 조회 쿼리 작성**
 
 `view_part_v1`의 PK 컬럼명이 문서에 없다. `SELECT *`로 헤더를 받아 확인한다.
 
@@ -91,7 +91,7 @@ SELECT * FROM view_subnet_v1 LIMIT 1;
 SELECT * FROM view_netport_v1 LIMIT 1;
 ```
 
-- [ ] **Step 2: 두 서버에서 실행**
+- [x] **Step 2: 두 서버에서 실행**
 
 ```bash
 DB_ACCESS_ENV=local/db-access-kit/connections-d42-68.env \
@@ -104,7 +104,7 @@ DB_ACCESS_ENV=local/db-access-kit/connections-d42-35.env \
   local/db-access-kit/work/device42-35
 ```
 
-- [ ] **Step 3: 결과 확인**
+- [x] **Step 3: 결과 확인**
 
 블록 8개 모두 `.tsv` 파일이 생겼는지 본다. 블록 이름에 언더스코어가 있으면 조용히 무시되므로 **파일 개수로 확인한다**.
 500이 난 뷰는 이름 또는 권한 문제다. `view-version-probe.sql`로 상위 버전을 찾아 쿼리를 고친다.
@@ -114,7 +114,7 @@ ls local/db-access-kit/work/device42-68/*.tsv | wc -l   # 8이어야 한다
 head -1 local/db-access-kit/work/device42-68/part-shape.tsv
 ```
 
-- [ ] **Step 4: 커밋**
+- [x] **Step 4: 커밋**
 
 ```bash
 git add docs/data-analysis/exploration-queries/device42/ci-component-source.sql
@@ -141,7 +141,7 @@ EOF
 - Consumes: Task 1이 확정한 컬럼명.
 - Produces: 유형별 원천 PK 유일성, Computer 연결분/전체 건수, 값 보유율. Task 5·6의 수집 대상 범위 결정 근거다.
 
-- [ ] **Step 1: 집계 블록 추가**
+- [x] **Step 1: 집계 블록 추가**
 
 Task 1에서 확인한 실제 컬럼명으로 아래를 작성한다. `<part_pk>`는 Task 1 Step 3에서 확인한 이름으로 바꾼다.
 `FROM` 절 서브쿼리가 금지되므로 집계는 전부 CTE로 쓴다.
@@ -247,15 +247,15 @@ FROM view_part_v1 p WHERE p.type_name = 'Hard Disk'
 GROUP BY p.pcount ORDER BY p.pcount;
 ```
 
-- [ ] **Step 2: 두 서버에서 실행**
+- [x] **Step 2: 두 서버에서 실행**
 
 Task 1 Step 2와 같은 명령을 다시 쓴다.
 
-- [ ] **Step 3: 결과 확인**
+- [x] **Step 3: 결과 확인**
 
 새 블록 8개의 `.tsv`가 생겼는지 본다. `FILTER (WHERE ...)`가 500이면 `SUM(CASE WHEN ... THEN 1 ELSE 0 END)`로 바꿔 다시 실행한다.
 
-- [ ] **Step 4: 관측 문서 작성**
+- [x] **Step 4: 관측 문서 작성**
 
 `docs/data-analysis/knowledge/device42/ci-component-inventory.md`를 만든다. 상단에 관측 스탬프와 재조회 쿼리 링크를 단다.
 
@@ -263,9 +263,9 @@ Task 1 Step 2와 같은 명령을 다시 쓴다.
 # OS·Disk·Filesystem·IP 원천 조사
 
 > 관측 2026-09-15 · D42 .68 / .35
-> 재조회 [원천 형태·값 분포](../../exploration-queries/device42/ci-component-source.sql)
+> 재조회 [원천 형태·값 분포](../../data-analysis/exploration-queries/device42/ci-component-source.sql)
 
-Computer 연관 범위의 연결 키·건수는 [Computer 연관 수집 원천](computer-inventory.md)에 있다.
+Computer 연관 범위의 연결 키·건수는 [Computer 연관 수집 원천](../../data-analysis/knowledge/device42/computer-inventory.md)에 있다.
 이 문서는 네 유형을 독립 CI로 다루기 위해 필요한 원천 PK 유일성, Computer 외 연결분,
 유형별 전체 컬럼과 값 보유율을 다룬다.
 ```
@@ -274,7 +274,7 @@ Computer 연관 범위의 연결 키·건수는 [Computer 연관 수집 원천](
 수치는 `.68 / .35` 두 값을 나란히 적는다. 한쪽만 적지 않는다.
 `pcount`가 수량인지 개체 수인지에 대한 판단 근거를 5절에 남긴다.
 
-- [ ] **Step 5: 커밋**
+- [x] **Step 5: 커밋**
 
 ```bash
 git add docs/data-analysis/exploration-queries/device42/ci-component-source.sql \
@@ -301,7 +301,7 @@ EOF
 **Interfaces:**
 - Produces: 유형별 ACTCI 분류 후보 목록과 각 후보의 스펙·자료형·적용 설정. Task 4의 입력이고, Task 5의 분류 선택 근거다.
 
-- [ ] **Step 1: 분류 탐색 쿼리 작성**
+- [x] **Step 1: 분류 탐색 쿼리 작성**
 
 ACTCI 적용 분류는 1,030개다. 이름으로 후보를 좁힌 뒤 각 후보의 스펙을 본다.
 
@@ -354,7 +354,7 @@ WHERE a.ASSETATTRID LIKE 'OPERATINGSYSTEM%' OR a.ASSETATTRID LIKE 'FILESYSTEM%'
 ORDER BY a.ASSETATTRID;
 ```
 
-- [ ] **Step 2: 실행**
+- [x] **Step 2: 실행**
 
 ```bash
 bash local/db-access-kit/scripts/run-maximo.sh \
@@ -362,7 +362,7 @@ bash local/db-access-kit/scripts/run-maximo.sh \
   local/db-access-kit/work/ci-component-classifications
 ```
 
-- [ ] **Step 3: 후보 판정**
+- [x] **Step 3: 후보 판정**
 
 `candidate-classifications.tsv`가 비었으면 `all-actci-classifications.tsv`를 직접 훑어 후보를 찾고 Step 1의 LIKE 목록을 고쳐 다시 실행한다.
 유형별 후보 수를 세어 스펙 6절 규칙을 적용한다.
@@ -371,7 +371,7 @@ bash local/db-access-kit/scripts/run-maximo.sh \
 wc -l local/db-access-kit/work/ci-component-classifications/*.tsv
 ```
 
-- [ ] **Step 4: 관측 문서 작성**
+- [x] **Step 4: 관측 문서 작성**
 
 `docs/data-analysis/knowledge/maximo/ci-component-classifications.md`를 만든다.
 
@@ -379,14 +379,14 @@ wc -l local/db-access-kit/work/ci-component-classifications/*.tsv
 # OS·Disk·Filesystem·IP 분류 조사
 
 > 관측 2026-09-15 · Maximo BLUDB
-> 재조회 [분류 후보·스펙](../../exploration-queries/maximo/ci-component-classifications.sql)
+> 재조회 [분류 후보·스펙](../../data-analysis/exploration-queries/maximo/ci-component-classifications.sql)
 ```
 
 절 구성: 1. 유형별 후보 분류 / 2. 후보별 스펙·자료형·단위 / 3. ACTCI 적용 설정 유무 / 4. 미등록 속성.
 후보가 0개인 유형은 그 사실을 명시한다. "없음"도 관측 결과다.
 ORGID·SITEID가 지정된 스펙이 있으면 별도로 표기한다. 적재 코드는 전역 템플릿만 읽는다.
 
-- [ ] **Step 5: 커밋**
+- [x] **Step 5: 커밋**
 
 ```bash
 git add docs/data-analysis/exploration-queries/maximo/ci-component-classifications.sql \
@@ -414,7 +414,7 @@ EOF
 - Consumes: Task 3이 정한 유형별 분류 후보의 `CLASSSTRUCTUREID`.
 - Produces: Computer 분류와 각 유형 분류 사이에 쓸 수 있는 관계 코드. Task 5의 관계 추천안 근거다.
 
-- [ ] **Step 1: 관계 규칙 블록 추가**
+- [x] **Step 1: 관계 규칙 블록 추가**
 
 Computer 두 분류의 CLASSSTRUCTUREID는 `SYS.COMPUTERSYSTEM`·`SYS.VIRTUALCOMPUTERSYSTEM`으로 조회한다.
 후보 분류 목록은 Task 3 결과로 `IN` 목록을 채운다.
@@ -456,7 +456,7 @@ FROM MAXIMO.RELATION r
 ORDER BY r.USEWITH, r.RELATIONNUM;
 ```
 
-- [ ] **Step 2: 실행과 확인**
+- [x] **Step 2: 실행과 확인**
 
 Task 3 Step 2와 같은 명령이다. `relation-rules-for-pairs.tsv`와 `relation-rules-reverse.tsv`의 행 수를 본다.
 
@@ -464,12 +464,12 @@ Task 3 Step 2와 같은 명령이다. `relation-rules-for-pairs.tsv`와 `relatio
 wc -l local/db-access-kit/work/ci-component-classifications/relation-rules-*.tsv
 ```
 
-- [ ] **Step 3: 관측 문서에 관계 절 추가**
+- [x] **Step 3: 관측 문서에 관계 절 추가**
 
 조회 결과가 0건이면 "사용 가능한 규칙 없음"을 관측 사실로 쓴다. 관계 코드를 추측해 적지 않는다.
 `RELATION.USEWITH`에 ACTCI가 0건이라는 기존 관측([ci-model.md](../../data-analysis/knowledge/maximo/ci-model.md))과 대조해 쓴다.
 
-- [ ] **Step 4: 커밋**
+- [x] **Step 4: 커밋**
 
 ```bash
 git add docs/data-analysis/exploration-queries/maximo/ci-component-classifications.sql \
@@ -496,7 +496,7 @@ EOF
 - Consumes: Task 2의 원천 관측, Task 3의 분류 후보, Task 4의 관계 규칙.
 - Produces: 나머지 세 유형 설계 문서의 절 구성과 표 형식. Task 6이 이 형식을 복제한다.
 
-- [ ] **Step 1: 문서 작성**
+- [x] **Step 1: 문서 작성**
 
 [design/ci/computer.md](../../data-analysis/design/ci/computer.md)의 절 구성을 따르되 짧게 쓴다.
 
@@ -512,11 +512,11 @@ EOF
 
 추천과 확정을 구분해 표기한다. 분류를 가정한 대응안을 확정처럼 쓰지 않는다.
 
-- [ ] **Step 2: 판단 규칙 적용 확인**
+- [x] **Step 2: 판단 규칙 적용 확인**
 
 분류 후보가 1개가 아니면 그 사실과 이유를 3절에 쓰고, Task 7에서 OS 매핑 문서를 작성하지 않는다.
 
-- [ ] **Step 3: 커밋**
+- [x] **Step 3: 커밋**
 
 ```bash
 git add docs/data-analysis/design/ci/os.md
@@ -544,7 +544,7 @@ EOF
 - Consumes: Task 5가 확립한 절 구성과 표 형식.
 - Produces: 세 유형의 분류 선택안과 관계 추천안.
 
-- [ ] **Step 1: 세 문서 작성**
+- [x] **Step 1: 세 문서 작성**
 
 Task 5의 8개 절을 그대로 쓴다. 유형별로 다음을 반드시 다룬다.
 
@@ -552,7 +552,7 @@ Task 5의 8개 절을 그대로 쓴다. 유형별로 다음을 반드시 다룬�
 - Filesystem: `device_fks` 배열과 `DISTINCT ON`(ISSUE-9), 식별자 `D42:MOUNTPOINT:<mountpoint_pk>`, 용량 단위
 - IP: `device_fks` 배열, `netport_fk` 유무에 따른 처리, 식별자 `D42:IPADDRESS:<ipaddress_pk>`, `inet` 타입은 `HOST()` 사용, Subnet 보강
 
-- [ ] **Step 2: 형식 일치 확인**
+- [x] **Step 2: 형식 일치 확인**
 
 네 문서의 절 제목과 표 열이 같은지 본다.
 
@@ -563,7 +563,7 @@ grep -h '^## ' docs/data-analysis/design/ci/os.md docs/data-analysis/design/ci/d
 
 각 절 제목이 4번씩 나와야 한다.
 
-- [ ] **Step 3: 커밋**
+- [x] **Step 3: 커밋**
 
 ```bash
 git add docs/data-analysis/design/ci/disk.md docs/data-analysis/design/ci/filesystem.md \
@@ -594,11 +594,11 @@ EOF
 - Consumes: Task 5·6의 확정된 분류와 스펙 선택.
 - Produces: 구현 단계가 읽을 매핑 정본. 조회 SQL, 본체 표, 속성 표.
 
-- [ ] **Step 1: 작성 대상 판정**
+- [x] **Step 1: 작성 대상 판정**
 
 분류 후보가 정확히 1개인 유형만 쓴다. 나머지는 쓰지 않고 그 이유를 Task 8에서 진행표에 남긴다.
 
-- [ ] **Step 2: 문서 작성**
+- [x] **Step 2: 문서 작성**
 
 [types/computer.md](../../data-analysis/data-mapping/ci/types/computer.md) 형식을 따른다. README의 CI 매핑 예외 절이 정본이다.
 
@@ -612,12 +612,12 @@ EOF
 공통 컬럼 정의를 복사하지 않고 `actci.md`·`actcispec.md`를 참조한다.
 관계는 확정 표에 넣지 않고 `design/ci/<유형>.md` 링크만 둔다.
 
-- [ ] **Step 3: 조회 SQL 실행 확인**
+- [x] **Step 3: 조회 SQL 실행 확인**
 
 2절에 쓴 SQL을 두 서버에서 실제로 돌려 통과하는지 본다. 임시 파일은 스크래치패드에 둔다.
 통과하지 않는 SQL을 매핑 문서에 남기지 않는다.
 
-- [ ] **Step 4: 커밋**
+- [x] **Step 4: 커밋**
 
 작성한 유형만 add 한다.
 
@@ -648,13 +648,13 @@ EOF
 **Interfaces:**
 - Consumes: Task 1~7의 산출물 목록과 보류 사유.
 
-- [ ] **Step 1: 진행표 갱신**
+- [x] **Step 1: 진행표 갱신**
 
 `data-mapping/ci/README.md`의 「유형별 진행」 표에 OS·Disk·Filesystem·IP 네 행을 추가한다.
 매핑 문서를 쓰지 않은 유형은 상태 칸에 보류 사유를 적는다.
 「읽는 순서」에 새 knowledge 문서 두 건을 넣는다.
 
-- [ ] **Step 2: 쿼리 목록 갱신**
+- [x] **Step 2: 쿼리 목록 갱신**
 
 `exploration-queries/README.md`의 목록 표에 두 행을 추가한다.
 
@@ -663,16 +663,16 @@ EOF
 | `maximo/ci-component-classifications.sql` | 네 유형의 ACTCI 분류 후보·스펙·적용 설정과 Computer 분류쌍 관계 규칙 |
 ```
 
-- [ ] **Step 3: 미결 갱신**
+- [x] **Step 3: 미결 갱신**
 
 `open-issues.md` ISSUE-8의 「남은 결정」에서 해소된 항목을 정리한다. 네 유형을 독립 CI로 관리하기로 한 결정과 근거 링크를 넣는다.
 ISSUE-11에 관계 규칙 부재, 미등록 속성 등 이번 조사에서 새로 드러난 항목을 추가한다.
 
-- [ ] **Step 4: 데이터 분석 README 갱신**
+- [x] **Step 4: 데이터 분석 README 갱신**
 
 `docs/data-analysis/README.md`의 읽는 순서에 네 유형 설계 문서 링크를 넣는다. Computer 한 줄 옆에 둔다.
 
-- [ ] **Step 5: 링크 확인**
+- [x] **Step 5: 링크 확인**
 
 문서에서 참조한 상대 경로가 실재하는지 본다.
 
@@ -683,7 +683,7 @@ grep -rhoE '\]\(\.\.?/[^)]+\)' docs/data-analysis/design/ci/ docs/data-analysis/
 
 출력된 경로를 각 문서 기준으로 확인하고 깨진 링크를 고친다.
 
-- [ ] **Step 6: 커밋**
+- [x] **Step 6: 커밋**
 
 ```bash
 git add docs/data-analysis/README.md docs/data-analysis/open-issues.md \
@@ -710,3 +710,27 @@ EOF
 - 매핑 문서를 쓰지 않은 유형은 진행표에 보류 사유가 있다.
 - `src/` 아래 변경이 없다.
 - `git status`가 깨끗하다.
+
+
+---
+
+## 실행 기록 — 2026-09-15
+
+전 8개 작업을 완료했다. 계획과 달랐던 점을 남긴다.
+
+**실행기 제약이 계획과 달랐다.**
+
+- Maximo 실행기는 `WITH`를 거부한다(`SELECT`/`VALUES`만 허용). Task 4의 계획 SQL은 전부 CTE였고 조인으로 다시 썼다. Device42는 반대로 `WITH`를 허용하고 `FROM` 절 서브쿼리를 거부한다. 차이를 `exploration-queries/README.md`에 정리했다.
+- Device42 실행기는 첫 500에서 배치 전체를 중단한다. 미확인 뷰를 등록 파일에 함께 두면 뒤 블록이 실행되지 않는다. 뷰 실재는 한 블록짜리 임시 파일로 개별 확인했다.
+- Device42 출력은 `.tsv`가 아니라 `|` 구분 `.txt`다. 계획의 `wc -l *.tsv` 확인 방법을 바꿨다.
+
+**원천 사실이 계획 가정과 달랐다.**
+
+- `view_part_v1`에 `type_name`이 없다. 디스크 필터에 `view_partmodel_v1` 조인이 필요하다.
+- 문자열 컬럼에 NULL 대신 빈 문자열이 많다. 첫 집계를 `COUNT()`로 해서 보유율을 과대 계상했고, `COUNT(NULLIF(TRIM(x),''))`로 다시 세어 정정 커밋을 남겼다. 디스크 `firmware`는 전건 빈 문자열이었다.
+
+**판단 규칙 적용 결과.**
+
+- 네 유형 모두 ACTCI 적용 범용 분류가 정확히 하나씩 있어 매핑 문서까지 작성했다. IP는 분류가 명확하나 관계 경로가 미결이라 본체·속성까지만 썼다.
+- 관계 규칙은 예상과 달리 대부분 존재했다. Disk·Filesystem은 `RELATION.CONTAINS`, OS는 `INSTALLEDON`·`RUNSON`이 있고 IP만 0건이다.
+- 계획에 없던 작업으로 Disk·Filesystem 설계 문서에 관계 절을 추가했다(초안에서 누락).
