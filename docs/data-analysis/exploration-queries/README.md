@@ -97,7 +97,10 @@ Maximo 는 한 대뿐이라 `DB_ACCESS_ENV` 없이 기본 파일을 쓴다.
 | `maximo/computer-classification-specs.sql` | Computer 관련 분류의 실제 스펙·타입·단위·적용 설정과 정확한 분류쌍 관계 대조 |
 | `maximo/computer-ci-mapping-audit.sql` | BIOS 속성 정의·자료형과 메모리·속도 단위 코드 재대조 |
 | `maximo/ci-load-prerequisites.sql` | CI 적재·추가 속성 등록에 필요한 필수 컬럼·시퀀스·적용 설정 확인 |
+| `maximo/ci-cache-size.sql` | CLASSSPEC 전체·ACTCI·ACTCI+CI와 ASSETATTRIBUTE 전체 건수·캐시 측정용 조회 |
+| `maximo/ci-cache-payload-size.sql` | CI 정의 전체 컬럼 값의 바이트 합과 DB 디스크 할당량 |
 | `maximo/ci-definition-coverage.sql` | ACTCI 분류별 속성 적용·속성 ID 누락, 대표 분류쌍 규칙 |
+| `maximo/ci-definition-scope.sql` | CI 정의 캐시가 읽는 템플릿의 조직·사이트 범위, 스펙 키 중복, 조인 증폭 |
 | `maximo/ci-db-target-mapping.sql` | 일반 DB·DB Server의 속성 설정과 분류쌍 관계 규칙 |
 | `maximo/ci-db-spec-analysis.sql` | 일반 DB·DB Server의 전체 속성명·타입·적용 설정 조사 |
 | `maximo/ci-relation-rules.sql` | RELATION·RELATIONRULES 구조, 적용 범위와 기존 CI 규칙 일치 여부 |

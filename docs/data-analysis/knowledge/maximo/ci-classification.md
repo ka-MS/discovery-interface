@@ -4,7 +4,8 @@
 > 재조회 [컬럼·관계](../../exploration-queries/maximo/ci-target-structure.sql),
 > [적용 범위·정합성](../../exploration-queries/maximo/ci-classification-audit.sql),
 > [계층·대표 속성](../../exploration-queries/maximo/ci-classification-templates.sql),
-> [분류별 정의 충족 여부](../../exploration-queries/maximo/ci-definition-coverage.sql)
+> [분류별 정의 충족 여부](../../exploration-queries/maximo/ci-definition-coverage.sql),
+> [조직·사이트 범위](../../exploration-queries/maximo/ci-definition-scope.sql)
 
 ## 분류와 속성의 역할
 
@@ -101,6 +102,40 @@ MANDATORY=0, USEINSPEC=1이고 기본값은 없다. 타입이 같아도 단위·
 같다는 뜻은 아니다. 위 타입은 속성 정의이며 ACTCISPEC의 저장 컬럼과 구분한다.
 
 [ISSUE-11](../../open-issues.md#issue-11-actual-ci-분류속성관계와-식별자-매핑) — 원천별 분류·속성 선택과 누락된 적용 설정의 보완 여부 미정.
+
+## 조직·사이트 범위
+
+> 관측 2026-09-14 · Maximo BLUDB
+
+CLASSSPEC과 CLASSSPECUSEWITH는 ORGID·SITEID로 조직·사이트 전용 템플릿을 가질 수 있다.
+두 테이블 모두 고유 인덱스에 이 컬럼이 들어간다.
+
+| 테이블 | 인덱스 | 유일 | 컬럼 |
+| --- | --- | --- | --- |
+| CLASSSPEC | CLASSSPEC_NDX1 | Y | CLASSSTRUCTUREID, ASSETATTRID, SECTION, ORGID, SITEID |
+| CLASSSPECUSEWITH | CLASSSPECUSE_NDX1 | Y | CLASSSTRUCTUREID, ASSETATTRID, SECTION, ORGID, SITEID, OBJECTNAME |
+| CLASSSPECUSEWITH | CLASSSPECUSEW_NDX1 | N | CLASSSPECID, OBJECTNAME |
+
+`(CLASSSPECID, OBJECTNAME)`은 유일하지 않다. 이 쌍만으로 조인하면 조직 전용 적용 설정이
+있을 때 행이 늘어난다.
+
+현재 값 분포다.
+
+| 범위 | 행 수 | ORGID·SITEID 지정 |
+| --- | ---: | ---: |
+| CLASSSPEC 전체 | 39,237 | 209 (ORGID만 186, ORGID+SITEID 23) |
+| CLASSSPEC — ACTCI 적용 분류 | 34,897 | 0 |
+| CLASSSPEC — Computer 두 분류 | 196 | 0 |
+| CLASSSPECUSEWITH — OBJECTNAME='ACTCI' | 32,992 | 0 |
+
+지정된 209행은 모두 `EAGLENA` 조직의 Maximo 데모 분류(DRY VAN, GATE, SOLENOID, SERVER 등)이며
+ACTCI에 적용된 분류는 하나도 없다. `(CLASSSTRUCTUREID, ASSETATTRID, SECTION)` 세 컬럼만으로
+묶었을 때 중복은 ACTCI 범위·Computer 범위 모두 0건이고, 적재 코드의 조인도 증폭이 없다
+(34,897행 = CLASSSPEC 34,897건).
+
+따라서 현재 환경에서는 세 컬럼 키로 충분하지만 이는 데이터 상태에 의존한다.
+적재 코드는 전역 템플릿만 조회해 이 의존을 없앤다.
+[공통 캐시 설계](../../design/ci/definition-cache.md) 참조.
 
 ## CLASSSTRUCTURE 컬럼
 
