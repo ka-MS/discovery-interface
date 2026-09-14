@@ -110,12 +110,12 @@ DISKDRIVE_ 15개와 MEDIAACCESSDEVICE_ 9개다.
 
 | 속성 | 자료형 | 원천 대응 |
 | --- | --- | --- |
-| MEDIAACCESSDEVICE_SERIALNUMBER | ALN | `view_part_v1.serial_no` |
+| MEDIAACCESSDEVICE_SERIALNUMBER | ALN | `view_part_v1.serial_no`. 공백 제외 13 / 3건 |
 | MEDIAACCESSDEVICE_MODEL | ALN | `view_partmodel_v1.name` |
 | MEDIAACCESSDEVICE_NAME | ALN | `view_partmodel_v1.name` |
 | MEDIAACCESSDEVICE_MANUFACTURER | ALN | `partmodel.vendor_fk` → 전건 비어 있음 |
 | DISKDRIVE_VENDOR | ALN | 위와 같음. 채울 값 없음 |
-| DISKDRIVE_REVISION | ALN | `view_part_v1.firmware` |
+| DISKDRIVE_REVISION | ALN | `view_part_v1.firmware` → 전건 빈 문자열 |
 | DISKDRIVE_DISKSIZE | NUMERIC | `partmodel.hdsize` + `hdsize_unit` |
 | DISKDRIVE_ISSOLIDSTATE | ALN | `partmodel.hddtype_name='SSD'` 판정. 보유 10/2건 |
 | MEDIAACCESSDEVICE_TYPE, STATUS, ISPLACEHOLDER, LOCATIONTAG, MANAGEDSYSTEMNAME | ALN | 대응 없음 |
