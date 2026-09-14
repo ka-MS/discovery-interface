@@ -19,6 +19,10 @@ Computer 본체·스펙 매핑은 [Computer](types/computer.md)에서 시작한�
 
 DB·Instance 전체 원천 컬럼과 참조 구조는 [원천 구조](../../knowledge/device42/database-model.md)에 있다.
 
+OS·Disk·Filesystem·IP의 원천 관측은 [OS·Disk·Filesystem·IP 원천 조사](../../knowledge/device42/ci-component-inventory.md),
+분류·스펙·관계 규칙은 [OS·Disk·Filesystem·IP 분류 조사](../../knowledge/maximo/ci-component-classifications.md),
+수집 구성안은 `../../design/ci/` 의 [os](../../design/ci/os.md)·[disk](../../design/ci/disk.md)·[filesystem](../../design/ci/filesystem.md)·[ip](../../design/ci/ip.md)에 있다.
+
 공통 7열 표는 전체 컬럼·참조 규칙을 소유한다. 유형 문서 본문에는 실제 조회 SQL과
 본체·속성 매핑을 작성한다. 관계 SQL과 정의는 출발 유형 문서에만 둔다.
 
@@ -29,9 +33,15 @@ DB·Instance 전체 원천 컬럼과 참조 구조는 [원천 구조](../../know
 | Computer | [computer.md](types/computer.md) | 본체·스펙 저장 구현 및 자동 테스트 완료. [실행 준비](types/computer-run.md)의 설정·BIOS 날짜 속성 등록 후 실제 적재·UI 검증 필요 |
 | Database | [database.md](types/database.md) | 원천 10컬럼 사용처·SQL 작성; 본체 이름·메모·분류, 이름 속성 대응. 추가 속성·적용 설정·필수값 미결 |
 | Database Instance | [database-instance.md](types/database-instance.md) | 원천 9컬럼·Resource 보강·SQL 작성; 본체 이름·메모·분류, 이름·제품명·버전 문자열 속성 대응. 추가 속성·관계·필수값 미결 |
+| OS | [os.md](types/os.md) | 매핑 작성 완료. 분류 SYS.OPERATINGSYSTEM, 속성 4개. EOL·EOS 대응 속성 없음. 적재 구현 미착수 |
+| Disk | [disk.md](types/disk.md) | 매핑 작성 완료. 분류 DEV.DISKDRIVE, 속성 3개. 제조사·펌웨어·미디어 유형은 원천 전건 비어 있음. 적재 구현 미착수 |
+| Filesystem | [filesystem.md](types/filesystem.md) | 매핑 작성 완료. 분류 SYS.FILESYSTEM, 속성 4개. 컨테이너 마운트 선별 미결. 적재 구현 미착수 |
+| IP | [ip.md](types/ip.md) | 본체·속성만 작성. 분류 NET.IPADDRESS, 속성 1개. **Computer와 직접 관계 규칙이 없어 경로 결정 필요** |
 
 기준정보 보완과 나머지 정책은 [ISSUE-8·11](../../open-issues.md)에 둔다.
-Computer 본체·속성은 구현했다. 관계 및 다른 CI 유형의 적재 구현, 실제 Maximo 적재·UI 검증은 미완료다.
+Computer 본체·속성은 구현했다. OS·Disk·Filesystem·IP는 매핑까지 작성했고 적재 구현은 미착수다.
+관계는 네 유형 모두 확정하지 않았다. 규칙 관측 결과는 분류 조사 문서에 있다.
+실제 Maximo 적재·UI 검증은 전 유형 미완료다.
 
 ## Target
 

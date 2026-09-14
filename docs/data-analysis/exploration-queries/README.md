@@ -50,6 +50,23 @@ Maximo 는 한 대뿐이라 `DB_ACCESS_ENV` 없이 기본 파일을 쓴다.
 - Device42는 `SELECT` 또는 `WITH` 로 시작해야 한다. Maximo는 `SELECT` 와
   `VALUES` 만 허용된다.
 
+## 실행기 차이
+
+두 실행기의 제약이 다르다. 같은 SQL을 양쪽에 쓸 수 없다.
+
+| 항목 | Device42 | Maximo |
+| --- | --- | --- |
+| 허용 시작 키워드 | `SELECT`, `WITH` | `SELECT`, `VALUES` |
+| `WITH` 절 | 가능 | **거부된다** |
+| `FROM` 절 서브쿼리 | **거부된다** | 가능 |
+| 블록 실패 시 | 첫 500에서 **배치 전체 중단** | 해당 블록에서 중단 |
+| 출력 | `<블록>.txt`, `|` 구분 | `<블록>.tsv`, 탭 구분 |
+
+Device42는 실재가 확인되지 않은 뷰를 등록 파일에 넣지 않는다. 하나가 500이면 뒤 블록이
+전부 실행되지 않는다. 새 뷰는 한 블록짜리 임시 파일로 먼저 확인한다.
+
+Device42의 상세 제약은 `../knowledge/device42/doql-constraints.md` 에 있다.
+
 ## 등록 기준
 
 - 재실행 가능하다. 대상 변경이 최상단 한 줄 또는 `IN` 목록 수정으로 끝난다.
@@ -101,6 +118,8 @@ Maximo 는 한 대뿐이라 `DB_ACCESS_ENV` 없이 기본 파일을 쓴다.
 | `maximo/ci-cache-payload-size.sql` | CI 정의 전체 컬럼 값의 바이트 합과 DB 디스크 할당량 |
 | `maximo/ci-definition-coverage.sql` | ACTCI 분류별 속성 적용·속성 ID 누락, 대표 분류쌍 규칙 |
 | `maximo/ci-definition-scope.sql` | CI 정의 캐시가 읽는 템플릿의 조직·사이트 범위, 스펙 키 중복, 조인 증폭 |
+| `device42/ci-component-source.sql` | OS·Disk·Filesystem·IP 원천 뷰 형태, PK 유일성, Computer 연결분, 값 보유율, 배열 연결 분포 |
+| `maximo/ci-component-classifications.sql` | 네 유형의 ACTCI 분류 후보·스펙·적용 설정과 Computer 분류쌍 관계 규칙 |
 | `maximo/ci-db-target-mapping.sql` | 일반 DB·DB Server의 속성 설정과 분류쌍 관계 규칙 |
 | `maximo/ci-db-spec-analysis.sql` | 일반 DB·DB Server의 전체 속성명·타입·적용 설정 조사 |
 | `maximo/ci-relation-rules.sql` | RELATION·RELATIONRULES 구조, 적용 범위와 기존 CI 규칙 일치 여부 |
