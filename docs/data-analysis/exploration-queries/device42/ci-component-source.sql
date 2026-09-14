@@ -160,3 +160,29 @@ WITH mnt AS (
 SELECT 'filesystem' AS entity, n AS row_count, has_first, has_updated FROM mnt
 UNION ALL SELECT 'disk', n, has_first, has_updated FROM prt
 UNION ALL SELECT 'os', n, has_first, has_updated FROM dos;
+
+-- name: mount-fstype-distribution
+SELECT m.fstype_name, COUNT(*) AS row_count FROM view_mountpoint_v2 m
+GROUP BY m.fstype_name ORDER BY COUNT(*) DESC;
+
+-- name: disk-hddtype-distribution
+SELECT pm.hddtype_name, pm.hdsize_unit, COUNT(*) AS row_count
+FROM view_part_v1 p JOIN view_partmodel_v1 pm ON pm.partmodel_pk = p.partmodel_fk
+WHERE pm.type_name = 'Hard Disk'
+GROUP BY pm.hddtype_name, pm.hdsize_unit ORDER BY COUNT(*) DESC;
+
+-- name: os-arch-distribution
+SELECT o.os_arch, o.os_arch_name, COUNT(*) AS row_count FROM view_deviceos_v1 o
+GROUP BY o.os_arch, o.os_arch_name ORDER BY COUNT(*) DESC;
+
+-- name: ip-type-distribution
+SELECT i.type_id, i.type, i.available, i.is_public, COUNT(*) AS row_count
+FROM view_ipaddress_v2 i GROUP BY i.type_id, i.type, i.available, i.is_public
+ORDER BY COUNT(*) DESC;
+
+-- name: os-product-distribution
+SELECT m.category_name, v.name AS vendor, m.name AS product, COUNT(*) AS row_count
+FROM view_deviceos_v1 o
+JOIN view_os_v1 m ON m.os_pk = o.os_fk
+LEFT JOIN view_vendor_v1 v ON v.vendor_pk = m.vendor_fk
+GROUP BY m.category_name, v.name, m.name ORDER BY COUNT(*) DESC;
