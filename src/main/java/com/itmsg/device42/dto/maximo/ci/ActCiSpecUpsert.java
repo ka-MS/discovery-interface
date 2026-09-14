@@ -4,8 +4,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public record ActCiSpecUpsert(
-        String actCiNum, long refObjectId, String classStructureId,
-        String assetAttrId, long classSpecId, String section,
+        String actCiNum, String classStructureId,
+        String assetAttrId, Long classSpecId, String section,
         int displaySequence, boolean mandatory, String measureUnitId,
         String linkedToAttribute, String linkedToSection,
         String alnValue, BigDecimal numValue,

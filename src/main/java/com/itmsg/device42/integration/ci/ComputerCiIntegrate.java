@@ -1,19 +1,20 @@
 package com.itmsg.device42.integration.ci;
 
 import com.itmsg.device42.config.Device42ConnectionFactory;
+import com.itmsg.device42.enums.ci.CiClassification;
+import com.itmsg.device42.enums.ci.ComputerSpec;
 import com.itmsg.device42.dto.device42.ci.ComputerSource;
 import com.itmsg.device42.dto.maximo.ci.ActCiSpecUpsert;
 import com.itmsg.device42.dto.maximo.ci.ActCiUpsert;
+import com.itmsg.device42.dto.maximo.ci.ComputerCiUpsert;
 import com.itmsg.device42.dto.maximo.ci.ClassificationDefinition;
 import com.itmsg.device42.dto.maximo.ci.SpecDefinition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.core.env.Environment;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.support.JdbcTransactionManager;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
@@ -22,82 +23,146 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
 
 @Component
 public class ComputerCiIntegrate implements CiIntegrationTask {
     private static final Logger log = LoggerFactory.getLogger(ComputerCiIntegrate.class);
-    static final String PHYSICAL = "SYS.COMPUTERSYSTEM";
-    static final String VIRTUAL = "SYS.VIRTUALCOMPUTERSYSTEM";
-    private static final String PREFIX = "COMPUTERSYSTEM_";
-    private static final Set<String> NUMERIC_ATTRIBUTES =
-            Set.of("MEMORYSIZE", "NUMCPUS", "CPUSPEED", "CPUCORESINSTALLED");
-    private static final Set<String> TEXT_ATTRIBUTES = Set.of(
-            "NAME", "SERIALNUMBER", "UUID", "MANUFACTURER", "MODEL", "CPUTYPE",
-            "ARCHITECTURE", "PRIMARYMACADDRESS", "TYPE", "VIRTUAL", "VMID",
-            "BIOSMANUFACTURER", "ROMVERSION", "BIOSRELEASEDATE"
-    );
+    private static final int DEFAULT_BATCH_SIZE = 1000;
+    private static final String CHANGE_BY = "Device42";
+    private static final String LANG_CODE = "KO";
+
     private final Device42ConnectionFactory connectionFactory;
-    private final JdbcTemplate jdbc;
-    private final Environment environment;
-    private final TransactionTemplate transaction;
+    private final JdbcTemplate maximoJdbcTemplate;
 
     public ComputerCiIntegrate(
             Device42ConnectionFactory connectionFactory,
-            @Qualifier("maximoJdbcTemplate") JdbcTemplate jdbc,
-            Environment environment
+            @Qualifier("maximoJdbcTemplate") JdbcTemplate maximoJdbcTemplate
     ) {
         this.connectionFactory = connectionFactory;
-        this.jdbc = jdbc;
-        this.environment = environment;
-        this.transaction = new TransactionTemplate(
-                new JdbcTransactionManager(Objects.requireNonNull(jdbc.getDataSource())));
+        this.maximoJdbcTemplate = maximoJdbcTemplate;
     }
 
     @Override
-    public void integrate() {
-        CiLoadSettings settings = CiLoadSettings.from(environment);
-        Map<String, ClassificationDefinition> definitions = loadDefinitions();
-        long afterDevicePk = 0;
-        long saved = 0;
-        while (true) {
-            List<ComputerSource> page = getData(afterDevicePk, settings.pageSize());
-            if (page.isEmpty()) {
-                break;
-            }
-            for (ComputerSource source : page) {
-                if (source.devicePk() <= afterDevicePk) {
-                    throw new IllegalStateException("Computer 조회 키가 중복되거나 정렬되지 않았습니다.");
-                }
-                saveComputer(source, definitions, settings);
-                afterDevicePk = source.devicePk();
-                saved++;
-            }
+    public void integrate(CiDefinitionCache definitions) {
+        long totalCount = getTotalCount();
+        if (totalCount <= 0) {
+            log.info("배치할 Computer 데이터가 없습니다. totalCount={}", totalCount);
+            return;
         }
-        log.info("Computer CI 적재가 완료되었습니다. computers={}", saved);
+
+        log.info("배치할 Computer 총 데이터. totalCount={}", totalCount);
+
+        long readCount = 0;
+        long mappedCount = 0;
+        long loadedCount = 0;
+
+        for (long offset = 0; offset < totalCount; offset += DEFAULT_BATCH_SIZE) {
+            int limit = (int) Math.min(DEFAULT_BATCH_SIZE, totalCount - offset);
+            log.info("Computer 배치를 조회합니다. offset={}, limit={}", offset, limit);
+
+            List<ComputerSource> data = getData(offset, limit);
+            List<ComputerCiUpsert> mappedData = mapData(data, definitions);
+
+            readCount += data.size();
+            mappedCount += mappedData.size();
+            loadedCount += putData(mappedData);
+        }
+
+        if (mappedCount < readCount) {
+            log.warn("매핑에서 제외된 Computer가 있습니다. 조회={}, 매핑={}", readCount, mappedCount);
+        }
+
+        log.info("Computer CI 적재를 마쳤습니다. 원천={}, 조회={}, 매핑={}, 적재={}",
+                totalCount, readCount, mappedCount, loadedCount);
     }
 
-    public List<ComputerSource> getData(long afterDevicePk, int limit) {
-        if (afterDevicePk < 0 || limit < 1 || limit > 1000) {
-            throw new IllegalArgumentException("유효하지 않은 Computer 조회 범위입니다.");
+    public long getTotalCount() {
+        try (Connection connection = connectionFactory.openConnection();
+             Statement statement = connection.createStatement();
+             ResultSet rs = statement.executeQuery(TOTAL_COUNT_QUERY)) {
+            return rs.next() ? rs.getLong(1) : 0L;
+        } catch (SQLException e) {
+            throw new IllegalStateException("Computer 건수 조회에 실패했습니다.", e);
         }
-        String query = SOURCE_QUERY.formatted(afterDevicePk, limit);
+    }
+
+    public List<ComputerSource> getData(long offset, int limit) {
+        String query = SOURCE_QUERY.formatted(limit, offset);
         try (Connection connection = connectionFactory.openConnection();
              Statement statement = connection.createStatement();
              ResultSet rs = statement.executeQuery(query)) {
-            List<ComputerSource> page = new ArrayList<>();
+            List<ComputerSource> data = new ArrayList<>(limit);
             while (rs.next()) {
-                page.add(readComputer(rs));
+                long devicePk = rs.getLong("device_pk");
+                try {
+                    data.add(readComputer(rs));
+                } catch (SQLException | ArithmeticException e) {
+                    log.error("Computer 원천 변환에 실패했습니다. devicePk={}", devicePk, e);
+                }
             }
-            return page;
+            return data;
         } catch (SQLException e) {
-            throw new IllegalStateException("D42 Computer 조회에 실패했습니다. afterDevicePk=" + afterDevicePk, e);
+            throw new IllegalStateException("Computer 조회에 실패했습니다. offset=" + offset, e);
         }
+    }
+
+    List<ComputerCiUpsert> mapData(List<ComputerSource> data,
+                                  CiDefinitionCache definitions) {
+        LocalDateTime applyDateTime = LocalDateTime.now();
+        List<ComputerCiUpsert> mappedData = new ArrayList<>(data.size());
+
+        for (ComputerSource source : data) {
+            try {
+                CiClassification classification = "virtual".equals(source.type())
+                        ? CiClassification.VIRTUAL_COMPUTER : CiClassification.COMPUTER;
+                ClassificationDefinition definition = definitions.classification(classification);
+                if (definition == null) {
+                    log.warn("Computer 분류가 없어 건너뜁니다. devicePk={}, classification={}",
+                            source.devicePk(), classification);
+                    continue;
+                }
+
+                ActCiUpsert actCi = mapActCi(source, definition, applyDateTime);
+                List<ActCiSpecUpsert> specs = mapActCiSpecs(source, actCi, definitions, classification);
+                mappedData.add(new ComputerCiUpsert(actCi, specs));
+            } catch (RuntimeException e) {
+                log.error("Computer 매핑에 실패했습니다. devicePk={}", source.devicePk(), e);
+            }
+        }
+        return mappedData;
+    }
+
+    /** @return ACTCI 적재에 성공한 건수. 실패·건너뛴 건은 각각 로그로 남는다. */
+    public int putData(List<ComputerCiUpsert> data) {
+        int loaded = 0;
+
+        for (ComputerCiUpsert computer : data) {
+            ActCiUpsert actCi = computer.actCi();
+            Long actCiId;
+            try {
+                actCiId = putActCi(actCi);
+            } catch (DataAccessException e) {
+                log.error("ACTCI 적재에 실패했습니다. actCiNum={}", actCi.actCiNum(), e);
+                continue;
+            }
+            if (actCiId == null) {
+                continue;
+            }
+            loaded++;
+
+            for (ActCiSpecUpsert spec : computer.specs()) {
+                try {
+                    putActCiSpec(spec, actCiId);
+                } catch (DataAccessException e) {
+                    log.error("ACTCISPEC 적재에 실패했습니다. actCiNum={}, attribute={}",
+                            spec.actCiNum(), spec.assetAttrId(), e);
+                }
+            }
+        }
+        return loaded;
     }
 
     private static ComputerSource readComputer(ResultSet rs) throws SQLException {
@@ -114,183 +179,91 @@ public class ComputerCiIntegrate implements CiIntegrationTask {
         );
     }
 
-    private static Integer nullableInteger(ResultSet rs, String column) throws SQLException {
-        BigDecimal value = rs.getBigDecimal(column);
-        return value == null ? null : value.intValueExact();
-    }
-
-    Map<String, ClassificationDefinition> loadDefinitions() {
-        Map<String, ClassificationDefinition> result = new LinkedHashMap<>();
-        jdbc.query(CLASS_QUERY, rs -> {
-            String name = rs.getString("CLASSIFICATIONID");
-            String id = rs.getString("CLASSSTRUCTUREID");
-            if (result.putIfAbsent(name, new ClassificationDefinition(name, id, Map.of())) != null) {
-                throw new IllegalStateException("ACTCI 분류가 중복됩니다: " + name);
-            }
-        });
-        if (!result.keySet().equals(Set.of(PHYSICAL, VIRTUAL))) {
-            throw new IllegalStateException("물리·가상 Computer의 ACTCI 적용 분류가 필요합니다.");
+    private ActCiUpsert mapActCi(ComputerSource source, ClassificationDefinition definition,
+                                 LocalDateTime applyDateTime) {
+        LocalDateTime lastScan = null;
+        if (source.lastDiscovered() != null && !source.lastDiscovered().isBlank()) {
+            String timestamp = source.lastDiscovered().trim().replace(' ', 'T')
+                    .replaceFirst("([+-]\\d{2})$", "$1:00");
+            lastScan = OffsetDateTime.parse(timestamp)
+                    .atZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime();
         }
-        Map<String, Map<String, SpecDefinition>> specs = new LinkedHashMap<>();
-        result.keySet().forEach(name -> specs.put(name, new LinkedHashMap<>()));
-        jdbc.query(SPEC_QUERY, rs -> {
-            String attribute = rs.getString("ASSETATTRID");
-            if (!selectedAttribute(attribute)) {
-                return;
-            }
-            String name = rs.getString("CLASSIFICATIONID");
-            String section = rs.getString("SECTION");
-            String expected = NUMERIC_ATTRIBUTES.contains(attribute.substring(PREFIX.length())) ? "NUMERIC" : "ALN";
-            String type = rs.getString("DATATYPE");
-            if (!result.get(name).classStructureId().equals(rs.getString("CLASSSTRUCTUREID"))
-                    || !expected.equals(type) || !"ACTCI".equals(rs.getString("OBJECTNAME"))
-                    || rs.getInt("USEINSPEC") != 1 || section != null
-                    || rs.getObject("SEQUENCE") == null || rs.getObject("MANDATORY") == null
-                    || !rs.getString("CLASSSTRUCTUREID").equals(rs.getString("USE_CLASS"))
-                    || !attribute.equals(rs.getString("USE_ATTRIBUTE"))
-                    || rs.getString("USE_SECTION") != null
-                    || (rs.getInt("MANDATORY") != 0 && rs.getInt("MANDATORY") != 1)
-                    || rs.getInt("SEQUENCE") < Short.MIN_VALUE || rs.getInt("SEQUENCE") > Short.MAX_VALUE) {
-                throw new IllegalStateException("사용할 수 없는 ACTCI 스펙 정의입니다: " + name + "/" + attribute);
-            }
-            SpecDefinition spec = new SpecDefinition(
-                    rs.getLong("CLASSSPECID"), rs.getString("CLASSSTRUCTUREID"), attribute, type,
-                    section, rs.getString("MEASUREUNITID"), rs.getInt("SEQUENCE"),
-                    rs.getInt("MANDATORY") == 1, rs.getString("LINKEDTOATTRIBUTE"), rs.getString("LINKEDTOSECTION")
-            );
-            if (specs.get(name).putIfAbsent(attribute, spec) != null) {
-                throw new IllegalStateException("ACTCI 스펙 템플릿이 중복됩니다: " + name + "/" + attribute);
-            }
-        });
-        for (String name : result.keySet()) {
-            for (String suffix : allAttributes()) {
-                if (!specs.get(name).containsKey(PREFIX + suffix)) {
-                    throw new IllegalStateException("ACTCI 스펙 등록이 필요합니다: " + name + "/" + PREFIX + suffix);
-                }
-            }
-            result.put(name, new ClassificationDefinition(name, result.get(name).classStructureId(), specs.get(name)));
-        }
-        Set<String> units = Set.copyOf(jdbc.queryForList(
-                "SELECT MEASUREUNITID FROM MAXIMO.MEASUREUNIT WHERE MEASUREUNITID IN ('GBYTE','MBYTE','GHZ','MHZ')",
-                String.class));
-        if (!units.containsAll(Set.of("GBYTE", "MBYTE", "GHZ", "MHZ"))) {
-            throw new IllegalStateException("Computer 메모리·속도 단위 코드가 필요합니다.");
-        }
-        return Map.copyOf(result);
-    }
-
-    private static List<String> allAttributes() {
-        List<String> attributes = new ArrayList<>(TEXT_ATTRIBUTES);
-        attributes.addAll(NUMERIC_ATTRIBUTES);
-        return attributes;
-    }
-
-    private static boolean selectedAttribute(String attribute) {
-        return attribute != null && attribute.startsWith(PREFIX)
-                && (TEXT_ATTRIBUTES.contains(attribute.substring(PREFIX.length()))
-                || NUMERIC_ATTRIBUTES.contains(attribute.substring(PREFIX.length())));
-    }
-
-    void saveComputer(ComputerSource source, Map<String, ClassificationDefinition> definitions, CiLoadSettings settings) {
-        String name = switch (source.type()) {
-            case "physical" -> PHYSICAL;
-            case "virtual" -> VIRTUAL;
-            default -> throw new IllegalArgumentException("지원하지 않는 Computer 유형입니다: " + source.type());
-        };
-        ClassificationDefinition definition = Objects.requireNonNull(definitions.get(name), name);
-        LocalDateTime changedAt = LocalDateTime.now(settings.zoneId());
-        ActCiUpsert parent = mapActCi(source, definition, settings, changedAt);
-        transaction.executeWithoutResult(status -> {
-            long id = saveActCi(parent);
-            for (ActCiSpecUpsert spec : mapSpecs(source, id, parent, definition)) {
-                saveSpec(spec);
-            }
-        });
-    }
-
-    static ActCiUpsert mapActCi(ComputerSource source, ClassificationDefinition definition,
-                               CiLoadSettings settings, LocalDateTime changedAt) {
-        if (source.devicePk() <= 0) {
-            throw new IllegalArgumentException("Computer 원천 PK가 필요합니다.");
-        }
-        String sourceId = "D42:DEVICE:" + source.devicePk();
-        if (source.lastDiscovered() == null || source.lastDiscovered().isBlank()) {
-            throw new IllegalArgumentException("LASTSCANDT 원천이 없습니다: " + sourceId);
-        }
-        String timestamp = source.lastDiscovered().trim().replace(' ', 'T')
-                .replaceFirst("([+-]\\d{2})$", "$1:00");
-        LocalDateTime lastScan = OffsetDateTime.parse(timestamp)
-                .atZoneSameInstant(settings.zoneId()).toLocalDateTime();
         return new ActCiUpsert(
-                sourceId, checkedText(source.name(), 192, "ACTCINAME"), definition.classStructureId(),
-                checkedText(source.notes(), 1024, "DESCRIPTION"), lastScan,
-                settings.changeBy(), changedAt, settings.langCode()
-        );
+                "D42:DEVICE:" + source.devicePk(), source.name(), definition.classStructureId(),
+                source.notes(), lastScan, CHANGE_BY, applyDateTime, LANG_CODE);
     }
 
-    static List<ActCiSpecUpsert> mapSpecs(ComputerSource source, long id,
-                                         ActCiUpsert parent, ClassificationDefinition definition) {
+    private List<ActCiSpecUpsert> mapActCiSpecs(ComputerSource source,
+                                              ActCiUpsert parent, CiDefinitionCache definitions,
+                                              CiClassification classification) {
         List<ActCiSpecUpsert> specs = new ArrayList<>();
-        addSpec(specs, definition, parent, id, "NAME", source.name(), null);
-        addSpec(specs, definition, parent, id, "SERIALNUMBER", source.serialNo(), null);
-        addSpec(specs, definition, parent, id, "UUID", source.uuid(), null);
-        addSpec(specs, definition, parent, id, "MODEL", source.model(), null);
-        addSpec(specs, definition, parent, id, "MANUFACTURER", source.manufacturer(), null);
-        addSpec(specs, definition, parent, id, "MEMORYSIZE", source.ram(),
+        addSpec(specs, definitions, parent, ComputerSpec.NAME, source.name(), null);
+        addSpec(specs, definitions, parent, ComputerSpec.SERIAL_NUMBER, source.serialNo(), null);
+        addSpec(specs, definitions, parent, ComputerSpec.UUID, source.uuid(), null);
+        addSpec(specs, definitions, parent, ComputerSpec.MODEL, source.model(), null);
+        addSpec(specs, definitions, parent, ComputerSpec.MANUFACTURER, source.manufacturer(), null);
+        addSpec(specs, definitions, parent, ComputerSpec.MEMORY_SIZE, source.ram(),
                 source.ram() == null ? null : memoryUnit(source.ramUnit()));
-        addSpec(specs, definition, parent, id, "NUMCPUS", decimal(source.totalCpus()), null);
-        addSpec(specs, definition, parent, id, "CPUSPEED", source.cpuSpeed(),
+        addSpec(specs, definitions, parent, ComputerSpec.CPU_COUNT, decimal(source.totalCpus()), null);
+        addSpec(specs, definitions, parent, ComputerSpec.CPU_SPEED, source.cpuSpeed(),
                 source.cpuSpeed() == null ? null : speedUnit(source.cpuSpeedUnit()));
-        addSpec(specs, definition, parent, id, "CPUTYPE", source.cpuType(), null);
-        addSpec(specs, definition, parent, id, "ARCHITECTURE", source.architecture(), null);
-        addSpec(specs, definition, parent, id, "PRIMARYMACADDRESS", source.primaryMac(), null);
-        addSpec(specs, definition, parent, id, "TYPE", "ComputerSystem", null);
-        addSpec(specs, definition, parent, id, "VIRTUAL", Boolean.toString("virtual".equals(source.type())), null);
-        addSpec(specs, definition, parent, id, "VMID", "virtual".equals(source.type()) ? source.vmId() : null, null);
-        addSpec(specs, definition, parent, id, "BIOSMANUFACTURER", source.biosManufacturer(), null);
-        addSpec(specs, definition, parent, id, "ROMVERSION", source.biosVersion(), null);
-        addSpec(specs, definition, parent, id, "BIOSRELEASEDATE", source.biosReleaseDate(), null);
+        addSpec(specs, definitions, parent, ComputerSpec.CPU_TYPE, source.cpuType(), null);
+        addSpec(specs, definitions, parent, ComputerSpec.ARCHITECTURE, source.architecture(), null);
+        addSpec(specs, definitions, parent, ComputerSpec.PRIMARY_MAC, source.primaryMac(), null);
+        addSpec(specs, definitions, parent, ComputerSpec.TYPE, "ComputerSystem", null);
+        addSpec(specs, definitions, parent, ComputerSpec.VIRTUAL, Boolean.toString("virtual".equals(source.type())), null);
+        if (ComputerSpec.VM_ID.appliesTo(classification)) {
+            addSpec(specs, definitions, parent, ComputerSpec.VM_ID, source.vmId(), null);
+        }
+        addSpec(specs, definitions, parent, ComputerSpec.BIOS_MANUFACTURER, source.biosManufacturer(), null);
+        addSpec(specs, definitions, parent, ComputerSpec.BIOS_VERSION, source.biosVersion(), null);
+        addSpec(specs, definitions, parent, ComputerSpec.BIOS_RELEASE_DATE, source.biosReleaseDate(), null);
         BigDecimal cores = source.totalCpus() == null || source.corePerCpu() == null ? null
                 : BigDecimal.valueOf((long) source.totalCpus() * source.corePerCpu());
-        addSpec(specs, definition, parent, id, "CPUCORESINSTALLED", cores, null);
+        addSpec(specs, definitions, parent, ComputerSpec.CPU_CORES, cores, null);
         return List.copyOf(specs);
     }
 
-    private static void addSpec(List<ActCiSpecUpsert> specs, ClassificationDefinition definition,
-                                ActCiUpsert parent, long id, String suffix, Object value, String unit) {
-        SpecDefinition template = Objects.requireNonNull(definition.specs().get(PREFIX + suffix), PREFIX + suffix);
+    private void addSpec(List<ActCiSpecUpsert> specs, CiDefinitionCache definitions,
+                         ActCiUpsert parent, ComputerSpec field, Object value, String unit) {
         if (value == null || value instanceof String text && text.isBlank()) {
-            if (template.mandatory()) {
-                throw new IllegalArgumentException("필수 스펙 값이 없습니다: " + template.assetAttrId());
-            }
+            return;
+        }
+        SpecDefinition template = definitions.spec(parent.classStructureId(), field.attributeId(), null);
+        if (template == null && field.additionalDisplaySequence() != null) {
+            template = definitions.additionalSpec(parent.classStructureId(), field.attributeId(), null,
+                    field.additionalDisplaySequence(), field.additionalMandatory());
+        }
+        if (template == null) {
+            log.warn("스펙 정의가 없어 건너뜁니다. actCiNum={}, attribute={}", parent.actCiNum(), field.attributeId());
+            return;
+        }
+        if ((field == ComputerSpec.MEMORY_SIZE || field == ComputerSpec.CPU_SPEED) && unit == null) {
+            log.warn("단위 코드가 없어 스펙을 건너뜁니다. actCiNum={}, attribute={}", parent.actCiNum(), template.assetAttrId());
             return;
         }
         String text = null;
         BigDecimal number = null;
         if ("ALN".equals(template.dataType()) && value instanceof String string) {
-            text = checkedText(string, 254, template.assetAttrId());
+            text = string;
         } else if ("NUMERIC".equals(template.dataType()) && value instanceof BigDecimal decimal) {
-            number = decimal.stripTrailingZeros();
-            if (number.precision() - number.scale() > 25 || number.scale() > 5) {
-                throw new IllegalArgumentException("NUMVALUE(30,5) 범위를 초과했습니다: " + template.assetAttrId());
-            }
+            number = decimal;
         } else {
-            throw new IllegalArgumentException("속성과 값의 자료형이 다릅니다: " + template.assetAttrId());
+            log.warn("자료형이 맞지 않아 스펙을 건너뜁니다. actCiNum={}, attribute={}",
+                    parent.actCiNum(), template.assetAttrId());
+            return;
         }
         specs.add(new ActCiSpecUpsert(
-                parent.actCiNum(), id, parent.classStructureId(), template.assetAttrId(),
+                parent.actCiNum(), parent.classStructureId(), template.assetAttrId(),
                 template.classSpecId(), template.section(), template.displaySequence(), template.mandatory(),
                 unit == null ? template.measureUnitId() : unit,
                 template.linkedToAttribute(), template.linkedToSection(), text, number,
-                parent.changeBy(), parent.changeDate()
-        ));
+                parent.changeBy(), parent.changeDate()));
     }
 
-    private static String checkedText(String text, int limit, String field) {
-        if (text != null && text.length() > limit) {
-            throw new IllegalArgumentException(field + " 길이를 초과했습니다. limit=" + limit);
-        }
-        return text;
+    private static Integer nullableInteger(ResultSet rs, String column) throws SQLException {
+        BigDecimal value = rs.getBigDecimal(column);
+        return value == null ? null : value.intValueExact();
     }
 
     private static BigDecimal decimal(Integer value) {
@@ -301,7 +274,7 @@ public class ComputerCiIntegrate implements CiIntegrationTask {
         return switch (unit == null ? "" : unit.trim()) {
             case "GB" -> "GBYTE";
             case "MB" -> "MBYTE";
-            default -> throw new IllegalArgumentException("미지원 메모리 단위입니다: " + unit);
+            default -> null;
         };
     }
 
@@ -309,113 +282,134 @@ public class ComputerCiIntegrate implements CiIntegrationTask {
         return switch (unit == null ? "" : unit.trim()) {
             case "GHz" -> "GHZ";
             case "MHz" -> "MHZ";
-            default -> throw new IllegalArgumentException("미지원 CPU 속도 단위입니다: " + unit);
+            default -> null;
         };
     }
 
-    private long saveActCi(ActCiUpsert ci) {
-        List<ExistingCi> existing = jdbc.query(
-                "SELECT ACTCIID,CLASSSTRUCTUREID FROM MAXIMO.ACTCI WHERE ACTCINUM=?",
+    private Long putActCi(ActCiUpsert ci) {
+        List<ExistingCi> existing = maximoJdbcTemplate.query(
+                FIND_ACTCI_QUERY,
                 (rs, row) -> new ExistingCi(rs.getLong(1), rs.getString(2)), ci.actCiNum());
-        if (existing.size() > 1) {
-            throw new IllegalStateException("ACTCINUM이 중복됩니다: " + ci.actCiNum());
-        }
         if (!existing.isEmpty()) {
             ExistingCi old = existing.getFirst();
             if (!ci.classStructureId().equals(old.classStructureId())) {
-                throw new IllegalStateException("분류 변경 규칙이 필요합니다: " + ci.actCiNum());
+                log.warn("분류 변경 규칙이 없어 건너뜁니다. actCiNum={}", ci.actCiNum());
+                return null;
             }
-            jdbc.update("""
-                    UPDATE MAXIMO.ACTCI SET ACTCINAME=?,DESCRIPTION=?,LASTSCANDT=?,
-                        CHANGEBY=?,CHANGEDATE=?,LANGCODE=?
-                    WHERE ACTCIID=?
-                    """, ci.actCiName(), ci.description(), ci.lastScanDate(), ci.changeBy(),
+            maximoJdbcTemplate.update(UPDATE_ACTCI_QUERY, ci.actCiName(), ci.description(), ci.lastScanDate(), ci.changeBy(),
                     ci.changeDate(), ci.langCode(), old.id());
             return old.id();
         }
-        long id = Objects.requireNonNull(jdbc.queryForObject("VALUES NEXT VALUE FOR MAXIMO.ACTCISEQ", Long.class));
-        jdbc.update("""
-                INSERT INTO MAXIMO.ACTCI
-                    (ACTCIID,ACTCINUM,ACTCINAME,CLASSSTRUCTUREID,DESCRIPTION,
-                     LASTSCANDT,CHANGEBY,CHANGEDATE,LANGCODE,HASLD)
-                VALUES (?,?,?,?,?,?,?,?,?,0)
-                """, id, ci.actCiNum(), ci.actCiName(), ci.classStructureId(), ci.description(),
+        long id = maximoJdbcTemplate.queryForObject(NEXT_ACTCI_ID_QUERY, Long.class);
+        maximoJdbcTemplate.update(INSERT_ACTCI_QUERY, id, ci.actCiNum(), ci.actCiName(), ci.classStructureId(), ci.description(),
                 ci.lastScanDate(), ci.changeBy(), ci.changeDate(), ci.langCode());
         return id;
     }
 
-    private void saveSpec(ActCiSpecUpsert spec) {
-        List<Long> ids = jdbc.queryForList("""
-                SELECT ACTCISPECID FROM MAXIMO.ACTCISPEC
-                WHERE ACTCINUM=? AND ASSETATTRID=?
-                  AND (SECTION=? OR (SECTION IS NULL AND ?=1))
-                """, Long.class, spec.actCiNum(), spec.assetAttrId(), spec.section(), spec.section() == null ? 1 : 0);
-        if (ids.size() > 1) {
-            throw new IllegalStateException("ACTCISPEC 키가 중복됩니다: " + spec.actCiNum() + "/" + spec.assetAttrId());
-        }
-        if (ids.isEmpty()) {
-            long id = Objects.requireNonNull(jdbc.queryForObject("VALUES NEXT VALUE FOR MAXIMO.ACTCISPECSEQ", Long.class));
-            jdbc.update("""
-                    INSERT INTO MAXIMO.ACTCISPEC
-                        (ACTCISPECID,ACTCINUM,ASSETATTRID,CLASSSTRUCTUREID,CLASSSPECID,SECTION,
-                         REFOBJECTID,REFOBJECTNAME,DISPLAYSEQUENCE,MANDATORY,MEASUREUNITID,
-                         LINKEDTOATTRIBUTE,LINKEDTOSECTION,ALNVALUE,NUMVALUE,TABLEVALUE,CHANGEBY,CHANGEDATE)
-                    VALUES (?,?,?,?,?,?,?,'ACTCI',?,?,?,?,?,?,?,NULL,?,?)
-                    """, id, spec.actCiNum(), spec.assetAttrId(), spec.classStructureId(), spec.classSpecId(),
-                    spec.section(), spec.refObjectId(), spec.displaySequence(), spec.mandatory() ? 1 : 0,
-                    spec.measureUnitId(), spec.linkedToAttribute(), spec.linkedToSection(),
-                    spec.alnValue(), spec.numValue(), spec.changeBy(), spec.changeDate());
-        } else {
-            jdbc.update("""
-                    UPDATE MAXIMO.ACTCISPEC SET CLASSSTRUCTUREID=?,CLASSSPECID=?,
-                        REFOBJECTID=?,REFOBJECTNAME='ACTCI',DISPLAYSEQUENCE=?,MANDATORY=?,
-                        MEASUREUNITID=?,LINKEDTOATTRIBUTE=?,LINKEDTOSECTION=?,
-                        ALNVALUE=?,NUMVALUE=?,TABLEVALUE=NULL,CHANGEBY=?,CHANGEDATE=?
-                    WHERE ACTCISPECID=?
-                    """, spec.classStructureId(), spec.classSpecId(), spec.refObjectId(),
-                    spec.displaySequence(), spec.mandatory() ? 1 : 0, spec.measureUnitId(),
-                    spec.linkedToAttribute(), spec.linkedToSection(), spec.alnValue(),
-                    spec.numValue(), spec.changeBy(), spec.changeDate(), ids.getFirst());
-        }
+    private void putActCiSpec(ActCiSpecUpsert spec, long actCiId) {
+        maximoJdbcTemplate.update(MERGE_ACTCISPEC_QUERY,
+                spec.actCiNum(), spec.assetAttrId(), spec.section(), spec.classStructureId(),
+                spec.classSpecId(), actCiId, spec.displaySequence(), spec.mandatory() ? 1 : 0,
+                spec.measureUnitId(), spec.linkedToAttribute(), spec.linkedToSection(),
+                spec.alnValue(), spec.numValue(), spec.changeBy(), spec.changeDate());
     }
 
     private record ExistingCi(long id, String classStructureId) {
     }
 
-    static final String CLASS_QUERY = """
-            SELECT s.CLASSIFICATIONID,s.CLASSSTRUCTUREID
-            FROM MAXIMO.CLASSSTRUCTURE s
-            JOIN MAXIMO.CLASSUSEWITH u ON u.CLASSSTRUCTUREID=s.CLASSSTRUCTUREID
-            WHERE s.CLASSIFICATIONID IN ('SYS.COMPUTERSYSTEM','SYS.VIRTUALCOMPUTERSYSTEM')
-              AND u.OBJECTNAME='ACTCI'
+    private static final String FIND_ACTCI_QUERY = "SELECT ACTCIID,CLASSSTRUCTUREID FROM MAXIMO.ACTCI WHERE ACTCINUM=?";
+
+    private static final String UPDATE_ACTCI_QUERY = """
+            UPDATE MAXIMO.ACTCI SET ACTCINAME=?,DESCRIPTION=?,LASTSCANDT=?,
+                CHANGEBY=?,CHANGEDATE=?,LANGCODE=?
+            WHERE ACTCIID=?
             """;
 
-    static final String SPEC_QUERY = """
-            SELECT s.CLASSIFICATIONID,c.CLASSSTRUCTUREID,c.CLASSSPECID,c.ASSETATTRID,
-                a.DATATYPE,c.SECTION,c.MEASUREUNITID,c.LINKEDTOATTRIBUTE,c.LINKEDTOSECTION,
-                u.OBJECTNAME,u.SEQUENCE,u.MANDATORY,u.USEINSPEC,
-                u.CLASSSTRUCTUREID AS USE_CLASS,u.ASSETATTRID AS USE_ATTRIBUTE,u.SECTION AS USE_SECTION
-            FROM MAXIMO.CLASSSTRUCTURE s
-            JOIN MAXIMO.CLASSSPEC c ON c.CLASSSTRUCTUREID=s.CLASSSTRUCTUREID
-            LEFT JOIN MAXIMO.ASSETATTRIBUTE a
-              ON a.ASSETATTRIBUTEID=c.ASSETATTRIBUTEID AND a.ASSETATTRID=c.ASSETATTRID
-            LEFT JOIN MAXIMO.CLASSSPECUSEWITH u ON u.CLASSSPECID=c.CLASSSPECID AND u.OBJECTNAME='ACTCI'
-            WHERE s.CLASSIFICATIONID IN ('SYS.COMPUTERSYSTEM','SYS.VIRTUALCOMPUTERSYSTEM')
+    private static final String INSERT_ACTCI_QUERY = """
+            INSERT INTO MAXIMO.ACTCI
+                (ACTCIID,ACTCINUM,ACTCINAME,CLASSSTRUCTUREID,DESCRIPTION,
+                 LASTSCANDT,CHANGEBY,CHANGEDATE,LANGCODE,HASLD)
+            VALUES (?,?,?,?,?,?,?,?,?,0)
             """;
 
-    static final String SOURCE_QUERY = """
+    private static final String NEXT_ACTCI_ID_QUERY = "VALUES NEXT VALUE FOR MAXIMO.ACTCISEQ";
+
+    /**
+     * 파라미터 마커에 CAST가 필요하다. USING 절의 마커는 DB2가 타입을 추론하지 못해
+     * SQLCODE=-418로 거부한다. ACTCISPECID는 NOT MATCHED 분기에서만 채번한다.
+     * USING 절에서는 NEXT VALUE FOR가 금지된다(SQLCODE=-348).
+     */
+    private static final String MERGE_ACTCISPEC_QUERY = """
+            MERGE INTO MAXIMO.ACTCISPEC AS target
+            USING (VALUES (
+                CAST(? AS VARCHAR(150)), CAST(? AS VARCHAR(300)), CAST(? AS VARCHAR(10)),
+                CAST(? AS VARCHAR(25)), CAST(? AS BIGINT), CAST(? AS BIGINT),
+                CAST(? AS INTEGER), CAST(? AS INTEGER), CAST(? AS VARCHAR(16)),
+                CAST(? AS VARCHAR(300)), CAST(? AS VARCHAR(10)), CAST(? AS VARCHAR(254)),
+                CAST(? AS DECIMAL(30,10)), CAST(? AS VARCHAR(100)), CAST(? AS TIMESTAMP)
+            )) AS source (
+                ACTCINUM, ASSETATTRID, SECTION, CLASSSTRUCTUREID, CLASSSPECID,
+                REFOBJECTID, DISPLAYSEQUENCE, MANDATORY, MEASUREUNITID,
+                LINKEDTOATTRIBUTE, LINKEDTOSECTION, ALNVALUE, NUMVALUE, CHANGEBY, CHANGEDATE
+            )
+            ON target.ACTCINUM = source.ACTCINUM
+                AND target.ASSETATTRID = source.ASSETATTRID
+                AND (target.SECTION = source.SECTION
+                     OR (target.SECTION IS NULL AND source.SECTION IS NULL))
+            WHEN MATCHED THEN
+                UPDATE SET
+                    CLASSSTRUCTUREID = source.CLASSSTRUCTUREID,
+                    CLASSSPECID = source.CLASSSPECID,
+                    REFOBJECTID = source.REFOBJECTID,
+                    REFOBJECTNAME = 'ACTCI',
+                    DISPLAYSEQUENCE = source.DISPLAYSEQUENCE,
+                    MANDATORY = source.MANDATORY,
+                    MEASUREUNITID = source.MEASUREUNITID,
+                    LINKEDTOATTRIBUTE = source.LINKEDTOATTRIBUTE,
+                    LINKEDTOSECTION = source.LINKEDTOSECTION,
+                    ALNVALUE = source.ALNVALUE,
+                    NUMVALUE = source.NUMVALUE,
+                    TABLEVALUE = NULL,
+                    CHANGEBY = source.CHANGEBY,
+                    CHANGEDATE = source.CHANGEDATE
+            WHEN NOT MATCHED THEN
+                INSERT (
+                    ACTCISPECID, ACTCINUM, ASSETATTRID, CLASSSTRUCTUREID, CLASSSPECID,
+                    SECTION, REFOBJECTID, REFOBJECTNAME, DISPLAYSEQUENCE, MANDATORY,
+                    MEASUREUNITID, LINKEDTOATTRIBUTE, LINKEDTOSECTION, ALNVALUE,
+                    NUMVALUE, TABLEVALUE, CHANGEBY, CHANGEDATE
+                ) VALUES (
+                    NEXT VALUE FOR MAXIMO.ACTCISPECSEQ,
+                    source.ACTCINUM, source.ASSETATTRID, source.CLASSSTRUCTUREID,
+                    source.CLASSSPECID, source.SECTION, source.REFOBJECTID, 'ACTCI',
+                    source.DISPLAYSEQUENCE, source.MANDATORY, source.MEASUREUNITID,
+                    source.LINKEDTOATTRIBUTE, source.LINKEDTOSECTION, source.ALNVALUE,
+                    source.NUMVALUE, NULL, source.CHANGEBY, source.CHANGEDATE
+                )
+            """;
+
+    private static final String COMPUTER_FILTER = """
+            d.type IN ('physical', 'virtual')
+            AND (d.network_device = false OR d.network_device IS NULL)
+            AND (
+                (d.type = 'physical' AND d.physicalsubtype IN
+                    ('Generic', 'Rackable', 'Blade', 'WorkStation', 'ThinClient', 'Laptop'))
+                OR
+                (d.type = 'virtual' AND d.virtualsubtype IN
+                    ('Internal VM', 'Amazon EC2 Instance', 'VMWare', 'Hyper-V'))
+            )
+            """;
+
+    private static final String TOTAL_COUNT_QUERY = """
+            SELECT COUNT(*) FROM view_device_v2 d WHERE
+            """ + COMPUTER_FILTER;
+
+    private static final String SOURCE_QUERY = """
             WITH computer AS (
                 SELECT d.*
                 FROM view_device_v2 d
-                WHERE d.type IN ('physical', 'virtual')
-                  AND (d.network_device = false OR d.network_device IS NULL)
-                  AND (
-                      (d.type = 'physical' AND d.physicalsubtype IN
-                          ('Generic', 'Rackable', 'Blade', 'WorkStation', 'ThinClient', 'Laptop'))
-                      OR
-                      (d.type = 'virtual' AND d.virtualsubtype IN
-                          ('Internal VM', 'Amazon EC2 Instance', 'VMWare', 'Hyper-V'))
-                  )
+                WHERE
+            """ + COMPUTER_FILTER + """
             ), cpu AS (
                 SELECT p.device_fk,
                     COUNT(DISTINCT NULLIF(TRIM(pm.name), '')) AS model_count,
@@ -437,8 +431,6 @@ public class ComputerCiIntegrate implements CiIntegrationTask {
             )
             SELECT d.device_pk, d.type,
                 'D42:DEVICE:' || CAST(d.device_pk AS varchar) AS source_id,
-                CASE d.type WHEN 'physical' THEN 'SYS.COMPUTERSYSTEM'
-                            WHEN 'virtual' THEN 'SYS.VIRTUALCOMPUTERSYSTEM' END AS classification_id,
                 d.name, d.notes, d.serial_no, d.uuid, d.last_discovered,
                 h.name AS model, v.name AS manufacturer,
                 d.ram, d.ram_size_type, d.total_cpus, d.core_per_cpu,
@@ -458,8 +450,7 @@ public class ComputerCiIntegrate implements CiIntegrationTask {
             LEFT JOIN view_vendor_v1 b ON b.vendor_pk = d.bios_vendor_fk
             LEFT JOIN cpu ON cpu.device_fk = d.device_pk
             LEFT JOIN primary_port pp ON pp.device_fk = d.device_pk
-            WHERE d.device_pk > %d
             ORDER BY d.device_pk
-            LIMIT %d
+            LIMIT %d OFFSET %d
             """;
 }

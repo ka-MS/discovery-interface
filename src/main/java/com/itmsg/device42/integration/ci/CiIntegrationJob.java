@@ -13,13 +13,16 @@ public class CiIntegrationJob implements IntegrationJob {
     private static final Logger log = LoggerFactory.getLogger(CiIntegrationJob.class);
 
     private final List<CiIntegrationTask> tasks;
+    private final CiDefinitionLoader definitionLoader;
 
-    public CiIntegrationJob(List<CiIntegrationTask> tasks) {
+    public CiIntegrationJob(List<CiIntegrationTask> tasks, CiDefinitionLoader definitionLoader) {
         this.tasks = tasks;
+        this.definitionLoader = definitionLoader;
     }
 
     @Override
     public void run() {
+        CiDefinitionCache definitions = definitionLoader.load();
         List<Exception> failures = new ArrayList<>();
 
         for (CiIntegrationTask task : tasks) {
@@ -27,7 +30,7 @@ public class CiIntegrationJob implements IntegrationJob {
 
             try {
                 log.info("{} 작업을 시작합니다.", taskName);
-                task.integrate();
+                task.integrate(definitions);
                 log.info("{} 작업이 완료되었습니다.", taskName);
             } catch (Exception e) {
                 failures.add(e);
