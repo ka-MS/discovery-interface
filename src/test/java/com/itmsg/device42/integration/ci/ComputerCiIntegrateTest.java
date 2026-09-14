@@ -2,32 +2,29 @@ package com.itmsg.device42.integration.ci;
 
 import com.itmsg.device42.config.Device42ConnectionFactory;
 import com.itmsg.device42.dto.device42.ci.ComputerSource;
-import com.itmsg.device42.dto.maximo.ci.ClassificationDefinition;
+import com.itmsg.device42.enums.ci.CiClassification;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
-import org.springframework.mock.env.MockEnvironment;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.*;
-import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.*;
 
 class ComputerCiIntegrateTest {
     private JdbcTemplate jdbc;
     private ComputerCiIntegrate integration;
-    private MockEnvironment environment;
-    private final CiLoadSettings settings = new CiLoadSettings("ETL", "KO", ZoneId.of("Asia/Seoul"), 2);
+    private CiDefinitionLoader definitionLoader;
     private static final List<String> TEXT = List.of(
             "NAME", "SERIALNUMBER", "UUID", "MANUFACTURER", "MODEL", "CPUTYPE", "ARCHITECTURE",
             "PRIMARYMACADDRESS", "TYPE", "VIRTUAL", "VMID", "BIOSMANUFACTURER", "ROMVERSION", "BIOSRELEASEDATE");
@@ -38,11 +35,9 @@ class ComputerCiIntegrateTest {
         var dataSource = new DriverManagerDataSource(
                 "jdbc:h2:mem:" + UUID.randomUUID() + ";MODE=DB2;DB_CLOSE_DELAY=-1", "sa", "");
         new ResourceDatabasePopulator(new ClassPathResource("ci/schema.sql")).execute(dataSource);
-        jdbc = new JdbcTemplate(dataSource);
-        environment = new MockEnvironment().withProperty("ci.change-by", "ETL")
-                .withProperty("ci.lang-code", "KO").withProperty("ci.zone-id", "Asia/Seoul")
-                .withProperty("ci.page-size", "2");
-        integration = new ComputerCiIntegrate(mock(Device42ConnectionFactory.class), jdbc, environment);
+        jdbc = spy(new JdbcTemplate(dataSource));
+        definitionLoader = new CiDefinitionLoader(jdbc);
+        integration = new ComputerCiIntegrate(mock(Device42ConnectionFactory.class), jdbc);
         seedDefinitions();
     }
 
@@ -57,10 +52,13 @@ class ComputerCiIntegrateTest {
             for (String suffix : attributes) {
                 String attribute = "COMPUTERSYSTEM_" + suffix;
                 long id = templateId++;
-                jdbc.update("INSERT INTO MAXIMO.ASSETATTRIBUTE VALUES (?,?,?)",
-                        id, attribute, NUMBER.contains(suffix) ? "NUMERIC" : "ALN");
+                long attributeId = 100 + attributes.indexOf(suffix);
+                if ("PHYS".equals(classId)) {
+                    jdbc.update("INSERT INTO MAXIMO.ASSETATTRIBUTE (ASSETATTRIBUTEID,ASSETATTRID,DATATYPE) VALUES (?,?,?)",
+                            attributeId, attribute, NUMBER.contains(suffix) ? "NUMERIC" : "ALN");
+                }
                 jdbc.update("INSERT INTO MAXIMO.CLASSSPEC (CLASSSTRUCTUREID,CLASSSPECID,ASSETATTRID,ASSETATTRIBUTEID) VALUES (?,?,?,?)",
-                        classId, id, attribute, id);
+                        classId, id, attribute, attributeId);
                 jdbc.update("""
                         INSERT INTO MAXIMO.CLASSSPECUSEWITH
                         (CLASSSPECID,OBJECTNAME,SEQUENCE,MANDATORY,USEINSPEC,CLASSSTRUCTUREID,ASSETATTRID)
@@ -79,9 +77,9 @@ class ComputerCiIntegrateTest {
 
     @Test
     void mapsPhysicalAndVirtualUsingTheirOwnTemplatesAndPreservesUnits() {
-        var definitions = integration.loadDefinitions();
-        integration.saveComputer(source(7, "physical", "Physical", new BigDecimal("32.125")), definitions, settings);
-        integration.saveComputer(source(8, "virtual", "Virtual", new BigDecimal("16")), definitions, settings);
+        var definitions = definitionLoader.load();
+        persist(source(7, "physical", "Physical", new BigDecimal("32.125")), definitions);
+        persist(source(8, "virtual", "Virtual", new BigDecimal("16")), definitions);
 
         assertThat(jdbc.queryForList("SELECT CLASSSTRUCTUREID FROM MAXIMO.ACTCI ORDER BY ACTCINUM", String.class))
                 .containsExactly("PHYS", "VM");
@@ -95,7 +93,8 @@ class ComputerCiIntegrateTest {
         assertThat(text("D42:DEVICE:8", "VMID", "ALNVALUE")).isEqualTo("vm-internal-id");
         assertThat(text("D42:DEVICE:7", "BIOSRELEASEDATE", "ALNVALUE")).isEqualTo("11/12/2021");
         assertThat(jdbc.queryForObject("SELECT LASTSCANDT FROM MAXIMO.ACTCI WHERE ACTCINUM='D42:DEVICE:7'",
-                LocalDateTime.class)).isEqualTo(LocalDateTime.of(2026, 9, 14, 9, 0, 0, 123456000));
+                LocalDateTime.class)).isEqualTo(OffsetDateTime.parse("2026-09-14T00:00:00.123456Z")
+                        .atZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime());
         assertThat(jdbc.queryForObject("""
                 SELECT COUNT(*) FROM MAXIMO.ACTCISPEC s
                 JOIN MAXIMO.ACTCI c ON c.ACTCIID=s.REFOBJECTID AND c.ACTCINUM=s.ACTCINUM
@@ -111,11 +110,11 @@ class ComputerCiIntegrateTest {
 
     @Test
     void rerunKeepsParentAndSpecIdsIncludingNullSections() {
-        var definitions = integration.loadDefinitions();
-        integration.saveComputer(source(7, "physical", "Before", new BigDecimal("32")), definitions, settings);
+        var definitions = definitionLoader.load();
+        persist(source(7, "physical", "Before", new BigDecimal("32")), definitions);
         long parentId = jdbc.queryForObject("SELECT ACTCIID FROM MAXIMO.ACTCI", Long.class);
         var specIds = jdbc.queryForList("SELECT ACTCISPECID FROM MAXIMO.ACTCISPEC ORDER BY ACTCISPECID", Long.class);
-        integration.saveComputer(source(7, "physical", "After", new BigDecimal("64")), definitions, settings);
+        persist(source(7, "physical", "After", new BigDecimal("64")), definitions);
 
         assertThat(count("ACTCI")).isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT ACTCIID FROM MAXIMO.ACTCI", Long.class)).isEqualTo(parentId);
@@ -127,86 +126,147 @@ class ComputerCiIntegrateTest {
     }
 
     @Test
-    void failedSpecInsertRollsBackParentAndEarlierSpecs() {
-        var definitions = integration.loadDefinitions();
-        rejectBiosVersion();
-        assertThatThrownBy(() -> integration.saveComputer(
-                source(7, "physical", "Fail", BigDecimal.TEN), definitions, settings)).isInstanceOf(RuntimeException.class);
+    void mappingDoesNotWriteUntilPutDataIsCalled() {
+        var mapped = integration.mapData(
+                List.of(source(7, "physical", "Host", BigDecimal.TEN)), definitionLoader.load());
         assertThat(count("ACTCI")).isZero();
         assertThat(count("ACTCISPEC")).isZero();
+        assertThat(mapped).hasSize(1);
+        assertThat(mapped.getFirst().specs()).isNotEmpty();
+
+        integration.putData(mapped);
+        assertThat(count("ACTCI")).isEqualTo(1);
     }
 
     @Test
-    void failedSpecUpdateRollsBackParentAndEarlierSpecChanges() {
-        var definitions = integration.loadDefinitions();
-        integration.saveComputer(source(7, "physical", "Before", BigDecimal.TEN), definitions, settings);
+    void failedParentDoesNotStopFollowingComputerOrCreateOrphanSpecs() {
+        var mapped = integration.mapData(List.of(
+                source(7, "physical", "X".repeat(193), BigDecimal.TEN),
+                source(8, "virtual", "Good", BigDecimal.ONE)), definitionLoader.load());
+        integration.putData(mapped);
+
+        assertThat(jdbc.queryForList("SELECT ACTCINUM FROM MAXIMO.ACTCI", String.class))
+                .containsExactly("D42:DEVICE:8");
+        assertThat(jdbc.queryForObject(
+                "SELECT COUNT(*) FROM MAXIMO.ACTCISPEC WHERE ACTCINUM='D42:DEVICE:7'", Integer.class)).isZero();
+        assertThat(text("D42:DEVICE:8", "NAME", "ALNVALUE")).isEqualTo("Good");
+    }
+
+    @Test
+    void failedSpecDoesNotRollBackOrStopFollowingSpecsAndComputers() {
+        rejectBiosVersion();
+        integration.putData(integration.mapData(List.of(
+                source(7, "physical", "A", BigDecimal.TEN),
+                source(8, "virtual", "B", BigDecimal.ONE)), definitionLoader.load()));
+
+        assertThat(count("ACTCI")).isEqualTo(2);
+        assertThat(jdbc.queryForObject(
+                "SELECT COUNT(*) FROM MAXIMO.ACTCISPEC WHERE ASSETATTRID='COMPUTERSYSTEM_ROMVERSION'",
+                Integer.class)).isZero();
+        for (String ci : List.of("D42:DEVICE:7", "D42:DEVICE:8")) {
+            assertThat(text(ci, "NAME", "ALNVALUE")).isNotBlank();
+            assertThat(value(ci, "CPUCORESINSTALLED", "NUMVALUE")).isEqualByComparingTo("24");
+        }
+    }
+
+    @Test
+    void failedSpecUpdateKeepsParentUpdateAndContinuesOtherSpecs() {
+        var definitions = definitionLoader.load();
+        persist(source(7, "physical", "Before", BigDecimal.TEN), definitions);
         jdbc.update("ALTER TABLE MAXIMO.ACTCISPEC ADD CONSTRAINT reject_new_name CHECK (ALNVALUE <> 'After')");
-        assertThatThrownBy(() -> integration.saveComputer(
-                source(7, "physical", "After", BigDecimal.ONE), definitions, settings)).isInstanceOf(RuntimeException.class);
-        assertThat(jdbc.queryForObject("SELECT ACTCINAME FROM MAXIMO.ACTCI", String.class)).isEqualTo("Before");
+        persist(source(7, "physical", "After", BigDecimal.ONE), definitions);
+
+        assertThat(jdbc.queryForObject("SELECT ACTCINAME FROM MAXIMO.ACTCI", String.class)).isEqualTo("After");
         assertThat(text("D42:DEVICE:7", "NAME", "ALNVALUE")).isEqualTo("Before");
+        assertThat(value("D42:DEVICE:7", "MEMORYSIZE", "NUMVALUE")).isEqualByComparingTo("1");
     }
 
     @Test
-    void missingNewAttributeFailsBeforeSourceReadsOrWrites() {
+    void missingOrIncompatibleSpecDefinitionOnlySkipsThatAttribute() {
         jdbc.update("DELETE FROM MAXIMO.CLASSSPEC WHERE ASSETATTRID='COMPUTERSYSTEM_BIOSRELEASEDATE'");
-        var reads = new AtomicInteger();
-        var task = new ComputerCiIntegrate(mock(Device42ConnectionFactory.class), jdbc, environment) {
-            @Override public List<ComputerSource> getData(long cursor, int limit) {
-                reads.incrementAndGet();
-                return List.of();
-            }
-        };
-        assertThatThrownBy(task::integrate).hasMessageContaining("BIOSRELEASEDATE");
-        assertThat(reads).hasValue(0);
-        assertThat(count("ACTCI")).isZero();
-    }
-
-    @Test
-    void rejectsWrongDataTypeDuplicateTemplatesAndWrongUseWithReference() {
+        jdbc.update("DELETE FROM MAXIMO.ASSETATTRIBUTE WHERE ASSETATTRID='COMPUTERSYSTEM_BIOSRELEASEDATE'");
         jdbc.update("UPDATE MAXIMO.ASSETATTRIBUTE SET DATATYPE='ALN' WHERE ASSETATTRID='COMPUTERSYSTEM_MEMORYSIZE'");
-        assertThatThrownBy(integration::loadDefinitions).hasMessageContaining("MEMORYSIZE");
-        jdbc.update("UPDATE MAXIMO.ASSETATTRIBUTE SET DATATYPE='NUMERIC' WHERE ASSETATTRID='COMPUTERSYSTEM_MEMORYSIZE'");
         jdbc.update("UPDATE MAXIMO.CLASSSPECUSEWITH SET CLASSSTRUCTUREID='WRONG' WHERE ASSETATTRID='COMPUTERSYSTEM_NAME'");
-        assertThatThrownBy(integration::loadDefinitions).hasMessageContaining("COMPUTERSYSTEM_NAME");
-        jdbc.update("UPDATE MAXIMO.CLASSSPECUSEWITH SET CLASSSTRUCTUREID='PHYS' WHERE ASSETATTRID='COMPUTERSYSTEM_NAME' AND CLASSSPECID=100");
-        jdbc.update("UPDATE MAXIMO.CLASSSPECUSEWITH SET CLASSSTRUCTUREID='VM' WHERE ASSETATTRID='COMPUTERSYSTEM_NAME' AND CLASSSPECID<>100");
-        jdbc.update("INSERT INTO MAXIMO.CLASSSPECUSEWITH SELECT * FROM MAXIMO.CLASSSPECUSEWITH WHERE CLASSSPECID=100");
-        assertThatThrownBy(integration::loadDefinitions).hasMessageContaining("중복");
+        persist(source(7, "physical", "Host", BigDecimal.TEN), definitionLoader.load());
+
+        assertThat(count("ACTCI")).isEqualTo(1);
+        assertThat(jdbc.queryForList("SELECT ASSETATTRID FROM MAXIMO.ACTCISPEC", String.class))
+                .doesNotContain("COMPUTERSYSTEM_BIOSRELEASEDATE", "COMPUTERSYSTEM_MEMORYSIZE", "COMPUTERSYSTEM_NAME")
+                .contains("COMPUTERSYSTEM_ROMVERSION", "COMPUTERSYSTEM_CPUCORESINSTALLED");
     }
 
     @Test
-    void readsPagesByLastSourceKeyAndLoadsDefinitionsOncePerRun() {
-        List<Long> cursors = new ArrayList<>();
-        var definitionReads = new AtomicInteger();
-        var task = new ComputerCiIntegrate(mock(Device42ConnectionFactory.class), jdbc, environment) {
-            @Override Map<String, ClassificationDefinition> loadDefinitions() {
-                definitionReads.incrementAndGet();
-                return super.loadDefinitions();
+    void missingPhysicalClassificationStillAllowsVirtualComputers() {
+        jdbc.update("DELETE FROM MAXIMO.CLASSUSEWITH WHERE CLASSSTRUCTUREID='PHYS'");
+        integration.putData(integration.mapData(List.of(
+                source(7, "physical", "Physical", BigDecimal.TEN),
+                source(8, "virtual", "Virtual", BigDecimal.ONE)), definitionLoader.load()));
+        assertThat(jdbc.queryForList("SELECT ACTCINUM FROM MAXIMO.ACTCI", String.class))
+                .containsExactly("D42:DEVICE:8");
+    }
+
+    @Test
+    void readsAllOffsetsEvenWhenAnEntirePageFailsMapping() {
+        List<Long> offsets = new ArrayList<>();
+        var task = new ComputerCiIntegrate(mock(Device42ConnectionFactory.class), jdbc) {
+            @Override public long getTotalCount() {
+                return 2001;
             }
-            @Override public List<ComputerSource> getData(long cursor, int limit) {
-                cursors.add(cursor);
-                assertThat(limit).isEqualTo(2);
-                return switch ((int) cursor) {
-                    case 0 -> List.of(source(7, "physical", "A", BigDecimal.ONE), source(20, "virtual", "B", BigDecimal.TEN));
-                    case 20 -> List.of(source(45, "virtual", "C", BigDecimal.ONE));
-                    default -> List.of();
-                };
+            @Override public List<ComputerSource> getData(long offset, int limit) {
+                offsets.add(offset);
+                assertThat(limit).isEqualTo(offset == 2000 ? 1 : 1000);
+                ComputerSource row = source(offset + 1, "physical", "Host", BigDecimal.ONE);
+                if (offset == 1000) {
+                    row = withTimeAndUnits(row, "invalid-time", "GB", "GHz");
+                }
+                return List.of(row);
             }
         };
-        task.integrate();
-        assertThat(cursors).containsExactly(0L, 20L, 45L);
-        assertThat(definitionReads).hasValue(1);
-        assertThat(count("ACTCI")).isEqualTo(3);
+        task.integrate(definitionLoader.load());
+        assertThat(offsets).containsExactly(0L, 1000L, 2000L);
+        assertThat(count("ACTCI")).isEqualTo(2);
+    }
+
+    @Test
+    void unknownUnitsSkipOnlyMeasuredAttributes() {
+        var row = withTimeAndUnits(source(7, "physical", "Host", BigDecimal.ONE),
+                "2026-09-14T00:00:00Z", "unknown", "unknown");
+        persist(row, definitionLoader.load());
+
+        assertThat(count("ACTCI")).isEqualTo(1);
+        assertThat(jdbc.queryForList("SELECT ASSETATTRID FROM MAXIMO.ACTCISPEC", String.class))
+                .doesNotContain("COMPUTERSYSTEM_MEMORYSIZE", "COMPUTERSYSTEM_CPUSPEED")
+                .contains("COMPUTERSYSTEM_NUMCPUS");
+    }
+
+    @Test
+    void sourceConversionFailureDoesNotDiscardTheRestOfThePage() throws Exception {
+        var factory = mock(Device42ConnectionFactory.class);
+        var connection = mock(java.sql.Connection.class);
+        var statement = mock(java.sql.Statement.class);
+        var rs = mock(java.sql.ResultSet.class);
+        when(factory.openConnection()).thenReturn(connection);
+        when(connection.createStatement()).thenReturn(statement);
+        when(statement.executeQuery(anyString())).thenReturn(rs);
+        when(rs.next()).thenReturn(true, true, false);
+        when(rs.getLong("device_pk")).thenReturn(7L, 7L, 8L, 8L);
+        when(rs.getBigDecimal("total_cpus")).thenReturn(new BigDecimal("1.5"), BigDecimal.ONE);
+
+        var task = new ComputerCiIntegrate(factory, jdbc);
+        var rows = task.getData(100, 100);
+
+        assertThat(rows).hasSize(1);
+        assertThat(rows.getFirst().devicePk()).isEqualTo(8);
+        verify(statement).executeQuery(contains("LIMIT 100 OFFSET 100"));
     }
 
     @Test
     void missingSpecValueDoesNotInventZeroOrClearExistingValue() {
-        var definitions = integration.loadDefinitions();
-        integration.saveComputer(source(7, "physical", "Host", BigDecimal.TEN), definitions, settings);
-        integration.saveComputer(source(7, "physical", "Host", null), definitions, settings);
+        var definitions = definitionLoader.load();
+        persist(source(7, "physical", "Host", BigDecimal.TEN), definitions);
+        persist(source(7, "physical", "Host", null), definitions);
         assertThat(value("D42:DEVICE:7", "MEMORYSIZE", "NUMVALUE")).isEqualByComparingTo("10");
-        integration.saveComputer(source(8, "virtual", "Empty", null), definitions, settings);
+        persist(source(8, "virtual", "Empty", null), definitions);
         assertThat(jdbc.queryForObject("""
                 SELECT COUNT(*) FROM MAXIMO.ACTCISPEC WHERE ACTCINUM='D42:DEVICE:8'
                   AND ASSETATTRID='COMPUTERSYSTEM_MEMORYSIZE'
@@ -215,18 +275,166 @@ class ComputerCiIntegrateTest {
 
     @Test
     void refusesUnresolvedClassChangesWithoutChangingExistingRows() {
-        var definitions = integration.loadDefinitions();
-        integration.saveComputer(source(7, "physical", "Physical", BigDecimal.TEN), definitions, settings);
-        assertThatThrownBy(() -> integration.saveComputer(
-                source(7, "virtual", "Virtual", BigDecimal.ONE), definitions, settings)).hasMessageContaining("분류 변경");
+        var definitions = definitionLoader.load();
+        persist(source(7, "physical", "Physical", BigDecimal.TEN), definitions);
+        persist(source(7, "virtual", "Virtual", BigDecimal.ONE), definitions);
         assertThat(jdbc.queryForObject("SELECT CLASSSTRUCTUREID FROM MAXIMO.ACTCI", String.class)).isEqualTo("PHYS");
     }
 
     @Test
-    void missingSettingsFailOnlyWhenCiIsRun() {
-        var task = new ComputerCiIntegrate(mock(Device42ConnectionFactory.class), jdbc, new MockEnvironment());
-        assertThatThrownBy(task::integrate).hasMessageContaining("ci.change-by");
-        assertThat(count("ACTCI")).isZero();
+    void usesSharedSnapshotWithoutQueryingDefinitionsDuringMapping() {
+        var cache = definitionLoader.load();
+        jdbc.update("UPDATE MAXIMO.ASSETATTRIBUTE SET DATATYPE='ALN' WHERE ASSETATTRID='COMPUTERSYSTEM_MEMORYSIZE'");
+        clearInvocations(jdbc);
+        var mapped = integration.mapData(List.of(source(7, "physical", "Host", BigDecimal.TEN)), cache);
+        verifyNoInteractions(jdbc);
+        assertThat(mapped.getFirst().specs()).anySatisfy(spec -> {
+            assertThat(spec.assetAttrId()).isEqualTo("COMPUTERSYSTEM_MEMORYSIZE");
+            assertThat(spec.numValue()).isEqualByComparingTo("10");
+        });
+        var refreshed = definitionLoader.load();
+        assertThat(refreshed.spec("PHYS", "COMPUTERSYSTEM_MEMORYSIZE", null).dataType()).isEqualTo("ALN");
+        assertThat(cache.spec("PHYS", "COMPUTERSYSTEM_MEMORYSIZE", null).dataType()).isEqualTo("NUMERIC");
+    }
+
+    @Test
+    void explicitlyAllowedAdditionalAttributeUsesNullTemplateAndLaterAdoptsRegisteredTemplate() {
+        jdbc.update("DELETE FROM MAXIMO.CLASSSPEC WHERE ASSETATTRID='COMPUTERSYSTEM_BIOSRELEASEDATE'");
+        persist(source(7, "physical", "Host", BigDecimal.TEN), definitionLoader.load());
+        var first = jdbc.queryForMap("""
+                SELECT ACTCISPECID,CLASSSPECID,DISPLAYSEQUENCE,MANDATORY,SECTION,LINKEDTOATTRIBUTE,ALNVALUE
+                FROM MAXIMO.ACTCISPEC WHERE ASSETATTRID='COMPUTERSYSTEM_BIOSRELEASEDATE'
+                """);
+        assertThat(first.get("CLASSSPECID")).isNull();
+        assertThat(((Number) first.get("DISPLAYSEQUENCE")).intValue()).isEqualTo(180);
+        assertThat(((Number) first.get("MANDATORY")).intValue()).isZero();
+        assertThat(first.get("SECTION")).isNull();
+        assertThat(first.get("LINKEDTOATTRIBUTE")).isNull();
+        assertThat(first.get("ALNVALUE")).isEqualTo("11/12/2021");
+
+        long attributeId = jdbc.queryForObject(
+                "SELECT ASSETATTRIBUTEID FROM MAXIMO.ASSETATTRIBUTE WHERE ASSETATTRID='COMPUTERSYSTEM_BIOSRELEASEDATE'", Long.class);
+        jdbc.update("""
+                INSERT INTO MAXIMO.CLASSSPEC (CLASSSTRUCTUREID,CLASSSPECID,ASSETATTRID,ASSETATTRIBUTEID)
+                VALUES ('PHYS',900,'COMPUTERSYSTEM_BIOSRELEASEDATE',?)
+                """, attributeId);
+        jdbc.update("""
+                INSERT INTO MAXIMO.CLASSSPECUSEWITH
+                    (CLASSSPECID,OBJECTNAME,SEQUENCE,MANDATORY,USEINSPEC,CLASSSTRUCTUREID,ASSETATTRID)
+                VALUES (900,'ACTCI',42,1,1,'PHYS','COMPUTERSYSTEM_BIOSRELEASEDATE')
+                """);
+        persist(source(7, "physical", "Host", BigDecimal.TEN), definitionLoader.load());
+        var second = jdbc.queryForMap("""
+                SELECT ACTCISPECID,CLASSSPECID,DISPLAYSEQUENCE,MANDATORY
+                FROM MAXIMO.ACTCISPEC WHERE ASSETATTRID='COMPUTERSYSTEM_BIOSRELEASEDATE'
+                """);
+        assertThat(second.get("ACTCISPECID")).isEqualTo(first.get("ACTCISPECID"));
+        assertThat(((Number) second.get("CLASSSPECID")).longValue()).isEqualTo(900);
+        assertThat(((Number) second.get("DISPLAYSEQUENCE")).intValue()).isEqualTo(42);
+        assertThat(((Number) second.get("MANDATORY")).intValue()).isEqualTo(1);
+    }
+
+    @Test
+    void doesNotUseAdditionalPathForUnmarkedAttributesOrInvalidExistingTemplates() {
+        jdbc.update("DELETE FROM MAXIMO.CLASSSPEC WHERE ASSETATTRID='COMPUTERSYSTEM_NAME'");
+        jdbc.update("UPDATE MAXIMO.CLASSSPECUSEWITH SET USEINSPEC=0 WHERE ASSETATTRID='COMPUTERSYSTEM_BIOSRELEASEDATE'");
+        var cache = definitionLoader.load();
+        assertThat(cache.additionalSpec("PHYS", "COMPUTERSYSTEM_BIOSRELEASEDATE", null, 180, false)).isNull();
+        persist(source(7, "physical", "Host", BigDecimal.TEN), cache);
+        assertThat(jdbc.queryForList("SELECT ASSETATTRID FROM MAXIMO.ACTCISPEC", String.class))
+                .doesNotContain("COMPUTERSYSTEM_NAME", "COMPUTERSYSTEM_BIOSRELEASEDATE")
+                .contains("COMPUTERSYSTEM_ROMVERSION");
+    }
+
+    @Test
+    void duplicateGlobalAttributeNamesDoNotOverwriteDefinitionsOrEnableAdditionalSpec() {
+        jdbc.update("DELETE FROM MAXIMO.CLASSSPEC WHERE ASSETATTRID='COMPUTERSYSTEM_BIOSRELEASEDATE'");
+        jdbc.update("""
+                INSERT INTO MAXIMO.ASSETATTRIBUTE (ASSETATTRIBUTEID,ASSETATTRID,DATATYPE)
+                VALUES (900,'COMPUTERSYSTEM_BIOSRELEASEDATE','NUMERIC')
+                """);
+        var cache = definitionLoader.load();
+        assertThat(cache.attribute(900).dataType()).isEqualTo("NUMERIC");
+        assertThat(cache.additionalSpec("PHYS", "COMPUTERSYSTEM_BIOSRELEASEDATE", null, 180, false)).isNull();
+        persist(source(7, "physical", "Host", BigDecimal.TEN), cache);
+        assertThat(jdbc.queryForList("SELECT ASSETATTRID FROM MAXIMO.ACTCISPEC", String.class))
+                .doesNotContain("COMPUTERSYSTEM_BIOSRELEASEDATE");
+    }
+
+    @Test
+    void organizationSpecificAttributeIsNotUsedAsGlobalAdditionalDefinition() {
+        jdbc.update("DELETE FROM MAXIMO.CLASSSPEC WHERE ASSETATTRID='COMPUTERSYSTEM_BIOSRELEASEDATE'");
+        jdbc.update("UPDATE MAXIMO.ASSETATTRIBUTE SET ORGID='ORG1' WHERE ASSETATTRID='COMPUTERSYSTEM_BIOSRELEASEDATE'");
+        assertThat(definitionLoader.load().additionalSpec(
+                "PHYS", "COMPUTERSYSTEM_BIOSRELEASEDATE", null, 180, false)).isNull();
+    }
+
+    @Test
+    void cacheSupportsDifferentPrefixesAndSectionsAndLimitsClassesToRegistry() {
+        jdbc.update("INSERT INTO MAXIMO.CLASSSTRUCTURE VALUES ('OTHER','SYS.OTHER')");
+        jdbc.update("INSERT INTO MAXIMO.CLASSUSEWITH VALUES ('OTHER','ACTCI')");
+        jdbc.update("""
+                INSERT INTO MAXIMO.ASSETATTRIBUTE (ASSETATTRIBUTEID,ASSETATTRID,DATATYPE)
+                VALUES (900,'MODELOBJECT_NAME','ALN')
+                """);
+        for (int i = 0; i < 3; i++) {
+            String classId = i == 2 ? "OTHER" : "PHYS";
+            String section = i == 0 ? null : "SLOT";
+            jdbc.update("""
+                    INSERT INTO MAXIMO.CLASSSPEC (CLASSSTRUCTUREID,CLASSSPECID,ASSETATTRID,ASSETATTRIBUTEID,SECTION)
+                    VALUES (?,?,'MODELOBJECT_NAME',900,?)
+                    """, classId, 900 + i, section);
+            jdbc.update("""
+                    INSERT INTO MAXIMO.CLASSSPECUSEWITH
+                        (CLASSSPECID,OBJECTNAME,SEQUENCE,MANDATORY,USEINSPEC,CLASSSTRUCTUREID,ASSETATTRID,SECTION)
+                    VALUES (?,'ACTCI',1,0,1,?,'MODELOBJECT_NAME',?)
+                    """, 900 + i, classId, section);
+        }
+        var cache = definitionLoader.load();
+        assertThat(cache.classification(CiClassification.COMPUTER).classStructureId()).isEqualTo("PHYS");
+        assertThat(cache.spec("PHYS", "MODELOBJECT_NAME", null).classSpecId()).isEqualTo(900);
+        assertThat(cache.spec("PHYS", "MODELOBJECT_NAME", "SLOT").classSpecId()).isEqualTo(901);
+        assertThat(cache.spec("OTHER", "MODELOBJECT_NAME", "SLOT")).isNull();
+        assertThat(cache.attribute(900)).isNotNull();
+    }
+
+    @Test
+    void organizationScopedTemplatesAreIgnoredInsteadOfCollidingWithGlobalOnes() {
+        jdbc.update("""
+                INSERT INTO MAXIMO.CLASSSPEC (CLASSSTRUCTUREID,CLASSSPECID,ASSETATTRID,ASSETATTRIBUTEID,ORGID)
+                VALUES ('PHYS',900,'COMPUTERSYSTEM_NAME',100,'ORG1')
+                """);
+        jdbc.update("""
+                INSERT INTO MAXIMO.CLASSSPECUSEWITH
+                    (CLASSSPECID,OBJECTNAME,SEQUENCE,MANDATORY,USEINSPEC,CLASSSTRUCTUREID,ASSETATTRID,ORGID)
+                VALUES (900,'ACTCI',7,1,1,'PHYS','COMPUTERSYSTEM_NAME','ORG1')
+                """);
+        jdbc.update("""
+                INSERT INTO MAXIMO.CLASSSPECUSEWITH
+                    (CLASSSPECID,OBJECTNAME,SEQUENCE,MANDATORY,USEINSPEC,CLASSSTRUCTUREID,ASSETATTRID,ORGID)
+                VALUES (101,'ACTCI',9,1,1,'PHYS','COMPUTERSYSTEM_SERIALNUMBER','ORG1')
+                """);
+
+        var cache = definitionLoader.load();
+
+        assertThat(cache.spec("PHYS", "COMPUTERSYSTEM_NAME", null).classSpecId()).isEqualTo(100);
+        assertThat(cache.spec("PHYS", "COMPUTERSYSTEM_SERIALNUMBER", null).displaySequence()).isEqualTo(101);
+        persist(source(7, "physical", "Host", BigDecimal.TEN), cache);
+        assertThat(text("D42:DEVICE:7", "NAME", "ALNVALUE")).isEqualTo("Host");
+        assertThat(text("D42:DEVICE:7", "SERIALNUMBER", "ALNVALUE")).isEqualTo("serial");
+    }
+
+    private void persist(ComputerSource source, CiDefinitionCache definitions) {
+        integration.putData(integration.mapData(List.of(source), definitions));
+    }
+
+    private ComputerSource withTimeAndUnits(ComputerSource source, String lastDiscovered,
+                                             String ramUnit, String speedUnit) {
+        return new ComputerSource(source.devicePk(), source.type(), source.name(), source.notes(),
+                source.serialNo(), source.uuid(), lastDiscovered, source.model(), source.manufacturer(),
+                source.ram(), ramUnit, source.totalCpus(), source.corePerCpu(), source.cpuSpeed(), speedUnit,
+                source.cpuType(), source.architecture(), source.primaryMac(), source.vmId(),
+                source.biosManufacturer(), source.biosVersion(), source.biosReleaseDate());
     }
 
     private void rejectBiosVersion() {
