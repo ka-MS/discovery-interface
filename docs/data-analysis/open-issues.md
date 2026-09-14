@@ -1,6 +1,7 @@
 # 미결 사항
 
-판단과 의견은 이 문서에만 둔다. 다른 문서는 관측된 값과 매핑 규칙만 기술한다.
+미결 항목의 상태·남은 결정과 관련 설계 링크를 관리한다.
+상세 구성안·대조표·선택 이유는 `design/`, 관측 사실은 `knowledge/`, 확정 매핑은 `data-mapping/`에 둔다.
 종료된 사항은 `close-issues.md` 에 둔다.
 GitHub 이슈로 옮긴 항목은 제목과 링크만 남긴다.
 
@@ -90,6 +91,29 @@ Maximo UI 는 `DPA*` 자식 테이블을 직접 읽지 않는다. 자식 위에 
 Device42의 본체 후보 View가 모두 별도 Actual CI를 뜻하지 않는다. 조사 결과는
 `data-mapping/ci/ci-targets.md`에 있다.
 
+DB·DB Instance 매핑 문서에 더해 Computer 원천 수집 항목 조사를 진행했다.
+각 유형의 조사 진행이 다른 후보의 독립 CI 포함 여부를 확정하는 것은 아니다.
+
+### Computer 관리 단위·포함 범위
+
+수집 추천안·필드별 대조표·관계 구성안은 [Computer CI 수집 설계](design/ci/computer.md)에 둔다.
+
+남은 결정:
+
+- Computer 물리·가상 분류, CI 기준 스펙에 BIOS·코어 수 추가를 합의했다. 수집 조건·필드 대응은 [Computer 매핑](data-mapping/ci/types/computer.md)에 작성·재검증했다. 새 서브타입은 대상 정의를 보완한다.
+- 개별 RAM·GPU의 포함 여부와 필요한 상세 관리 범위.
+- IP·Subnet·설치 SW의 관리 단위와 관계 구성 선택.
+
+### 사업 범위 기준 검토 — 2026-09-11
+
+사용자가 제공한 [사업 추진 범위](../requirements/business-scope.md)를 수집 요구사항의 기준으로 삼는다. 기존 DB·DB Instance 문서는 조사 결과이며 사업 요구사항 전체의 충족을 뜻하지 않는다.
+
+- 서버·네트워크·DB·WEB/WAS·기타 S/W 구분별로 원천과 적재 결과를 대조한다. 사업 구분과 구현의 수집 카테고리·CI 분류는 반드시 1:1일 필요는 없다.
+- DB는 설치된 DBMS의 제품명·버전·설치 경로 수집을 우선 검토한다. 기존 Instance 매핑이 이 요구를 충족하는지, 설치 소프트웨어·서비스 등 보강 원천이 필요한지 확인한다.
+- 개별 Database·Schema 및 Kubernetes 상세 개체는 사업 범위와 관리 필요성을 확인한 뒤 독립 CI 포함 여부를 정한다. 명시되지 않았다는 이유만으로 제외를 확정하지 않는다.
+- CPU·IP 등 상세 정보를 별도 CI로 만들지 속성으로 둘지, 설치·실행 위치 등 어떤 관계를 수집할지는 카테고리별 조사에서 결정한다.
+- 카테고리 하나의 본체·속성과 필요한 관계를 검증한 뒤 확장한다. 이 검토만으로 기존 분류 매핑을 변경하거나 새로운 관계 코드를 확정하지 않는다.
+
 확인된 중복 표현은 다음과 같다.
 
 - Database 전용 View는 `view_resource_v2`와 PK와 이름이 전건 일치한다.
@@ -97,15 +121,115 @@ Device42의 본체 후보 View가 모두 별도 Actual CI를 뜻하지 않는다
   `view_resource_v2`와 PK, identifier, 이름이 전건 일치한다.
 - Cloud Instance는 Device와 전건 1:1로 연결되지만 PK와 이름은 전건 동일하지 않다.
 - Database Instance는 Application Component와 연결되지만 PK와 이름은 다르다.
+- Database Instance도 동일 PK·이름의 Resource가 있다. Instance 본체와 중복 적재하지 않는다.
 
 ### 남은 결정
 
 - Actual CI로 관리할 개체 유형
 - `view_resource_v2`의 유형별 포함 목록
-- Cloud Instance와 Database Instance를 별도 CI로 만들지 여부
+- Cloud Instance의 별도 CI 여부와 DB Instance에 연결된 Application Component의 중복 적재 처리
 - Application Group의 상태별 포함 기준
 - Service Instance의 적재 단위와 상태별 포함 기준
 - Subnet, VLAN, VRF를 Actual CI로 관리할지 여부
+
+## ISSUE-11 Actual CI 분류·속성·관계와 식별자 매핑
+
+**상태:** DB·DB Instance의 일반 분류 사용 확정. 기준정보 보완과 공통 적재 정책 논의 필요.
+
+근거: [원천](data-mapping/ci/ci-targets.md), [분류·속성](knowledge/maximo/ci-classification.md),
+[관계 규칙](knowledge/maximo/ci-model.md). 대상 포함 여부는 ISSUE-8에서 결정한다.
+
+### 적재 범위 검토안
+
+정기 ETL은 ACTCI·ACTCISPEC·ACTCIRELATION으로 제한하고, 필요한 기준정보는
+별도 사전 구성으로 관리하는 안이다. 기존 분류·속성·관계 정의를 재사용할지,
+누락 설정을 보완하거나 새 정의를 만들지 먼저 결정한다.
+신규 분류는 CLASSSTRUCTURE·CLASSSPEC뿐 아니라 CLASSUSEWITH·CLASSSPECUSEWITH·
+ASSETATTRIBUTE 등 연결 정보와 Maximo 애플리케이션 동작까지 검증해야 한다.
+
+### 결정
+
+- DB·DB Instance는 엔진별로 분기하지 않고 일반 DB·DB Server 분류로 통일한다.
+- 확정된 원천·분류·속성 대응은 [DB](data-mapping/ci/types/database.md)와
+  [DB Instance](data-mapping/ci/types/database-instance.md)를 정본으로 삼는다.
+- SQL Server 전용 분류·속성 대응안은 채택하지 않는다.
+
+### 나머지 분류 선택 검토안
+
+이 표는 확정 매핑이 아니다. 이름이 유사하다는 이유만으로 의미가 같다고 보지 않는다.
+
+| 원천 대상 | 검토할 분류 | 남은 판단 |
+| --- | --- | --- |
+| Device | SYS.COMPUTERSYSTEM / SYS.VIRTUALCOMPUTERSYSTEM | 네트워크 장비·컨테이너·unknown을 포함한 유형별 분기 |
+| Application Component / Group | APP.APPLICATION 등 | 실행 구성요소와 논리 묶음의 구분 |
+| Business Service | PROCESS.BUSINESSSERVICE | 원천 개체와 분류 의미 대응 |
+| Service Instance | SERVICE.SERVICEINSTANCE | 발견된 서비스 프로세스와 분류 의미 대응; 누락 설정 보완 여부 |
+| Subnet / VLAN | NET.IPNETWORK / NET.VLAN | 관리 범위와 주소·번호의 식별 범위 |
+| Cloud / Kubernetes / VRF / Storage Array | 미선정 | 다른 명칭의 분류 재사용, 신규 분류 또는 제외 여부 |
+
+### 속성 대응 검토안
+
+타입·단위 근거는 분류 문서, 값 보유율·길이는 원천 문서에 둔다.
+Computer 본체·스펙의 현재 대응은 [Computer 매핑](data-mapping/ci/types/computer.md), 연관 CI 후보는 [수집 설계 대조표](design/ci/computer.md#원천-필드별-스펙-대조보완)를 참조한다.
+
+| 원천 필드 | 검토할 ASSETATTRID | 남은 판단 |
+| --- | --- | --- |
+| database.database_id / creation_date / collate / recovery_model / allocated_size | 일반 DB 분류에서 미선정 | 기존 속성 대응 또는 신규 속성 정의; DB ID 범위·날짜 형식·크기 단위 |
+| databaseinstance.database_count / connection_count / is_default_instance | 일반 DB Server 분류에서 미선정 | 기존 속성 대응 또는 신규 속성 정의; 연결 수의 수집 시점 |
+| subnet.mask_bits / vlan.number | IPNETWORK_PREFIXLENGTH / VLAN_VLANID | 대상 포함 및 분류 선택 |
+
+원천 명칭은 원천 문서와 유형별 문서에 기재한 View다.
+빈 속성 행 생성 여부, 섹션, 기본값·필수 여부·표시 순서의 적용 방식도 결정한다.
+compatibility_level의 일반 분류 속성 대응은 미정이며, DB 제품 버전으로 간주하지 않는다.
+
+### Computer 적재 전 확인 — 2026-09-14
+
+본체·스펙 대응 및 SQL은 [Computer 매핑](data-mapping/ci/types/computer.md), 관계 구성안은 [수집 설계](design/ci/computer.md)에 둔다.
+등록된 분류·스펙·관계는 [분류 조사 결과](knowledge/maximo/computer-classification-specs.md)에서 확인했다.
+
+- BIOS 출시일 원문용 COMPUTERSYSTEM_BIOSRELEASEDATE(ALN)와 두 ACTCI 분류 템플릿·적용 설정 등록. 현재 미등록이며 업무 테이블 변경은 수행하지 않았다.
+- sourceId=`D42:<원천 개체 종류>:<원천 PK>` 기반 본체·스펙 저장을 구현했다. 신규 숫자 ID는 각 Maximo 시퀀스 NEXT VALUE를 사용하며 기존 ID를 유지한다. 실제 Maximo 동시 채번·적재 검증은 남아 있다.
+- FQDN·SIGNATURE 대응과 MANAGEDSYSTEMNAME·SYSTEMBOARDUUID 원천 보강. 매핑 규칙에 따른 단위 표시·승격 후 전달 및 조건부 CPU·MAC 보강의 UI 확인.
+- 계정·언어·시간대는 명시적 실행 설정으로 구현했다. 현재 예외 전달·빈 스펙 생략 등의 동작은 [실행 준비](data-mapping/ci/types/computer-run.md)에 기록했다. 재시도·삭제·분류 변경 등 운영 정책 확장은 후속 결정이며 설치 SW의 경로 보강도 후속 유형에서 진행.
+- 관계의 방향·카디널리티·SWAPPED 적용과 IP 직접 연결·SW의 OS 연결 조건 검증.
+
+### DB·Instance 원천별 남은 판단
+
+- databaseinstance_fk 기준은 9쌍, instance_id·Resource.root_resource_fk 기준은 10쌍이다.
+  현재 관계 SQL은 FK 기준을 유지한다. 차이의 원인과 보강 우선순위를 확인한 후 1건의 관계를 추가할지 결정한다.
+- 일반 DB의 34개 속성에는 DB 내부 ID·생성 시각·정렬 규칙·호환성 수준·복구 모드·크기에
+  바로 대응시킬 전용 속성이 확인되지 않았다. 이름이 비슷한 DATABASE_ASSETID 등을 대신 쓰지 않고
+  기존 속성 재해석 또는 신규 정의 여부를 결정한다.
+- 일반 DB Server의 DB 수·연결 수·기본 Instance 여부와 JSON의 주소·CPU·메모리·시작 시각·메모리 상태는
+  Target 속성과 의미·단위·범위가 미확정이다. 호스트 자원 값을 Instance 속성으로 임의 대입하지 않는다.
+- db_type_id의 다른 엔진 코드 대응은 미확인이다. 제품명에는 database_type을 사용하므로
+  코드표 미확인이 이름 매핑을 막지는 않는다.
+- Resource.details.version은 APPSERVER_VERSIONSTRING에 원문으로 대응한다.
+  제품 버전 번호·빌드·OS를 분해하는 규칙은 만들지 않는다. 표본 밖 엔진의 키·형식은 추가 검증 대상이다.
+- Resource.notes는 두 유형 모두 빈 문자열이지만 DESCRIPTION 원천으로 대응한다.
+  원문 유지 조건과 별개로 비어 있지 않은 메모의 실제 적재·UI 표시는 미검증이다.
+
+### DB 매핑의 적재 전 보완
+
+- 일반 DB 분류의 선택 속성에 ASSETATTRIBUTEID 연결과 ACTCI용 CLASSSPECUSEWITH를
+  보완해야 한다. 적용 범위, 표시 순서·필수 여부·기본값을 정하고 별도 변경 승인을 받는다.
+- Instance→DB는 RELATION.CONTAINS를 사용하는 안이다. 일반 DB Server→일반 DB
+  분류쌍 규칙이 없으므로 카디널리티 1:N·포함 관계·부모 방향 설정을 확정하고 등록해야 한다.
+- 조회 SQL은 databaseinstance_fk가 없는 DB도 반환한다. 관계 부재를 이유로 본체를 제외하지 않는다.
+  다만 발견 시각·식별자 정책이 정해지기 전에는 적재 가능으로 간주하지 않는다.
+
+### 관계·필수값
+
+- Instance→장치 연결이 없는 표본은 보강 원천을 찾을지 관계 없이 둘지 결정한다.
+  관계 규칙이 존재한다는 이유로 실제 관계를 만들지 않는다.
+- Virtual Host의 원천 1:N을 기존 VIRTUALIZES 규칙의 카디널리티·대상 상위·
+  SWAPPED 설정에 어떻게 대응시킬지 검증한다. 기존 CI의 관계 행도 정합성 기준으로
+  그대로 복사하지 않는다.
+- ACTCINUM·GUID·CCIDISGUID·숫자 PK·MERGE 키를 구분한다. 유형 간 숫자 PK 충돌을
+  피할 식별 범위와 재수집 시 동일성 정책, 시퀀스 예약 공존 방식을 결정한다.
+- LASTSCANDT 누락을 제외·보강·대체 중 어떻게 처리할지 결정한다.
+  last_changed·적재 시각을 발견 시각으로 대체하는 규칙은 아직 없다.
+- LANGCODE·CHANGEBY·CHANGEDATE·기본값의 JDBC 적재 규칙 및 UI 표시를 검증한다.
 
 ## ISSUE-10 전력·설비 서브타입의 적재 제외 범위
 
