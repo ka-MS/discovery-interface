@@ -139,3 +139,59 @@ DISKDRIVE_ 15개와 MEDIAACCESSDEVICE_ 9개다.
 
 `DISKSIZE`라는 NUMERIC 속성이 `ORGID='EAGLENA'`로 따로 있다. 조직 전용 정의이므로
 적재 코드의 전역 템플릿 조회 대상이 아니다. 근거는 [CI 분류 모델](ci-classification.md)의 조직·사이트 범위 절.
+
+## 5. Computer와의 관계 규칙
+
+`ACTCIRELATION`의 유효성은 `RELATIONNUM` + 출발 `CLASSSTRUCTUREID` + 도착 `CLASSSTRUCTUREID`가
+`RELATIONRULES`에 있어야 성립한다. 근거는 [CI 모델](ci-model.md).
+추천 분류 네 개와 Computer 두 분류의 조합을 양방향으로 조회했다.
+
+### 규칙이 있는 조합
+
+| 출발 | 도착 | RELATIONNUM | CONTAINMENT | CARDINALITY | REVREL | SWAPPED |
+| --- | --- | --- | ---: | --- | ---: | ---: |
+| SYS.COMPUTERSYSTEM | DEV.DISKDRIVE | RELATION.CONTAINS | 1 | 1:N | 0 | 0 |
+| SYS.COMPUTERSYSTEM | SYS.FILESYSTEM | RELATION.CONTAINS | 1 | 1:N | 0 | 0 |
+| SYS.VIRTUALCOMPUTERSYSTEM | DEV.DISKDRIVE | RELATION.CONTAINS | 1 | 1:N | 0 | 0 |
+| SYS.VIRTUALCOMPUTERSYSTEM | SYS.FILESYSTEM | RELATION.CONTAINS | 1 | 1:N | 0 | 0 |
+| SYS.OPERATINGSYSTEM | SYS.COMPUTERSYSTEM | RELATION.INSTALLEDON | 1 | N:1 | 1 | 1 |
+| SYS.OPERATINGSYSTEM | SYS.COMPUTERSYSTEM | RELATION.RUNSON | 0 | 1:1 | 1 | 1 |
+| SYS.OPERATINGSYSTEM | SYS.VIRTUALCOMPUTERSYSTEM | RELATION.INSTALLEDON | 1 | N:1 | 1 | 1 |
+| SYS.OPERATINGSYSTEM | SYS.VIRTUALCOMPUTERSYSTEM | RELATION.RUNSON | 0 | 1:1 | 1 | 1 |
+
+Disk·Filesystem은 Computer가 출발점이고, OS는 OS가 출발점이다. 방향이 서로 반대다.
+OS는 두 코드가 있다. `INSTALLEDON`은 포함 관계에 N:1, `RUNSON`은 비포함에 1:1이다.
+
+### IP는 직접 규칙이 없다
+
+`SYS.*COMPUTERSYSTEM`과 `NET.IPADDRESS` 사이에는 **양방향 모두 규칙이 0건**이다.
+`NET.IPADDRESS`가 걸린 규칙은 135건 있으나 Computer와의 직접 조합은 없다.
+
+CDM이 정의한 경로는 인터페이스를 거친다.
+
+| 출발 | 도착 | RELATIONNUM | CONTAINMENT | CARDINALITY |
+| --- | --- | --- | ---: | --- |
+| SYS.COMPUTERSYSTEM | NET.IPINTERFACE | RELATION.CONTAINS | 1 | 1:N |
+| SYS.VIRTUALCOMPUTERSYSTEM | NET.IPINTERFACE | RELATION.CONTAINS | 1 | 1:N |
+| NET.IPINTERFACE | NET.IPADDRESS | RELATION.BINDSTO | 0 | 1:1 |
+| NET.IPADDRESS | NET.IPNETWORK | RELATION.MEMBEROF | 0 | 1:1 |
+
+즉 `Computer → IPINTERFACE → IPADDRESS`다. 원천도 같은 모양이다.
+`view_ipaddress_v2.netport_fk` → `view_netport_v1.device_fk`가 이 경로에 대응하며,
+`subnet_fk`는 `NET.IPNETWORK`(`RELATION.MEMBEROF`)에 대응한다.
+
+다만 원천에서 `netport_fk`를 가진 IP는 78 / 103건뿐이다. 나머지는 인터페이스를 거치지 않는다.
+IP를 어떻게 연결할지는 수집 구성안에서 정한다.
+
+### RELATION 정의의 USEWITH
+
+조합에 쓰인 관계 코드 7개의 `RELATION.USEWITH`는 **전부 `CI`**다. `ACTCI`는 없다.
+
+| RELATIONNUM | TYPE | USEWITH |
+| --- | --- | --- |
+| RELATION.BOOTSFROM, CONTAINS, DEFINEDUSING, INSTALLEDON, REALIZES, RUNSON, VIRTUALIZES | UNIDIRECTIONAL | CI |
+
+`RELATION`에 `USEWITH='ACTCI'` 행이 0건이라는 기존 관측([CI 모델](ci-model.md))과 일치한다.
+`RELATIONRULES`의 분류쌍 규칙은 존재하므로 `ACTCIRELATION`의 분류쌍 조건은 만족하지만,
+관계 정의 자체가 ACTCI용으로 표시돼 있지 않다. 실제 적재·UI 표시 가능 여부는 미검증이다.
+이 차이는 ISSUE-11에서 다룬다.
