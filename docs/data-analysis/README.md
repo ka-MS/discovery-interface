@@ -14,6 +14,7 @@ Device42(원천)와 Maximo(타겟) 사이의 매핑 작업 문서다.
 
 수집 구성·관리 단위를 검토할 때는 해당 `design/` 문서도 확인한다.
 Computer CI는 [수집 설계](design/ci/computer.md)에 추천안·필드별 대조표·관계 구성안을 둔다.
+OS·Disk·Filesystem·IP는 [os](design/ci/os.md)·[disk](design/ci/disk.md)·[filesystem](design/ci/filesystem.md)·[ip](design/ci/ip.md)에 같은 구성으로 둔다.
 
 ## 조사 대상 서버
 

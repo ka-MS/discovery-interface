@@ -102,7 +102,26 @@ DB·DB Instance 매핑 문서에 더해 Computer 원천 수집 항목 조사를 
 
 - Computer 물리·가상 분류, CI 기준 스펙에 BIOS·코어 수 추가를 합의했다. 수집 조건·필드 대응은 [Computer 매핑](data-mapping/ci/types/computer.md)에 작성·재검증했다. 새 서브타입은 대상 정의를 보완한다.
 - 개별 RAM·GPU의 포함 여부와 필요한 상세 관리 범위.
-- IP·Subnet·설치 SW의 관리 단위와 관계 구성 선택.
+- Subnet·설치 SW의 관리 단위와 관계 구성 선택. IP는 아래 절에서 다룬다.
+
+### OS·Disk·Filesystem·IP 관리 단위 — 2026-09-15
+
+**네 유형을 독립 ACTCI로 관리하기로 합의했다.** Computer 스펙으로 흡수하지 않는다.
+근거는 장비당 개수(파일시스템 5.3 / 6.1, IP 1.5, 디스크 1.3 / 1.0개)와 ACTCISPEC 키가
+`(ACTCINUM, ASSETATTRID, SECTION)`이라 다중 개체를 담을 수 없다는 점이다.
+OS는 장비당 정확히 1개지만 EOL·EOS를 가진 독립 관리 대상이라 CI로 분리한다.
+
+수집 구성안은 [os](design/ci/os.md)·[disk](design/ci/disk.md)·[filesystem](design/ci/filesystem.md)·[ip](design/ci/ip.md),
+확정 매핑은 `data-mapping/ci/types/` 의 같은 이름 문서다.
+
+남은 결정:
+
+- **IP의 관계 경로.** Computer와 `NET.IPADDRESS` 사이에 `RELATIONRULES`가 양방향 0건이다. CDM 경로는 `Computer → NET.IPINTERFACE → NET.IPADDRESS`다. Network Interface를 CI로 함께 도입할지, IP를 관계 없이 적재할지, IP를 다음 단계로 미룰지 정해야 한다. 범위 확대 여부라 사용자 결정이 필요하다.
+- **Disk·IP의 독립 CI 유지 여부.** 실제로 채울 수 있는 속성이 Disk 3개(모델·시리얼·용량), IP 1개(주소)뿐이다. 제조사·펌웨어·미디어 유형은 원천이 전건 비어 있다.
+- **컨테이너·가상 파일시스템 선별.** `overlay` 38 / 62건, `devtmpfs` 9 / 10건, `squashfs` 0 / 8건이다. 경로에 컨테이너 ID가 들어가 재기동 시 원천 PK가 바뀌면 매 실행마다 새 CI가 생긴다. 제외를 추천하나 목록이 확정되지 않았다.
+- **Subnet CI 도입 여부.** IP의 `mask_bits`가 전건 보유인데 `NET.IPADDRESS`에 담을 자리가 없다. `NET.IPNETWORK`가 별도 분류다.
+- **수집 대상 범위.** OS는 Computer 연결분이 30% / 80%로 두 서버 차이가 크다. IP는 17% / 18%다. Filesystem·Disk는 전건 Computer 연결이라 판단이 필요 없다.
+- **Disk 원천 커버리지.** 표본 Computer 95 / 85대 중 디스크를 가진 장비가 18 / 19대뿐이다. 사업 범위 「서버 — Disk」 요구를 이 원천으로 충족할 수 있는지 운영 D42에서 확인해야 한다.
 
 ### 사업 범위 기준 검토 — 2026-09-11
 
@@ -166,6 +185,22 @@ ASSETATTRIBUTE 등 연결 정보와 Maximo 애플리케이션 동작까지 검�
 | Service Instance | SERVICE.SERVICEINSTANCE | 발견된 서비스 프로세스와 분류 의미 대응; 누락 설정 보완 여부 |
 | Subnet / VLAN | NET.IPNETWORK / NET.VLAN | 관리 범위와 주소·번호의 식별 범위 |
 | Cloud / Kubernetes / VRF / Storage Array | 미선정 | 다른 명칭의 분류 재사용, 신규 분류 또는 제외 여부 |
+
+### OS·Disk·Filesystem·IP 조사에서 드러난 항목 — 2026-09-15
+
+근거는 [분류 조사](knowledge/maximo/ci-component-classifications.md)와
+[원천 조사](knowledge/device42/ci-component-inventory.md)다.
+
+- **관계 정의의 `USEWITH`가 전부 `CI`다.** 채택 후보인 `RELATION.CONTAINS`·`INSTALLEDON`·`RUNSON`을 포함해 조합에 쓰인 7개 모두 `ACTCI`가 아니다. `RELATIONRULES`의 분류쌍 조건은 만족하므로 `ACTCIRELATION`의 유효성 검사는 통과하지만, 실제 적재·UI 표시 가능 여부는 미검증이다. `RELATION`에 `USEWITH='ACTCI'` 행이 0건이라는 기존 관측과 일치한다.
+- **OS의 EOL·EOS를 담을 속성이 없다.** 원천이 48 / 22, 47 / 22건 보유하고 사업 범위 「나. EOS 관리」에 직결되는데 `SYS.OPERATINGSYSTEM`에 수명주기 날짜 속성이 없다. 전역 속성 신규 등록이 필요하다. 이번 범위에서는 제외를 추천했다.
+- **Filesystem 용량 단위.** 원천에 단위 컬럼이 없다. 표본상 MB로 해석되며 `MEASUREUNITID='MBYTE'` 지정을 추천한다.
+- **Disk 용량 단위.** `hdsize_unit`이 GB·TB 혼재다. `TBYTE` 코드 존재가 미확인이며 GB 정규화가 대안이다.
+- **마운트 경로 길이.** 컨테이너 경로가 약 130자다. `ACTCINAME` 192자, `ALNVALUE` 254자 한계에 근접한다. 절단·생략 규칙이 필요하다.
+- **식별자 접두어.** `view_part_v1`이 CPU·RAM·GPU와 공용이라 `D42:PART:` 대 `D42:DISK:` 선택이 남는다.
+- **`IPADDRESS_ADDRESSTYPE` 코드 규약** 미확인.
+- **중복 속성 선택.** OS의 `VERSIONSTRING`·`NAME`, IP의 `STRINGNOTATION`, Disk의 `MEDIAACCESSDEVICE_NAME`이 각각 다른 속성과 중복이다. 한쪽만 채택해야 한다.
+- **`MODELOBJECT_CDMSOURCE`·`SOURCETOKEN` 채택 여부.** 네 분류 모두 공통으로 갖는다. 연계 출처와 원천 키를 남기는 용도로 쓸지 정해야 한다.
+- **LASTSCANDT 원천.** IP만 `last_discovered`를 전건 갖는다. OS·Disk·Filesystem은 부모 Computer의 값을 쓰는 안을 추천했다.
 
 ### 속성 대응 검토안
 
