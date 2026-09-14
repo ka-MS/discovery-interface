@@ -30,10 +30,7 @@ public class AssetIntegrationJob implements IntegrationJob {
 
             try {
                 log.info("{} 작업을 시작합니다.", taskName);
-                i++;
-
                 task.integrate();
-
                 log.info("{} 작업이 완료되었습니다.", taskName);
             } catch (Exception e) {
                 failures.add(e);

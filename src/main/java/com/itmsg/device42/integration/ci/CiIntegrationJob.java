@@ -1,4 +1,4 @@
-package com.itmsg.device42.integration.software;
+package com.itmsg.device42.integration.ci;
 
 import com.itmsg.device42.integration.IntegrationJob;
 import org.slf4j.Logger;
@@ -8,14 +8,13 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.List;
 
-@Component("software")
-public class SoftwareIntegrationJob implements IntegrationJob {
+@Component("ci")
+public class CiIntegrationJob implements IntegrationJob {
+    private static final Logger log = LoggerFactory.getLogger(CiIntegrationJob.class);
 
-    private static final Logger log = LoggerFactory.getLogger(SoftwareIntegrationJob.class);
+    private final List<CiIntegrationTask> tasks;
 
-    private final List<SoftwareIntegrationTask> tasks;
-
-    public SoftwareIntegrationJob(List<SoftwareIntegrationTask> tasks) {
+    public CiIntegrationJob(List<CiIntegrationTask> tasks) {
         this.tasks = tasks;
     }
 
@@ -23,7 +22,7 @@ public class SoftwareIntegrationJob implements IntegrationJob {
     public void run() {
         List<Exception> failures = new ArrayList<>();
 
-        for (SoftwareIntegrationTask task : tasks) {
+        for (CiIntegrationTask task : tasks) {
             String taskName = task.getClass().getSimpleName();
 
             try {
@@ -32,7 +31,8 @@ public class SoftwareIntegrationJob implements IntegrationJob {
                 log.info("{} 작업이 완료되었습니다.", taskName);
             } catch (Exception e) {
                 failures.add(e);
-                log.error("{} 작업에 실패했습니다. 다음 작업을 계속합니다.", taskName, e);
+                log.error("{} 작업에 실패했습니다. 다음 작업을 계속합니다.",
+                        taskName, e);
             }
         }
     }
