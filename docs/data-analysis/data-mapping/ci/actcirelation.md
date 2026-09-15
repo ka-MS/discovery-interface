@@ -5,7 +5,7 @@
 > 메타데이터 재조회: 2026-09-15 · MAXIMO / BLUDB.
 > 관계 설계: [Computer 중심 관계](../../design/ci/relations.md).
 > 관측 근거: [관계 정의](../../knowledge/maximo/computer-ci-relations.md).
-> 아래 저장 규칙·MERGE는 구현 제안이며 **실제 관계 INSERT/UPDATE와 UI·승격 검증은 수행하지 않았다**.
+> 아래 공통 MERGE는 미실행 초안이다. OS → 물리 Computer 한 쌍은 **별도 INSERT·CI 승격·UI 표시를 검증했다**. [샘플 결과](../../knowledge/maximo/computer-ci-relations.md#oscomputer-승격-샘플-검증).
 
 ## 1. 관계 키
 
@@ -32,7 +32,7 @@ Computer 관계 조사 결과를 DB 관계의 승인으로 해석하지 않는�
 | SOURCECI | 소스 실제 구성 품목 번호 | UPPER(150) | N | 변환 | 유형별 원천 연결 키 | 유형 매핑의 출발 ACTCINUM |
 | TARGETCI | 대상 실제 구성 품목 번호 | UPPER(150) | N | 변환 | 유형별 원천 연결 키 | 유형 매핑의 도착 ACTCINUM |
 | RELATIONNUM | 관계 | UPPER(192) | N | 상수 | 확정할 CiRelationRule | RELATION·RELATIONRULES에서 확인된 정확한 코드 |
-| SWAPPED | 스왑됨 | YORN(1) | Y | 상수 | 사전 정의한 저장 방향 | 이번 정방향 매핑은 0 제안. 규칙 SWAPPED를 그대로 복사하지 않음. 표시·승격 검증 필요 |
+| SWAPPED | 스왑됨 | YORN(1) | Y | 상수 | 사전 정의한 저장 방향 | OS → 물리 Computer는 0으로 단건 승격·표시 확인. 다른 관계는 검증 필요. 규칙 SWAPPED를 그대로 복사하지 않음 |
 | CHANGEBY | 변경자 | UPPER(100) | Y | 상수 | 기존 CI 적재 규약 | Device42 |
 | CHANGEDATE | 변경 날짜 | DATETIME(10) | Y | 변환 | 관계 매핑 시각 | 기존 CI와 같은 JVM 기본 시간대. 원천 발견 시각이 아님 |
 | ANCESTORCI | 상위 실제 CI | UPPER(150) | Y | 원천없음 | 별도 상위 원천 없음 | 신규 NULL. SOURCECI를 무조건 복사하지 않음 |
@@ -116,7 +116,7 @@ D42의 논리키 관계 SELECT와 Maximo의 분류쌍·키·참조 메타데이�
 
 1. 양 끝 정상/누락/분류 불일치/규칙 부재별 적재 여부.
 2. 재실행 시 관계 한 행 유지와 ACTCIRELATIONID 보존.
-3. OS 방향·SWAPPED·상위 탐색 및 CI 승격 후 관계 보존.
+3. OS → 물리 Computer 단건은 SWAPPED=0, CI 승격 후 관계 방향·부모 보존 확인. 다른 분류쌍·복수 관계·탐색은 추가 검증.
 4. 관계 하나의 저장 실패 뒤 나머지 관계 계속 처리.
 5. 같은 유형의 뒤쪽 배치에 호스트가 있는 경우 관계 누락 방지.
 6. 여러 장비 배열·여러 IP를 첫 번째 하나로 줄이지 않는지.

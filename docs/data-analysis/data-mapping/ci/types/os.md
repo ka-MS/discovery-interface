@@ -2,7 +2,7 @@
 
 > Target: MAXIMO.ACTCI · MAXIMO.ACTCISPEC
 > 원천·메타데이터 확인: 2026-09-15 · D42 .68 / .35 · Maximo BLUDB
-> 구현: OsCiIntegrate · 상태: 본체·스펙 적재 구현 및 자동 테스트 완료. 관계 미적재. 실제 Maximo 적재·UI 검증은 미완료.
+> 구현: OsCiIntegrate · 상태: 본체·스펙 적재 구현 및 자동 테스트 완료. 관계 자동 적재 미구현. OS → 물리 Computer 단건 INSERT·CI 승격·관련 CI 표시 확인. 속성별 검증은 별도.
 > 분류 선택 이유·관계 추천안·미결 근거는 [OS 수집 설계](../../../design/ci/os.md)에 있다.
 
 공통 컬럼 정의는 [ACTCI](../actci.md), [ACTCISPEC](../actcispec.md)가 소유한다.
@@ -15,7 +15,7 @@
 | 분류 | `SYS.OPERATINGSYSTEM` 한 개. 물리·가상을 구분하지 않는다 |
 | ACTCINUM | `D42:DEVICEOS:<deviceos_pk>` |
 | 스펙 참조 | ACTCINUM·CLASSSTRUCTUREID는 본체와 동일, REFOBJECTID=ACTCIID |
-| 관계 | 6절에 원천·분류쌍 매핑 작성. 저장 구현·UI 검증은 별도 |
+| 관계 | 6절에 원천·분류쌍 매핑 작성. 물리 Computer 단건 승격·UI 확인, 자동 저장 구현은 별도 |
 
 분류명으로 CLASSSTRUCTUREID를 조회한다. 환경별 ID를 상수로 고정하지 않는다.
 
@@ -91,7 +91,7 @@ LIMIT %d OFFSET %d
 | OPERATINGSYSTEM_VERSIONSTRING | CI 기준 밖. OSVERSION과 중복이라 미채택 |
 | KERNELARCHITECTURE 승격 전달 | `SYS.OPERATINGSYSTEM`은 승격 범위에서 `CI.OS`로 매핑되는데 `CI.OS`에 이 속성이 없다. 누락 가능. 미검증. ISSUE-11 |
 | MODELOBJECT_CDMSOURCE·SOURCETOKEN | 미채택. CI 계열 분류에 `MODELOBJECT_` 속성이 0개라 승격에서 전달되지 않고, `ACTCINUM`·`CHANGEBY`와 중복이다 |
-| 관계 | 6절의 RELATION.INSTALLEDON 매핑. ACTCI 관계 적재·SWAPPED·UI 검증 미완료. USEWITH=CI만으로 저장 불가라고 판단하지 않는다. ISSUE-11 |
+| 관계 | 6절의 RELATION.INSTALLEDON 매핑. 물리 Computer 단건은 SWAPPED=0 적재·승격·UI 확인. 가상 Computer·자동 저장은 미검증. ISSUE-11 |
 | 수집 대상 범위 | Computer 연결분만 추천. 두 서버 비율 30% / 80%로 차이 큼. ISSUE-8 |
 
 ## 6. 관계 매핑 — 2026-09-15
@@ -106,7 +106,10 @@ LIMIT %d OFFSET %d
 출발 SYS.OPERATINGSYSTEM → 도착 SYS.COMPUTERSYSTEM 또는 SYS.VIRTUALCOMPUTERSYSTEM.
 N:1, CONTAINMENT=1, REVRELATIONSHIP=1이며 Computer가 상위다.
 규칙의 SWAPPED=1을 이유로 양 끝을 다시 뒤집거나 관계 행에 무조건 1을 복사하지 않는다.
-[ACTCIRELATION](../actcirelation.md)의 정방향 저장안과 후속 UI 검증을 따른다.
+[ACTCIRELATION](../actcirelation.md)의 정방향 저장안을 따른다.
+2026-09-15 OS → 물리 Computer 한 쌍은 SWAPPED=0으로 INSERT한 뒤 기존 승격 범위에서
+CI 및 관계 생성을 확인했다. [검증 결과](../../../knowledge/maximo/computer-ci-relations.md#oscomputer-승격-샘플-검증).
+가상 Computer의 자식 승격은 별도 범위 설정·검증이 필요하다.
 RUNSON은 실행 의미를 추가하므로 단순 device_fk 연결로 함께 생성하지 않는다.
 
 Computer task 완료 후 OS 본체 배치 저장 뒤 생성한다.

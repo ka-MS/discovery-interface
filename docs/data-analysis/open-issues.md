@@ -192,7 +192,7 @@ ASSETATTRIBUTE 등 연결 정보와 Maximo 애플리케이션 동작까지 검�
 근거는 [분류 조사](knowledge/maximo/ci-component-classifications.md)와
 [원천 조사](knowledge/device42/ci-component-inventory.md)다.
 
-- **관계 정의의 `USEWITH`가 전부 `CI`다.** 채택 후보인 `RELATION.CONTAINS`·`INSTALLEDON`·`RUNSON`을 포함해 조합에 쓰인 7개 모두 `ACTCI`가 아니다. `RELATIONRULES`의 분류쌍 조건은 만족하므로 `ACTCIRELATION`의 유효성 검사는 통과하지만, 실제 적재·UI 표시 가능 여부는 미검증이다. `RELATION`에 `USEWITH='ACTCI'` 행이 0건이라는 기존 관측과 일치한다.
+- **관계 정의의 `USEWITH`가 전부 `CI`다.** 조회한 7개 코드에 `ACTCI`는 없다. OS → 물리 Computer의 `RELATION.INSTALLEDON`은 실제 ACTCI 관계 INSERT·승격·CI 화면 표시를 확인했다. 다른 관계는 별도 검증한다. [샘플 결과](knowledge/maximo/computer-ci-relations.md#oscomputer-승격-샘플-검증).
 - **OS의 EOL·EOS를 담을 속성이 없다.** 원천이 48 / 22, 47 / 22건 보유하고 사업 범위 「나. EOS 관리」에 직결되는데 `SYS.OPERATINGSYSTEM`에 수명주기 날짜 속성이 없다. 전역 속성 신규 등록이 필요하다. 이번 범위에서는 제외를 추천했다.
 - **Filesystem 용량 단위.** 원천에 단위 컬럼이 없다. 표본상 MB로 해석되며 `MEASUREUNITID='MBYTE'` 지정을 추천한다.
 - **Disk 용량 단위.** `hdsize_unit`이 GB·TB 혼재다. `TBYTE` 코드 존재가 미확인이며 GB 정규화가 대안이다.
@@ -269,9 +269,11 @@ compatibility_level의 일반 분류 속성 대응은 미정이며, DB 제품 �
 
 2026-09-15 Computer 관계 조사: [관계 설계](design/ci/relations.md),
 [공통 저장 초안](data-mapping/ci/actcirelation.md).
-Disk·Filesystem 포함 및 OS 설치 관계의 원천·분류쌍 매핑을 작성했다. 관계 쓰기는 수행하지 않았다.
+Disk·Filesystem 포함 및 OS 설치 관계의 원천·분류쌍 매핑을 작성했다.
+OS → 물리 Computer 한 쌍은 SWAPPED=0으로 INSERT한 뒤 CI 승격·관계 표시·부모 보존을 확인했다.
+[검증 기록](knowledge/maximo/computer-ci-relations.md#oscomputer-승격-샘플-검증). 제품 관계 적재·공통 MERGE는 미구현/미검증이다.
 남은 결정은 VM–호스트/Interface–IP의 1:1 설정 대조, Interface CI 도입과 포트 미연결·공유 IP 경로,
-ACTCIRELATION.SWAPPED·UI·승격 검증이다. 규칙 SWAPPED를 행에 그대로 복사하지 않는다.
+다른 분류쌍의 ACTCIRELATION.SWAPPED·UI·승격 검증이다. 규칙 SWAPPED를 행에 그대로 복사하지 않는다.
 관계의 이동·삭제는 ISSUE-7과 함께 검토하며 이번 조사에서 정책을 확정하지 않는다.
 
 - Instance→장치 연결이 없는 표본은 보강 원천을 찾을지 관계 없이 둘지 결정한다.
