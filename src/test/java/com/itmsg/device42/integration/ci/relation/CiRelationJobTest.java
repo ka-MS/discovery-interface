@@ -2,6 +2,7 @@ package com.itmsg.device42.integration.ci.relation;
 
 import com.itmsg.device42.config.Device42ConnectionFactory;
 import com.itmsg.device42.dto.maximo.ci.ActCiRelationUpsert;
+import com.itmsg.device42.integration.ci.FilesystemCiIntegrate;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -17,6 +18,41 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 class CiRelationJobTest {
+
+    @Test
+    void definesEveryRelationPlannedForThisStage() {
+        assertThat(CiRelationSource.values()).containsExactly(
+                CiRelationSource.OS_INSTALLED_ON_COMPUTER,
+                CiRelationSource.COMPUTER_CONTAINS_DISK,
+                CiRelationSource.COMPUTER_CONTAINS_FILESYSTEM);
+        assertThat(CiRelationSource.COMPUTER_CONTAINS_DISK.relationNum()).isEqualTo("RELATION.CONTAINS");
+        assertThat(CiRelationSource.COMPUTER_CONTAINS_FILESYSTEM.relationNum()).isEqualTo("RELATION.CONTAINS");
+    }
+
+    @Test
+    void diskRelationKeepsHardDiskFilter() {
+        assertThat(CiRelationSource.COMPUTER_CONTAINS_DISK.pageQuery(0, 10))
+                .contains("pm.type_name = 'Hard Disk'")
+                .contains("'D42:DEVICE:'")
+                .contains("'D42:PART:'");
+        assertThat(CiRelationSource.COMPUTER_CONTAINS_DISK.countQuery())
+                .contains("pm.type_name = 'Hard Disk'");
+    }
+
+    @Test
+    void filesystemRelationExpandsDeviceArrayAndReusesExcludedTypes() {
+        String page = CiRelationSource.COMPUTER_CONTAINS_FILESYSTEM.pageQuery(0, 10);
+        assertThat(page)
+                .contains("ANY(m.device_fks)")
+                .doesNotContain("DISTINCT ON")
+                .contains("'D42:MOUNTPOINT:'");
+        assertThat(CiRelationSource.COMPUTER_CONTAINS_FILESYSTEM.countQuery())
+                .contains("ANY(m.device_fks)")
+                .doesNotContain("EXISTS");
+        for (String excluded : FilesystemCiIntegrate.EXCLUDED_TYPES) {
+            assertThat(page).as("제외 타입 %s", excluded).contains("'" + excluded + "'");
+        }
+    }
 
     @Test
     void everyPageQueryOrdersByRelationKeyAndPages() {
@@ -69,6 +105,41 @@ class CiRelationJobTest {
 
         verify(factory, times(CiRelationSource.values().length)).openConnection();
         verifyNoInteractions(writer);
+    }
+
+    /**
+     * continuesAfterOneRelationSourceFails 는 실패한 소스 자신의 예외가 잡힌다는 것만 증명한다.
+     * 이 테스트는 첫 소스가 실패해도 뒤 소스가 실제로 실행되어 데이터를 적재한다는 것을 증명한다.
+     */
+    @Test
+    void continuesToLaterRelationSourcesAfterFirstSourceFailsToOpenConnection() throws Exception {
+        var factory = mock(Device42ConnectionFactory.class);
+        var connection = mock(Connection.class);
+        var statement = mock(Statement.class);
+        when(factory.openConnection())
+                .thenThrow(new IllegalStateException("device42 down"))
+                .thenReturn(connection);
+        when(connection.createStatement()).thenReturn(statement);
+
+        var countRs = mock(ResultSet.class);
+        when(countRs.next()).thenReturn(true, false);
+        when(countRs.getLong(1)).thenReturn(1L);
+
+        var pageRs = mock(ResultSet.class);
+        when(pageRs.next()).thenReturn(true, false);
+        when(pageRs.getString("sourceci")).thenReturn("D42:DEVICE:1");
+        when(pageRs.getString("targetci")).thenReturn("D42:PART:1");
+
+        when(statement.executeQuery(anyString())).thenAnswer(invocation ->
+                invocation.<String>getArgument(0).contains("COUNT(*)") ? countRs : pageRs);
+
+        var writer = mock(ActCiRelationWriter.class);
+        when(writer.write(anyList())).thenReturn(1);
+
+        new CiRelationJob(factory, writer).run();
+
+        verify(factory, atLeast(CiRelationSource.values().length)).openConnection();
+        verify(writer, atLeastOnce()).write(anyList());
     }
 
     /**

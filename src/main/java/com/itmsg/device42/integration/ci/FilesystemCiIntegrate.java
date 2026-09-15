@@ -35,7 +35,7 @@ public class FilesystemCiIntegrate implements CiIntegrationTask {
      * 적재하지 않는 파일시스템 종류. 컨테이너 런타임·커널 가상 파일시스템이다.
      * 경로에 컨테이너 ID가 들어가 재기동 시 원천 PK가 바뀌면 매 실행마다 새 CI가 쌓인다.
      */
-    static final List<String> EXCLUDED_TYPES = List.of("overlay", "devtmpfs", "squashfs", "efivarfs");
+    public static final List<String> EXCLUDED_TYPES = List.of("overlay", "devtmpfs", "squashfs", "efivarfs");
 
     private static final String EXCLUDED_TYPES_SQL = EXCLUDED_TYPES.stream()
             .map(type -> "'" + type + "'").collect(Collectors.joining(", "));
