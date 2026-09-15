@@ -97,7 +97,9 @@ LIMIT %d OFFSET %d
 ## 6. 관계 매핑 — 2026-09-15
 
 [관계 설계](../../../design/ci/relations.md)의 우선 구현 매핑이다.
-현재 OsCiIntegrate의 본체·스펙 저장과 별개로, 관계 적재는 미구현이다.
+관계 적재는 미구현이다. OsCiIntegrate 안이 아니라 모든 CI 본체 적재가 끝난 뒤의
+[관계 단계](../../../design/ci/relations.md#실행-위치--ci-본체-적재-이후-별도-단계)에서 저장하며,
+조회 정의는 연결 키를 가진 OS 도메인이 소유한다.
 
 | 의미 | SOURCECI | TARGETCI | RELATIONNUM |
 | --- | --- | --- | --- |
@@ -112,8 +114,8 @@ CI 및 관계 생성을 확인했다. [검증 결과](../../../knowledge/maximo/
 가상 Computer의 자식 승격은 별도 범위 설정·검증이 필요하다.
 RUNSON은 실행 의미를 추가하므로 단순 device_fk 연결로 함께 생성하지 않는다.
 
-Computer task 완료 후 OS 본체 배치 저장 뒤 생성한다.
-아래 SQL은 두 서버에서 실행 확인했으며, task 내부에서는 이미 읽은 deviceos_pk·device_fk로 같은 쌍을 만든다.
+아래 SQL은 두 서버에서 실행 확인했으며 관계 단계의 OS 조회 정의가 그대로 쓴다.
+본체 조회 결과를 재사용하지 않는다.
 
 ```sql
 WITH computer AS (SELECT d.* FROM view_device_v2 d WHERE d.type IN ('physical','virtual')

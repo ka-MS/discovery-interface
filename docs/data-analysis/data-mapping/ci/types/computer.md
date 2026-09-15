@@ -263,20 +263,21 @@ TYPE의 ComputerSystem 값은 [IBM ComputerSystem 매핑](https://www.ibm.com/do
 
 관측·선택 근거는 [관계 설계](../../../design/ci/relations.md),
 Target 컬럼과 저장 SQL 제안은 [ACTCIRELATION](../actcirelation.md)을 참조한다.
-관계 본체 적재 코드는 이번 조사에서 구현하지 않았다.
+관계 적재 코드는 아직 구현하지 않았다. 관계는 본체 task 안이 아니라
+모든 CI 본체 적재가 끝난 뒤의 [관계 단계](../../../design/ci/relations.md#실행-위치--ci-본체-적재-이후-별도-단계)에서 저장한다.
 
-| 의미 | SOURCECI | TARGETCI | RELATIONNUM | 실제 저장 담당 제안 |
+| 의미 | SOURCECI | TARGETCI | RELATIONNUM | 조회 정의 소유 |
 | --- | --- | --- | --- | --- |
-| 디스크 포함 | D42:DEVICE:<device_fk> | D42:PART:<part_pk> | RELATION.CONTAINS | Disk task의 본체 저장 후 |
-| 파일시스템 포함 | D42:DEVICE:<각 device_fks 원소> | D42:MOUNTPOINT:<mountpoint_pk> | RELATION.CONTAINS | Filesystem task의 본체 저장 후 |
+| 디스크 포함 | D42:DEVICE:<device_fk> | D42:PART:<part_pk> | RELATION.CONTAINS | Disk 도메인 |
+| 파일시스템 포함 | D42:DEVICE:<각 device_fks 원소> | D42:MOUNTPOINT:<mountpoint_pk> | RELATION.CONTAINS | Filesystem 도메인 |
 
 출발 분류는 SYS.COMPUTERSYSTEM 또는 SYS.VIRTUALCOMPUTERSYSTEM,
 도착 분류는 각각 DEV.DISKDRIVE, SYS.FILESYSTEM이다.
 두 분류 쌍 모두 CONTAINMENT=1, REVRELATIONSHIP=0, CARDINALITY=1:N이다.
-관계의 방향이 Computer 출발이어도 원천 연결 키를 아는 자식 task가 생성한다.
+관계의 방향이 Computer 출발이어도 원천 연결 키를 아는 쪽, 즉 Disk·Filesystem 도메인의
+조회 정의가 소유한다. 이 문서는 매핑 정본이고 조회 책임은 코드 쪽 기준이다.
 
-아래 SELECT는 두 D42 서버에서 실행 검증했다. 별도 후처리 시 쓸 수 있는 전체 관계 조회 예이며,
-task 내부에서는 이미 읽은 배치의 원천 키/배열로 동일한 쌍을 만들면 된다.
+아래 SELECT는 두 D42 서버에서 실행 검증했으며 관계 단계의 조회 정의가 그대로 쓴다.
 관계 쌍에는 본체 전용 DISTINCT ON을 적용하지 않는다.
 
 ```sql
@@ -303,6 +304,7 @@ ORDER BY sourceci,targetci;
 
 VM–호스트는 virtual_host_device_fk로 양 끝이 확인된다.
 저장 방향 후보는 VM → Host, 코드 후보는 RELATION.VIRTUALIZES다.
-실제 호스트는 physical과 virtual 모두 있다. Computer 전체 적재 후 처리해야 뒤쪽 배치 호스트를 놓치지 않는다.
+실제 호스트는 physical과 virtual 모두 있다. 관계 단계가 본체 적재 이후에 실행되므로
+뒤쪽 배치의 호스트를 놓치는 문제는 발생하지 않는다.
 현재 1:1 규칙·SWAPPED·표시 검증은 남았으므로 위 우선 구현 표에 포함하지 않았다.
 host_chassis_device_fk, vm_manager_device_fk를 같은 관계로 대체하지 않는다.

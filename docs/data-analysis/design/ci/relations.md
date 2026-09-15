@@ -38,34 +38,91 @@ flowchart LR
 VM→Host는 규칙의 저장 방향이며, 사용자 화면에 어떤 문장/방향으로 보일지는 별도 검증한다.
 표시할 관계의 선택은 수집·저장 규칙과 분리하고 이번 조사에서 UI 설정은 바꾸지 않는다.
 
-## 언제, 어디서 저장할지
+## 실행 위치 — CI 본체 적재 이후 별도 단계
 
-공통 ActCiRelationWriter가 저장을 담당하고 각 수집 task는 원천에서 관계 DTO를 만든다.
+관계는 본체 task 안에서 저장하지 않는다. 모든 본체·스펙 task가 끝난 뒤 관계 단계를 실행한다.
 
-| 관계 | 양 끝을 아는 task | 저장 시점 |
+```text
+CiIntegrationJob
+  1. 분류·속성 기준정보 조회
+  2. CI 본체·스펙 task 실행      Computer · OS · Disk · Filesystem · IP
+  3. 관계 단계 실행
+  4. 처리 결과 집계
+```
+
+분리하는 이유:
+
+- 관계의 실행 위치·실패 처리·재실행 방식을 하나로 통일하고, 관계만 독립 재실행할 수 있다.
+- 상대 CI가 뒤쪽 배치에 있어 누락되는 경우를 구조적으로 없앤다. 본체 task 안에서 저장하면
+  Computer를 먼저 실행하도록 명시적 순서를 걸어야 하고, VM→Host처럼 같은 유형 안의
+  선후 관계는 그 순서로도 해결되지 않는다.
+- 본체용 중복 제거와 관계의 연결 보존을 분리한다. 본체가 이미 축약한 결과를 관계에
+  재사용하는 실수를 만들지 않는다.
+
+관계 단계가 시작됐다는 것이 본체 적재의 성공을 뜻하지는 않는다.
+저장 전제는 아래 「저장 전제와 이번 조사 한계」를 따른다.
+
+## 구조 추천안 — 도메인별 조회 정의 + 공통 실행기
+
+> 추천안이다. 클래스 이름·정의 등록 방식은 구현 시 확정한다.
+
+관계마다 `OsComputerRelationIntegrate` 같은 클래스를 두면 관계 수만큼 클래스가 늘어난다.
+관계 조회는 대부분 SELECT 하나와 키 변환이라 클래스로 나눌 상태·분기가 없다.
+조회 정의를 데이터로 두고 실행기 하나가 조회·변환·저장·집계를 맡는 안을 우선한다.
+
+```text
+관계 단계
+  CiRelationIntegrate          이름 제안. 조회 → 변환 → 저장 → 집계
+    ├─ OS 관계 조회 정의
+    ├─ Disk 관계 조회 정의
+    ├─ Filesystem 관계 조회 정의
+    └─ Computer 관계 조회 정의    검증된 관계만 활성화
+    ↓
+  ActCiRelationWriter          공통 MERGE
+```
+
+여러 API 조합이나 별도 상태·판정이 필요한 도메인이 실제로 등장하면 그 도메인만
+전용 Collector로 분리한다. SQL로 처리되는 관계를 위해 미리 클래스를 만들지 않는다.
+
+## 조회 정의의 소유 기준
+
+관계의 출발점이 아니라 **연결 근거를 제공하는 원천 도메인**으로 묶는다.
+
+| 원천 도메인 | 관계 | 연결 근거 |
 | --- | --- | --- |
-| Computer → Disk | DiskCiIntegrate | Computer task 완료 후, Disk 본체 배치 저장 뒤 |
-| Computer → Filesystem | FilesystemCiIntegrate | Computer task 완료 후, Filesystem 본체 배치 저장 뒤 |
-| OS → Computer | OsCiIntegrate | Computer task 완료 후, OS 본체 배치 저장 뒤 |
-| VM → Host | ComputerCiIntegrate 또는 후처리 | **Computer 전체 배치 완료 후**. 후속 배치의 호스트 누락 방지 |
-| Interface → IP | 향후 IP 관계 매핑 | Interface 적재 완료 후 |
+| OS | OS → Computer | deviceos_pk · device_fk |
+| Disk | Computer → Disk | Hard Disk 조건의 part_pk · device_fk |
+| Filesystem | Computer → Filesystem | mountpoint_pk · device_fks |
+| Computer | VM → Host | device_pk · virtual_host_device_fk |
+| IP | Interface → IP | ipaddress_pk · netport_fk |
 
-Computer를 먼저 실행하도록 명시적 순서를 준다. 같은 유형 안의 선후 관계는 @Order로 해결되지 않는다.
-같은 task에서 본체·스펙·관계를 처리해도 SQL과 책임은 공통 Writer로 분리한다.
-관계 방향이 Computer→Disk라고 Computer task에서 생성할 필요는 없다.
+Computer → Disk도 Disk 도메인 정의가 소유한다. Computer가 등장하는 관계를 Computer에 모으지 않는다.
+이는 구현상 조회 책임 기준이다. 문서 정본은 기존 규약대로 출발 유형 문서가 소유하므로
+코드 소유와 문서 소유가 갈리는 관계가 있다. SQL을 양쪽에 복사하지 않고 링크로 잇는다.
 
-같은 유형의 관계 후처리는 원천의 연결 키만 배치 재조회하는 안을 우선한다.
-전체 CI 전역 맵은 불필요하다. 수집 시 관계 후보를 보관하는 방식은 규모·수명 관리가 필요하므로
-후속 구현에서 별도 결정한다. 지금은 Disk·Filesystem·OS 때문에 원천 전체를 다시 읽을 이유가 없다.
+## 관계 조회의 계약
+
+- 본체와 같은 수집 범위·필터를 적용한다.
+- 관계 생성에 필요한 키와 분류 판별 정보만 조회한다. 본체 속성은 다시 읽지 않는다.
+- 전체 ACTCI를 메모리에 올려 이름으로 찾지 않는다. 양 끝은 원천의 확인된 연결 키로 만든다.
+- 본체 task가 관계 후보를 누적해 다음 단계로 넘기는 방식보다, 관계 단계가 원천의 연결 키만
+  다시 읽는 안을 우선한다. 보관 규모·수명 관리가 필요 없고 관계만 재실행할 수 있다.
+
+공통 Writer에 넘기는 값은 출발 ACTCINUM, 도착 ACTCINUM, 관계 규칙이다.
+규칙에는 정확한 relationnum과 예상 출발·도착 CLASSSTRUCTUREID가 들어간다.
+SQL의 저장 위치·Java 타입·정의 등록 방식은 구현 시 정한다.
+문서화를 위해 범용 플러그인 구조나 설정 체계를 미리 설계하지 않는다.
 
 ## 본체 중복 제거와 관계 보존
 
 - 본체는 원천 개체 PK마다 하나. 관계는 (SOURCECI,TARGETCI,RELATIONNUM)마다 하나.
 - IP·Filesystem의 device_fks는 단일 장비로 축약하지 않는다.
-- 기존 DISTINCT ON은 본체 적재에 유지할 수 있다. 관계를 생성할 때는 원본 배열을 DTO에 보존하거나
-  같은 배치의 원천 개체 키에 대한 연결 쌍을 별도로 읽어야 한다.
-- IP의 현재 DTO에는 netport_fk와 전체 장비 배열이 없다. 현 상태 그대로 공통 Writer를 호출한다고
-  모든 관계가 만들어지는 것은 아니다. Interface 도입 시 원천 DTO를 확장해야 한다.
+- 기존 DISTINCT ON은 본체 적재에 유지한다. 관계 단계는 본체 조회를 재사용하지 않고
+  연결 쌍을 전용 SELECT로 다시 읽으므로 배열이 축약되지 않는다.
+  마운트포인트 10에 device_fks={173,174}이면 관계는 두 행이다.
+- 관계 조회에서 제거하는 중복은 최종 관계 키 (SOURCECI,TARGETCI,RELATIONNUM)가 같은 경우뿐이다.
+- IP 관계는 원천에서 netport_fk와 장비 배열을 읽어야 한다. 본체 DTO에는 없다.
+  Interface 도입 시 관계 조회 정의에서 확보한다.
 - netport_fk가 없는 IP를 같은 장비의 임의 포트에 연결하지 않는다.
 
 ## 관계 정의의 코드 표현
@@ -85,7 +142,7 @@ CLASSSTRUCTUREID·관계 규칙은 CI 작업 시작 시 해당 정의만 조회�
 CARDINALITY·CONTAINMENT·REVRELATIONSHIP은 DB 정의를 확인하며 enum에 별도 정본을 만들지 않는다.
 
 DTO 제안: sourceCiNum, targetCiNum, rule. SWAPPED는 규칙 메타데이터의 단순 복사 값이 아니다.
-원천 조회 SQL은 각 task가, 관계 MERGE SQL은 공통 Writer가 소유한다.
+원천 조회 SQL은 각 도메인 조회 정의가, 관계 MERGE SQL은 공통 Writer가 소유한다.
 
 ## 저장 전제와 이번 조사 한계
 

@@ -272,9 +272,15 @@ compatibility_level의 일반 분류 속성 대응은 미정이며, DB 제품 �
 Disk·Filesystem 포함 및 OS 설치 관계의 원천·분류쌍 매핑을 작성했다.
 OS → 물리 Computer 한 쌍은 SWAPPED=0으로 INSERT한 뒤 CI 승격·관계 표시·부모 보존을 확인했다.
 [검증 기록](knowledge/maximo/computer-ci-relations.md#oscomputer-승격-샘플-검증). 제품 관계 적재·공통 MERGE는 미구현/미검증이다.
+실행 위치는 CI 본체 적재 이후의 별도 관계 단계로 정리했다.
+GUID 두 컬럼은 샘플 승격 결과에 따라 신규 NULL로 결정해 미결에서 내렸다.
+
 남은 결정은 VM–호스트/Interface–IP의 1:1 설정 대조, Interface CI 도입과 포트 미연결·공유 IP 경로,
 다른 분류쌍의 ACTCIRELATION.SWAPPED·UI·승격 검증이다. 규칙 SWAPPED를 행에 그대로 복사하지 않는다.
 관계의 이동·삭제는 ISSUE-7과 함께 검토하며 이번 조사에서 정책을 확정하지 않는다.
+호스트 변경 시 MERGE는 새 관계를 추가할 뿐 이전 관계를 지우지 않으므로,
+ETL 관리 범위와 원천 조회의 완전한 성공 여부를 전제로 한 정리 정책이 필요하다.
+부분 조회나 조회 실패를 근거로 관계를 삭제하지 않는다.
 
 - Instance→장치 연결이 없는 표본은 보강 원천을 찾을지 관계 없이 둘지 결정한다.
   관계 규칙이 존재한다는 이유로 실제 관계를 만들지 않는다.
