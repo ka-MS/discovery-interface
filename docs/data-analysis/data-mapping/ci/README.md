@@ -6,6 +6,10 @@ Device42 개체를 Maximo Actual CI로 적재하는 매핑 정본이다.
 
 ## 읽는 순서
 
+Computer·OS·Disk·Filesystem·IP의 관계 조사 결과는 [관계 설계](../../design/ci/relations.md)에서 시작한다.
+실제 연결 SQL은 출발 유형의 [Computer](types/computer.md#7-관계-매핑--2026-09-15)와
+[OS](types/os.md#6-관계-매핑--2026-09-15), 공통 저장 초안은 [ACTCIRELATION](actcirelation.md)에 있다.
+
 1. [CI 모델](../../knowledge/maximo/ci-model.md) — Actual CI와 CI 비교, 참조 경로
 2. [CI 분류 모델](../../knowledge/maximo/ci-classification.md) — CLASSSTRUCTURE·CLASSSPEC 컬럼과 적용 범위
 3. [ci-targets.md](ci-targets.md) — CI 후보, 중복 View, 포함·제외 범위
@@ -37,7 +41,7 @@ OS·Disk·Filesystem·IP의 원천 관측은 [OS·Disk·Filesystem·IP 원천 �
 | OS | [os.md](types/os.md) | 본체·스펙 적재 구현 및 자동 테스트 완료. 분류 SYS.OPERATINGSYSTEM, 속성 5개(대조 기준 CI.OS). 관계 미적재. EOL·EOS 대응 속성 없음 |
 | Disk | [disk.md](types/disk.md) | 본체·스펙 적재 구현 및 자동 테스트 완료. 분류 DEV.DISKDRIVE, 속성 3개(CI 대조 기준 없음). 관계 미적재. 제조사·펌웨어는 원천 전건 비어 있음 |
 | Filesystem | [filesystem.md](types/filesystem.md) | 본체·스펙 적재 구현 및 자동 테스트 완료. 분류 SYS.FILESYSTEM, 속성 4개(대조 기준 CI.FILESYSTEM). 관계 미적재. 컨테이너·가상 마운트는 제외 |
-| IP | [ip.md](types/ip.md) | 본체·스펙 적재 구현 및 자동 테스트 완료. 분류 NET.IPADDRESS, 속성 2개(대조 기준 CI.IPADDRESS). **관계 규칙이 없어 미적재. 경로 결정 필요** |
+| IP | [ip.md](types/ip.md) | 본체·스펙 적재 구현 및 자동 테스트 완료. 분류 NET.IPADDRESS, 속성 4개(대조 기준 CI.IPADDRESS). 장비 연결 IP 전체 수집. **관계 규칙이 없어 미적재. 경로 결정 필요** |
 
 기준정보 보완과 나머지 정책은 [ISSUE-8·11](../../open-issues.md)에 둔다.
 Computer·OS·Disk·Filesystem·IP 다섯 유형의 본체·속성을 구현했다. 공통 쓰기는 ActCiWriter,

@@ -253,3 +253,51 @@ Maximo에서 분류·속성 타입·적용 설정·단위 코드를 대조했다
 [Maximo 분류·스펙](../../../knowledge/maximo/computer-classification-specs.md).
 ROMVERSION의 BIOS 버전 의미는 [IBM CCMDB 가이드](https://www.redbooks.ibm.com/redbooks/pdfs/sg247879.pdf)에서,
 TYPE의 ComputerSystem 값은 [IBM ComputerSystem 매핑](https://www.ibm.com/docs/en/tivoli-monitoring/6.3.0?topic=cdm-computersystem-class)에서 확인했다.
+
+## 7. 관계 매핑 — 2026-09-15
+
+관측·선택 근거는 [관계 설계](../../../design/ci/relations.md),
+Target 컬럼과 저장 SQL 제안은 [ACTCIRELATION](../actcirelation.md)을 참조한다.
+관계 본체 적재 코드는 이번 조사에서 구현하지 않았다.
+
+| 의미 | SOURCECI | TARGETCI | RELATIONNUM | 실제 저장 담당 제안 |
+| --- | --- | --- | --- | --- |
+| 디스크 포함 | D42:DEVICE:<device_fk> | D42:PART:<part_pk> | RELATION.CONTAINS | Disk task의 본체 저장 후 |
+| 파일시스템 포함 | D42:DEVICE:<각 device_fks 원소> | D42:MOUNTPOINT:<mountpoint_pk> | RELATION.CONTAINS | Filesystem task의 본체 저장 후 |
+
+출발 분류는 SYS.COMPUTERSYSTEM 또는 SYS.VIRTUALCOMPUTERSYSTEM,
+도착 분류는 각각 DEV.DISKDRIVE, SYS.FILESYSTEM이다.
+두 분류 쌍 모두 CONTAINMENT=1, REVRELATIONSHIP=0, CARDINALITY=1:N이다.
+관계의 방향이 Computer 출발이어도 원천 연결 키를 아는 자식 task가 생성한다.
+
+아래 SELECT는 두 D42 서버에서 실행 검증했다. 별도 후처리 시 쓸 수 있는 전체 관계 조회 예이며,
+task 내부에서는 이미 읽은 배치의 원천 키/배열로 동일한 쌍을 만들면 된다.
+관계 쌍에는 본체 전용 DISTINCT ON을 적용하지 않는다.
+
+```sql
+WITH computer AS (SELECT d.* FROM view_device_v2 d WHERE d.type IN ('physical','virtual')
+AND (d.network_device=false OR d.network_device IS NULL)
+AND ((d.type='physical' AND d.physicalsubtype IN ('Generic','Rackable','Blade','WorkStation','ThinClient','Laptop'))
+OR (d.type='virtual' AND d.virtualsubtype IN ('Internal VM','Amazon EC2 Instance','VMWare','Hyper-V'))))
+SELECT DISTINCT 'D42:DEVICE:' || CAST(c.device_pk AS varchar) AS sourceci,
+       'D42:PART:' || CAST(p.part_pk AS varchar) AS targetci,
+       'RELATION.CONTAINS' AS relationnum
+FROM view_part_v1 p
+JOIN view_partmodel_v1 pm ON pm.partmodel_pk=p.partmodel_fk
+JOIN computer c ON c.device_pk=p.device_fk
+WHERE pm.type_name='Hard Disk'
+UNION ALL
+SELECT DISTINCT 'D42:DEVICE:' || CAST(c.device_pk AS varchar),
+       'D42:MOUNTPOINT:' || CAST(m.mountpoint_pk AS varchar),
+       'RELATION.CONTAINS'
+FROM view_mountpoint_v2 m
+JOIN computer c ON c.device_pk=ANY(m.device_fks)
+WHERE (m.fstype_name IS NULL OR m.fstype_name NOT IN ('overlay','devtmpfs','squashfs','efivarfs'))
+ORDER BY sourceci,targetci;
+```
+
+VM–호스트는 virtual_host_device_fk로 양 끝이 확인된다.
+저장 방향 후보는 VM → Host, 코드 후보는 RELATION.VIRTUALIZES다.
+실제 호스트는 physical과 virtual 모두 있다. Computer 전체 적재 후 처리해야 뒤쪽 배치 호스트를 놓치지 않는다.
+현재 1:1 규칙·SWAPPED·표시 검증은 남았으므로 위 우선 구현 표에 포함하지 않았다.
+host_chassis_device_fk, vm_manager_device_fk를 같은 관계로 대체하지 않는다.

@@ -11,14 +11,15 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 대상 | Computer에 연결된 `view_ipaddress_v2` 행. 50 / 97건 |
+| 대상 | **장비에 연결된** `view_ipaddress_v2` 행. 105 / 111건. 부모 유형으로 좁히지 않는다 |
 | 분류 | `NET.IPADDRESS` 한 개 |
 | ACTCINUM | `D42:IPADDRESS:<ipaddress_pk>` |
 | 스펙 참조 | ACTCINUM·CLASSSTRUCTUREID는 본체와 동일, REFOBJECTID=ACTCIID |
 | 관계 | **Computer와 직접 규칙이 없다.** 5절 |
 
-전체 IP 297 / 543건 중 어떤 장비에도 붙지 않은 행이 192 / 432건이다.
-Computer 연결분만 대상으로 한다.
+전체 IP 297 / 543건 중 어떤 장비에도 붙지 않은 행이 192 / 432건이며 이것만 제외한다.
+IP는 장비 종속 개체가 아니라 독립 CI이므로 Computer·네트워크·컨테이너를 구분하지 않는다.
+장비 유형을 추가해도 이 조회를 고치지 않는다. 근거는 [IP 수집 설계](../../../design/ci/ip.md) 7절.
 
 ## 2. 원천과 조회 조건
 
@@ -29,35 +30,23 @@ Computer 연결분만 대상으로 한다.
 `HOST()`로 주소만 뽑는다. 프리픽스 길이는 서브넷에서 가져온다.
 
 ```sql
-WITH computer AS (
-    SELECT d.device_pk, d.last_discovered
-    FROM view_device_v2 d
-    WHERE d.type IN ('physical', 'virtual')
-      AND (d.network_device = false OR d.network_device IS NULL)
-      AND (
-          (d.type = 'physical' AND d.physicalsubtype IN
-              ('Generic', 'Rackable', 'Blade', 'WorkStation', 'ThinClient', 'Laptop'))
-          OR
-          (d.type = 'virtual' AND d.virtualsubtype IN
-              ('Internal VM', 'Amazon EC2 Instance', 'VMWare', 'Hyper-V'))
-      )
-)
 SELECT DISTINCT ON (i.ipaddress_pk)
-    i.ipaddress_pk, c.device_pk AS device_fk,
-    'D42:IPADDRESS:' || CAST(i.ipaddress_pk AS varchar) AS source_id,
+    i.ipaddress_pk, d.device_pk AS device_fk,
     HOST(i.ip_address) AS ip_address,
+    NULLIF(TRIM(d.name), '') AS device_name,
     NULLIF(TRIM(i.label), '') AS label,
     NULLIF(TRIM(i.notes), '') AS notes,
-    i.netport_fk, b.mask_bits, i.last_discovered
+    i.last_discovered
 FROM view_ipaddress_v2 i
-JOIN computer c ON c.device_pk = ANY(i.device_fks)
-LEFT JOIN view_subnet_v1 b ON b.subnet_pk = i.subnet_fk
-ORDER BY i.ipaddress_pk, c.device_pk
+JOIN view_device_v2 d ON d.device_pk = ANY(i.device_fks)
+ORDER BY i.ipaddress_pk, d.device_pk
 LIMIT %d OFFSET %d
 ```
 
 2026-09-15 두 서버에서 실행해 통과를 확인했다.
-`netport_fk`와 `mask_bits`는 현재 적재 대상이 아니며 관계·서브넷 결정용으로 함께 조회한다.
+`netport_fk`와 `mask_bits`는 관계·서브넷 조사용이다. 현재 IpCiIntegrate의 원천 SQL·DTO에는 포함하지 않는다.
+관계 구현 시 netport_fk 및 전체 device_fks 보존이 필요하다.
+2026-09-15의 실제 경로·다중 연결 대조는 [관계 원천](../../../knowledge/device42/computer-ci-relations.md)을 참조한다.
 
 ## 3. 본체 매핑
 
@@ -76,13 +65,14 @@ LIMIT %d OFFSET %d
 ## 4. 속성 매핑
 
 적재 분류 `NET.IPADDRESS` · **대조 기준 `CI.IPADDRESS`(CCI00011, 6개)**.
-CI 기준 6개 중 원천 대응이 있는 것은 주소 표기 둘뿐이며 같은 값이 들어간다.
 선택 근거는 [IP 수집 설계](../../../design/ci/ip.md) 3절.
 
 | ASSETATTRID | 한글 의미 | 값 컬럼 | 구분 | Source | 변환·조건 |
 | --- | --- | --- | --- | --- | --- |
 | IPADDRESS_DOTNOTATION | 점 표기 주소 | ALNVALUE | 변환 | `i.ip_address` | `HOST()`. 전건 |
 | IPADDRESS_STRINGNOTATION | 문자열 표기 주소 | ALNVALUE | 변환 | `i.ip_address` | `HOST()`. CI 기준 속성. DOTNOTATION과 같은 값 |
+| IPADDRESS_MANAGEDSYSTEMNAME | 관리 시스템 이름 | ALNVALUE | 직접 | 연결 장비의 `d.name` | 여러 장비면 `device_pk` 최소인 장비 |
+| MODELOBJECT_LABEL | 레이블 | ALNVALUE | 직접 | `i.label` | 55 / 59건. **CI 기준 밖 의도적 추가** |
 
 ## 5. 미대응·미결
 
@@ -91,6 +81,7 @@ CI 기준 6개 중 원천 대응이 있는 것은 주소 표기 둘뿐이며 같
 | **관계 경로** | `SYS.*COMPUTERSYSTEM`↔`NET.IPADDRESS` 규칙이 양방향 0건이다. CDM 경로는 `Computer → NET.IPINTERFACE → NET.IPADDRESS`다. Interface CI 도입은 범위 확대라 **사용자 결정 필요**. ISSUE-8 |
 | 서브넷 마스크 | `b.mask_bits` 전건 보유하나 `NET.IPADDRESS`에 자리 없음. `NET.IPNETWORK` 별도 CI 필요. ISSUE-8 |
 | `b.gateway` | 컬럼은 있으나 두 서버 모두 값 0건 |
-| IPADDRESS_ADDRESSTYPE | NUMERIC. IPv4/IPv6 코드 규약 미확인. ISSUE-11 |
-| `i.label` | 55 / 59건. `MODELOBJECT_LABEL` 채택 여부 미정 |
-| 채울 속성이 하나뿐 | 독립 CI 유지 여부 재확인 대상. ISSUE-8 |
+| IPADDRESS_ADDRESSTYPE | DOMAINID 없음, 시스템 기존 값 0건이라 코드 규약을 알 수 없다. ISSUE-11 |
+| MODELOBJECT_LABEL 승격 전달 | CI 계열 분류에 `MODELOBJECT_` 속성이 0개다. 승격에서 누락될 수 있다. 미검증. ISSUE-11 |
+| MODELOBJECT_CDMSOURCE·SOURCETOKEN | 미채택 확정. CI 계열에 없고 `ACTCINUM`·`CHANGEBY`와 중복 |
+| 분류 v4/v6 분리 | `NET.IPV4ADDRESS`·`NET.IPV6ADDRESS` 속성 22개 동일, 승격 범위 등록됨. 원천 v6 0 / 2건. ISSUE-8 |

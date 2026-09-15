@@ -15,7 +15,7 @@
 | 분류 | `SYS.OPERATINGSYSTEM` 한 개. 물리·가상을 구분하지 않는다 |
 | ACTCINUM | `D42:DEVICEOS:<deviceos_pk>` |
 | 스펙 참조 | ACTCINUM·CLASSSTRUCTUREID는 본체와 동일, REFOBJECTID=ACTCIID |
-| 관계 | 확정하지 않는다. 추천안은 설계 문서 |
+| 관계 | 6절에 원천·분류쌍 매핑 작성. 저장 구현·UI 검증은 별도 |
 
 분류명으로 CLASSSTRUCTUREID를 조회한다. 환경별 ID를 상수로 고정하지 않는다.
 
@@ -90,6 +90,37 @@ LIMIT %d OFFSET %d
 | 제조사 | `view_os_v1.vendor_fk`로 보강 가능하나 분류에 속성 없음. `os_name`에 포함 |
 | OPERATINGSYSTEM_VERSIONSTRING | CI 기준 밖. OSVERSION과 중복이라 미채택 |
 | KERNELARCHITECTURE 승격 전달 | `SYS.OPERATINGSYSTEM`은 승격 범위에서 `CI.OS`로 매핑되는데 `CI.OS`에 이 속성이 없다. 누락 가능. 미검증. ISSUE-11 |
-| MODELOBJECT_CDMSOURCE·SOURCETOKEN | 연계 출처·원천 키 보존용. 채택 여부 미정 |
-| 관계 | `RELATION.INSTALLEDON` 추천. `USEWITH`가 CI라 ACTCI 적재 미검증. ISSUE-11 |
+| MODELOBJECT_CDMSOURCE·SOURCETOKEN | 미채택. CI 계열 분류에 `MODELOBJECT_` 속성이 0개라 승격에서 전달되지 않고, `ACTCINUM`·`CHANGEBY`와 중복이다 |
+| 관계 | 6절의 RELATION.INSTALLEDON 매핑. ACTCI 관계 적재·SWAPPED·UI 검증 미완료. USEWITH=CI만으로 저장 불가라고 판단하지 않는다. ISSUE-11 |
 | 수집 대상 범위 | Computer 연결분만 추천. 두 서버 비율 30% / 80%로 차이 큼. ISSUE-8 |
+
+## 6. 관계 매핑 — 2026-09-15
+
+[관계 설계](../../../design/ci/relations.md)의 우선 구현 매핑이다.
+현재 OsCiIntegrate의 본체·스펙 저장과 별개로, 관계 적재는 미구현이다.
+
+| 의미 | SOURCECI | TARGETCI | RELATIONNUM |
+| --- | --- | --- | --- |
+| OS 설치 장비 | D42:DEVICEOS:<deviceos_pk> | D42:DEVICE:<device_fk> | RELATION.INSTALLEDON |
+
+출발 SYS.OPERATINGSYSTEM → 도착 SYS.COMPUTERSYSTEM 또는 SYS.VIRTUALCOMPUTERSYSTEM.
+N:1, CONTAINMENT=1, REVRELATIONSHIP=1이며 Computer가 상위다.
+규칙의 SWAPPED=1을 이유로 양 끝을 다시 뒤집거나 관계 행에 무조건 1을 복사하지 않는다.
+[ACTCIRELATION](../actcirelation.md)의 정방향 저장안과 후속 UI 검증을 따른다.
+RUNSON은 실행 의미를 추가하므로 단순 device_fk 연결로 함께 생성하지 않는다.
+
+Computer task 완료 후 OS 본체 배치 저장 뒤 생성한다.
+아래 SQL은 두 서버에서 실행 확인했으며, task 내부에서는 이미 읽은 deviceos_pk·device_fk로 같은 쌍을 만든다.
+
+```sql
+WITH computer AS (SELECT d.* FROM view_device_v2 d WHERE d.type IN ('physical','virtual')
+AND (d.network_device=false OR d.network_device IS NULL)
+AND ((d.type='physical' AND d.physicalsubtype IN ('Generic','Rackable','Blade','WorkStation','ThinClient','Laptop'))
+OR (d.type='virtual' AND d.virtualsubtype IN ('Internal VM','Amazon EC2 Instance','VMWare','Hyper-V'))))
+SELECT DISTINCT 'D42:DEVICEOS:' || CAST(o.deviceos_pk AS varchar) AS sourceci,
+       'D42:DEVICE:' || CAST(c.device_pk AS varchar) AS targetci,
+       'RELATION.INSTALLEDON' AS relationnum
+FROM view_deviceos_v1 o
+JOIN computer c ON c.device_pk=o.device_fk
+ORDER BY sourceci,targetci;
+```

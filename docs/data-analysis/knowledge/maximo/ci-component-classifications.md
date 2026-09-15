@@ -234,6 +234,20 @@ MODIFIER, MOUNTPOINT, RELEASE, TOTALINODES, TYPE, VERSIONSTRING이다.
 따라서 Disk는 대조 기준 없이 ACTCI 쪽 `DEV.DISKDRIVE`만 보고 속성을 골라야 한다.
 승격 대상 CI 분류가 없다는 뜻이기도 하다. 관리 단위 재검토 근거로 ISSUE-8에 남긴다.
 
+### CI 계열에는 MODELOBJECT 속성이 없다
+
+ACTCI 쪽 네 분류는 `MODELOBJECT_` 공통 속성을 14개씩 갖는데 CI 계열은 하나도 없다.
+
+| 분류 | MODELOBJECT_ | 전체 스펙 |
+| --- | ---: | ---: |
+| CI.OS / CI.FILESYSTEM / CI.IPADDRESS / CI.COMPUTERSYSTEM | 0 | 7 / 16 / 6 / 19 |
+| SYS.OPERATINGSYSTEM / SYS.FILESYSTEM / NET.IPADDRESS / SYS.COMPUTERSYSTEM | 14 | 50 / 33 / 22 / 98 |
+
+`MODELOBJECT_*`를 적재해도 승격에서 전달되지 않을 가능성이 높다.
+`MODELOBJECT_CDMSOURCE`·`SOURCETOKEN`은 `ACTCISPEC`·`CISPEC` 전체에 기존 값이 0건이다.
+
+`IPADDRESS_ADDRESSTYPE`도 `DOMAINID`가 비어 있고 기존 값이 0건이라 NUMERIC 코드 규약을 알 수 없다.
+
 ### 승격 범위는 CITEMPLATE이 정한다
 
 어떤 ACTCI 분류가 어떤 CI 분류로 승격되는지는 `MAXIMO.CITEMPLATE`에 설정돼 있다.

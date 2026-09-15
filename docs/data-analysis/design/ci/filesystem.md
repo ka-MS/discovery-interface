@@ -88,8 +88,18 @@ CI 기준 16개는 `SYS.FILESYSTEM` 고유 19개에서 ISPLACEHOLDER·LOCATIONTA
 | FILESYSTEM_CAPACITY | ○ | NUMERIC | `m.capacity` | 채택 | 114 / 140건. 7절 단위 |
 | FILESYSTEM_AVAILABLESPACE | ○ | NUMERIC | `m.free_capacity` | 채택 | 106 / 129건 |
 | 나머지 CI 기준 12개 | ○ | – | – | 미채택 | inode·블록 크기·버전 등 원천 대응 없음 |
-| MODELOBJECT_LABEL | ✗ | ALN | `m.label` | 검토 | 24 / 8건. 낮다 |
-| MODELOBJECT_CDMSOURCE·SOURCETOKEN | ✗ | ALN | 연계 출처·원천 키 | 검토 | |
+| MODELOBJECT_LABEL | ✗ | ALN | `m.label` | 미결 | 24 / 8건. IP는 채택했다. 9절 |
+| MODELOBJECT_CDMSOURCE·SOURCETOKEN | ✗ | ALN | – | 미채택 | 아래 참조 |
+
+### MODELOBJECT_CDMSOURCE·SOURCETOKEN은 쓰지 않는다
+
+네 유형 공통 결정이다. 2026-09-15 확인했다.
+
+- **CI 계열 분류에 `MODELOBJECT_` 속성이 하나도 없다.** `CI.OS` 0/7, `CI.FILESYSTEM` 0/16,
+  `CI.IPADDRESS` 0/6, `CI.COMPUTERSYSTEM` 0/19다. ACTCI 쪽은 모두 14개씩 갖는다.
+  적재해도 승격에서 전달되지 않는다.
+- 같은 정보를 이미 담고 있다. `ACTCINUM`이 원천 키를, `CHANGEBY='Device42'`가 연계 출처를 나타낸다.
+- `ACTCISPEC`·`CISPEC` 전체에 이 두 속성의 기존 값이 0건이다. 환경 선례가 없다.
 
 **채택한 네 개가 모두 CI 기준 안에 있다.** 기준선을 벗어난 추가가 없다.
 
@@ -185,4 +195,5 @@ Computer가 출발점이다. 양쪽 Computer 분류 모두 같은 규칙을 갖�
 | `filesystem` 원문 속성 미등록 | 이번 범위 제외 추천 | ISSUE-11 |
 | LASTSCANDT 원천 | 부모 Computer 값 사용 추천 | ISSUE-11 |
 | 배열 `DISTINCT ON` 유지 여부 | 유지 추천 | ISSUE-9 |
+| `m.label` 채택 여부 | IP는 `MODELOBJECT_LABEL`을 채택했다. Filesystem도 맞출지 미결 | ISSUE-11 |
 | 승격 1:N 매핑 검증 | `CI.FILESYSTEM`에 ACTCI 분류 둘이 걸린 유일한 경우. 동작 미검증 | ISSUE-11 |

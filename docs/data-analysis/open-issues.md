@@ -120,7 +120,8 @@ OS는 장비당 정확히 1개지만 EOL·EOS를 가진 독립 관리 대상이�
 - **Disk·IP의 독립 CI 유지 여부.** 실제로 채울 수 있는 속성이 Disk 3개(모델·시리얼·용량), IP 1개(주소)뿐이다. 제조사·펌웨어·미디어 유형은 원천이 전건 비어 있다.
 - **컨테이너·가상 파일시스템 선별.** `overlay` 38 / 62건, `devtmpfs` 9 / 10건, `squashfs` 0 / 8건이다. 경로에 컨테이너 ID가 들어가 재기동 시 원천 PK가 바뀌면 매 실행마다 새 CI가 생긴다. 제외를 추천하나 목록이 확정되지 않았다.
 - **Subnet CI 도입 여부.** IP의 `mask_bits`가 전건 보유인데 `NET.IPADDRESS`에 담을 자리가 없다. `NET.IPNETWORK`가 별도 분류다.
-- **수집 대상 범위.** OS는 Computer 연결분이 30% / 80%로 두 서버 차이가 크다. IP는 17% / 18%다. Filesystem·Disk는 전건 Computer 연결이라 판단이 필요 없다.
+- **수집 대상 범위.** OS는 Computer 연결분이 30% / 80%로 두 서버 차이가 크다. Filesystem·Disk는 전건 Computer 연결이라 판단이 필요 없다. **IP는 2026-09-15 장비 연결 전체로 넓혔다**(105 / 111건). 장비 종속 개체가 아니므로 부모 유형으로 좁히지 않는다.
+- **IP 분류를 v4/v6로 나눌지.** `NET.IPV4ADDRESS`·`NET.IPV6ADDRESS`가 `NET.IPADDRESS`와 속성 22개가 동일하고 승격 범위에도 등록돼 있다. 원천 IPv6는 0 / 2건이다. 나누면 값을 정할 수 없는 `IPADDRESS_ADDRESSTYPE` 없이도 구분이 분류로 표현된다. 이미 97건이 `NET.IPADDRESS`로 적재돼 있어 분류 변경 처리도 함께 정해야 한다.
 - **Disk 원천 커버리지.** 표본 Computer 95 / 85대 중 디스크를 가진 장비가 18 / 19대뿐이다. 사업 범위 「서버 — Disk」 요구를 이 원천으로 충족할 수 있는지 운영 D42에서 확인해야 한다.
 
 ### 사업 범위 기준 검토 — 2026-09-11
@@ -205,6 +206,8 @@ ASSETATTRIBUTE 등 연결 정보와 Maximo 애플리케이션 동작까지 검�
 - **Filesystem 승격 매핑을 추가했다.** 기본 구성은 `CI.FILESYSTEM`을 `SYS.LOCALFILESYSTEM`에만 매핑하는데 이 ETL은 `SYS.FILESYSTEM`으로 적재한다. 2026-09-15 매핑 행을 추가했다(`CITEMPLATE` 164번). `CI.FILESYSTEM`에 ACTCI 분류 둘이 걸린 것은 158행 중 유일한 경우이며 승격 동작은 미검증이다. 화면의 「유효성 검증」으로 확인해야 한다.
 - **Disk는 승격할 수 없다.** `DEV.DISKDRIVE`가 `CITEMPLATE`에 한 행도 없다. CI 계열에 디스크 분류가 없다는 관측과 같은 결론이다. ISSUE-8의 관리 단위 재검토 근거다.
 - **가상 Computer 승격 범위에 자식이 없다.** `CI.VIRTUALCOMPUTERSYSTEM` 범위는 자기 자신 1행뿐인데 `CI.COMPUTERSYSTEM` 범위는 OS·Filesystem·IP를 포함한 9행이다. 2026-09-15 적재 기준 Computer 70대 중 65대가 가상이므로, 현재 설정으로는 가상 서버를 승격해도 본체만 올라간다. 기준정보 변경은 이 ETL 범위가 아니다.
+- **`MODELOBJECT_CDMSOURCE`·`SOURCETOKEN` 미채택 확정.** CI 계열 분류에 `MODELOBJECT_` 속성이 0개라 승격에서 전달되지 않고, `ACTCINUM`·`CHANGEBY`와 정보가 중복된다. 시스템 전체 기존 값도 0건이다. 2026-09-15 결정.
+- **`MODELOBJECT_LABEL`은 IP만 채택했다.** 원천 `i.label`에 실제 값이 있어 넣었다. CI 계열에 없으므로 승격 전달은 기대하지 않는다. Filesystem의 `m.label`(24 / 8건)을 맞출지는 미결이다.
 - **CI 기준 밖 속성의 승격 전달.** `OPERATINGSYSTEM_KERNELARCHITECTURE`는 `CI.OS`에 없는데 채택했다. Computer의 BIOS 출시일·CPU 코어 수와 같은 의도적 추가다. ACTCI→CI 승격에서 이런 속성이 누락되는지는 미검증이다. 승격 자체가 미구현이다.
 - **Disk의 승격 대상 분류 부재.** CI 계열에 디스크 분류가 없어 승격할 곳이 없다. 관리 단위 재검토 근거로 ISSUE-8에도 걸었다.
 - **LASTSCANDT 원천.** IP만 `last_discovered`를 전건 갖는다. OS·Disk·Filesystem은 부모 Computer의 값을 쓰는 안을 추천했다.
@@ -262,6 +265,13 @@ compatibility_level의 일반 분류 속성 대응은 미정이며, DB 제품 �
   다만 발견 시각·식별자 정책이 정해지기 전에는 적재 가능으로 간주하지 않는다.
 
 ### 관계·필수값
+
+2026-09-15 Computer 관계 조사: [관계 설계](design/ci/relations.md),
+[공통 저장 초안](data-mapping/ci/actcirelation.md).
+Disk·Filesystem 포함 및 OS 설치 관계의 원천·분류쌍 매핑을 작성했다. 관계 쓰기는 수행하지 않았다.
+남은 결정은 VM–호스트/Interface–IP의 1:1 설정 대조, Interface CI 도입과 포트 미연결·공유 IP 경로,
+ACTCIRELATION.SWAPPED·UI·승격 검증이다. 규칙 SWAPPED를 행에 그대로 복사하지 않는다.
+관계의 이동·삭제는 ISSUE-7과 함께 검토하며 이번 조사에서 정책을 확정하지 않는다.
 
 - Instance→장치 연결이 없는 표본은 보강 원천을 찾을지 관계 없이 둘지 결정한다.
   관계 규칙이 존재한다는 이유로 실제 관계를 만들지 않는다.

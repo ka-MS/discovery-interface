@@ -50,7 +50,15 @@ ESXi·Windows(10/11/Server)·macOS·FreeBSD·Solaris·Cisco IOS·VxWorks·Samsun
 | **OPERATINGSYSTEM_KERNELARCHITECTURE** | **✗** | ALN | `o.os_arch_name` | **채택** | **CI 기준 밖 의도적 추가.** 아래 참조 |
 | 나머지 OPERATINGSYSTEM_ 29개 | ✗ | – | – | 미채택 | `SYS.OPERATINGSYSTEM`에만 있고 원천 대응 없음 |
 
-`MODELOBJECT_CDMSOURCE`·`SOURCETOKEN`은 두 분류 모두에 있으나 채택 여부 미정이다.
+### MODELOBJECT_CDMSOURCE·SOURCETOKEN은 쓰지 않는다
+
+네 유형 공통 결정이다. 2026-09-15 확인했다.
+
+- **CI 계열 분류에 `MODELOBJECT_` 속성이 하나도 없다.** `CI.OS` 0/7, `CI.FILESYSTEM` 0/16,
+  `CI.IPADDRESS` 0/6, `CI.COMPUTERSYSTEM` 0/19다. ACTCI 쪽은 모두 14개씩 갖는다.
+  적재해도 승격에서 전달되지 않는다.
+- 같은 정보를 이미 담고 있다. `ACTCINUM`이 원천 키를, `CHANGEBY='Device42'`가 연계 출처를 나타낸다.
+- `ACTCISPEC`·`CISPEC` 전체에 이 두 속성의 기존 값이 0건이다. 환경 선례가 없다.
 
 ### CI 기준 밖 추가 — KERNELARCHITECTURE
 
