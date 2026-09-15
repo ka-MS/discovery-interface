@@ -135,7 +135,7 @@ Disk·Filesystem의 요구까지 대조했다.
 
 | 요구 | 어디서 처리되나 | OS | Disk | Filesystem |
 | --- | --- | --- | --- | --- |
-| 물리·가상 Computer 판별 | **불필요.** MERGE가 실제 ACTCI 분류로 RELATIONRULES를 본다 | 도착이 둘 | 출발이 둘 | 출발이 둘 |
+| 물리·가상 Computer 판별 | MERGE가 저장된 ACTCI 분류로 RELATIONRULES를 확인. 원천의 예상 분류와 대조하지 않는 최소 정책 | 도착이 둘 | 출발이 둘 | 출발이 둘 |
 | 배열의 전체 연결 | 페이지 SQL. `c.device_pk=ANY(m.device_fks)`가 쌍으로 펼친다 | 해당 없음 | 해당 없음 | 필요 |
 | 관계별 수집 필터 | 페이지 SQL 안 | Computer 조인 | `pm.type_name='Hard Disk'` | fstype 제외 목록 |
 | 안정적 페이징 | 공통 실행기. 정렬 키가 `sourceci,targetci`로 동일 | 가능 | 가능 | 가능 |

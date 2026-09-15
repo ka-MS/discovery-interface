@@ -111,6 +111,51 @@ class ActCiRelationWriterTest {
     }
 
     @Test
+    void continuesAfterDatabaseRejectsFirstRelation() {
+        // 양 끝과 규칙이 정상인 첫 관계만 CHECK 제약으로 거부해 실제 저장 예외를 발생시킨다.
+        jdbc.execute("""
+                ALTER TABLE MAXIMO.ACTCIRELATION ADD CONSTRAINT REJECT_FIRST_RELATION
+                CHECK (SOURCECI <> 'D42:DEVICEOS:147')
+                """);
+
+        int loaded = writer.write(List.of(
+                relation("D42:DEVICEOS:147", "D42:DEVICE:173"),
+                relation("D42:DEVICEOS:148", "D42:DEVICE:174")));
+
+        assertThat(loaded).isEqualTo(1);
+        assertThat(jdbc.queryForList("SELECT SOURCECI FROM MAXIMO.ACTCIRELATION", String.class))
+                .containsExactly("D42:DEVICEOS:148");
+    }
+
+    @Test
+    void keepsBothComputerLinksToOneFilesystemAndTheirIdsOnRerun() {
+        String contains = "RELATION.CONTAINS";
+        jdbc.update("INSERT INTO MAXIMO.RELATION VALUES (?)", contains);
+        actCi("D42:MOUNTPOINT:10", "FS1");
+        rule(contains, "CS1", "FS1");
+        rule(contains, "VCS1", "FS1");
+        var physical = new ActCiRelationUpsert("D42:DEVICE:173", "D42:MOUNTPOINT:10", contains);
+        var virtual = new ActCiRelationUpsert("D42:DEVICE:174", "D42:MOUNTPOINT:10", contains);
+
+        assertThat(writer.write(List.of(physical, virtual))).isEqualTo(2);
+        String snapshotQuery = """
+                SELECT SOURCECI, TARGETCI, RELATIONNUM, ACTCIRELATIONID
+                FROM MAXIMO.ACTCIRELATION ORDER BY SOURCECI
+                """;
+        var firstRows = jdbc.queryForList(snapshotQuery);
+        assertThat(firstRows).hasSize(2);
+        assertThat(firstRows).extracting(row -> row.get("SOURCECI"))
+                .containsExactly(physical.sourceCiNum(), virtual.sourceCiNum());
+        assertThat(firstRows).allSatisfy(row -> {
+            assertThat(row.get("TARGETCI")).isEqualTo("D42:MOUNTPOINT:10");
+            assertThat(row.get("RELATIONNUM")).isEqualTo(contains);
+        });
+
+        assertThat(writer.write(List.of(virtual, physical))).isEqualTo(2);
+        assertThat(jdbc.queryForList(snapshotQuery)).isEqualTo(firstRows);
+    }
+
+    @Test
     void skipsWhenRelationCodeIsNotRegistered() {
         jdbc.update("DELETE FROM MAXIMO.RELATION");
 
