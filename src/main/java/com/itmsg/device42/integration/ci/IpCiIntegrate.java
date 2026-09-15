@@ -126,6 +126,7 @@ public class IpCiIntegrate implements CiIntegrationTask {
 
                 List<ActCiSpecUpsert> specs = new ArrayList<>();
                 specMapper.addSpec(specs, definitions, actCi, IpSpec.DOT_NOTATION, source.ipAddress(), null);
+                specMapper.addSpec(specs, definitions, actCi, IpSpec.STRING_NOTATION, source.ipAddress(), null);
 
                 mappedData.add(new CiUpsert(actCi, List.copyOf(specs)));
             } catch (RuntimeException e) {

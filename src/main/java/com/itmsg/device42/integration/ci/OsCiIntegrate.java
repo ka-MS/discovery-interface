@@ -123,6 +123,7 @@ public class OsCiIntegrate implements CiIntegrationTask {
 
                 List<ActCiSpecUpsert> specs = new ArrayList<>();
                 specMapper.addSpec(specs, definitions, actCi, OsSpec.OS_NAME, source.osName(), null);
+                specMapper.addSpec(specs, definitions, actCi, OsSpec.NAME, source.osName(), null);
                 specMapper.addSpec(specs, definitions, actCi, OsSpec.OS_VERSION, source.osVersion(), null);
                 specMapper.addSpec(specs, definitions, actCi, OsSpec.KERNEL_VERSION, source.kernelVersion(), null);
                 specMapper.addSpec(specs, definitions, actCi, OsSpec.KERNEL_ARCHITECTURE, source.architecture(), null);

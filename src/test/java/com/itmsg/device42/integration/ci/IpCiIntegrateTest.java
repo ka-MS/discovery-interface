@@ -33,17 +33,24 @@ class IpCiIntegrateTest {
         integration = new IpCiIntegrate(mock(Device42ConnectionFactory.class), new ActCiWriter(jdbc), new CiSpecMapper());
         jdbc.update("INSERT INTO MAXIMO.CLASSSTRUCTURE VALUES ('IPA','NET.IPADDRESS')");
         jdbc.update("INSERT INTO MAXIMO.CLASSUSEWITH VALUES ('IPA','ACTCI')");
-        jdbc.update("INSERT INTO MAXIMO.ASSETATTRIBUTE (ASSETATTRIBUTEID,ASSETATTRID,DATATYPE) VALUES (800,'IPADDRESS_DOTNOTATION','ALN')");
-        jdbc.update("INSERT INTO MAXIMO.CLASSSPEC (CLASSSTRUCTUREID,CLASSSPECID,ASSETATTRID,ASSETATTRIBUTEID) VALUES ('IPA',800,'IPADDRESS_DOTNOTATION',800)");
+        seedSpec(800, "IPADDRESS_DOTNOTATION");
+        seedSpec(801, "IPADDRESS_STRINGNOTATION");
+    }
+
+    private void seedSpec(long id, String attribute) {
+        jdbc.update("INSERT INTO MAXIMO.ASSETATTRIBUTE (ASSETATTRIBUTEID,ASSETATTRID,DATATYPE) VALUES (?,?,'ALN')",
+                id, attribute);
+        jdbc.update("INSERT INTO MAXIMO.CLASSSPEC (CLASSSTRUCTUREID,CLASSSPECID,ASSETATTRID,ASSETATTRIBUTEID) VALUES ('IPA',?,?,?)",
+                id, attribute, id);
         jdbc.update("""
                 INSERT INTO MAXIMO.CLASSSPECUSEWITH
                     (CLASSSPECID,OBJECTNAME,SEQUENCE,MANDATORY,USEINSPEC,CLASSSTRUCTUREID,ASSETATTRID)
-                VALUES (800,'ACTCI',1,0,1,'IPA','IPADDRESS_DOTNOTATION')
-                """);
+                VALUES (?,'ACTCI',1,0,1,'IPA',?)
+                """, id, attribute);
     }
 
     @Test
-    void mapsBodyAndAddressSpecUsingOwnScanTime() {
+    void mapsBodyAndBothAddressSpecsUsingOwnScanTime() {
         integration.putData(integration.mapData(
                 List.of(new IpSource(3, 100, "192.168.2.57", "메모", "2026-08-26T07:15:00Z")),
                 definitionLoader.load()));
@@ -55,7 +62,10 @@ class IpCiIntegrateTest {
         assertThat(jdbc.queryForObject("SELECT LASTSCANDT FROM MAXIMO.ACTCI", LocalDateTime.class))
                 .isEqualTo(OffsetDateTime.parse("2026-08-26T07:15:00Z")
                         .atZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime());
-        assertThat(jdbc.queryForObject("SELECT ALNVALUE FROM MAXIMO.ACTCISPEC", String.class)).isEqualTo("192.168.2.57");
+        assertThat(jdbc.queryForList("SELECT ASSETATTRID FROM MAXIMO.ACTCISPEC ORDER BY ASSETATTRID", String.class))
+                .containsExactly("IPADDRESS_DOTNOTATION", "IPADDRESS_STRINGNOTATION");
+        assertThat(jdbc.queryForList("SELECT DISTINCT ALNVALUE FROM MAXIMO.ACTCISPEC", String.class))
+                .containsExactly("192.168.2.57");
     }
 
     @Test
