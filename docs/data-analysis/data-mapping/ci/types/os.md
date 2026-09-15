@@ -2,7 +2,7 @@
 
 > Target: MAXIMO.ACTCI · MAXIMO.ACTCISPEC
 > 원천·메타데이터 확인: 2026-09-15 · D42 .68 / .35 · Maximo BLUDB
-> 구현: 없음 · 상태: 매핑 작성 완료. 적재 구현·실제 Maximo 검증은 미착수.
+> 구현: OsCiIntegrate · 상태: 본체·스펙 적재 구현 및 자동 테스트 완료. 관계 미적재. 실제 Maximo 적재·UI 검증은 미완료.
 > 분류 선택 이유·관계 추천안·미결 근거는 [OS 수집 설계](../../../design/ci/os.md)에 있다.
 
 공통 컬럼 정의는 [ACTCI](../actci.md), [ACTCISPEC](../actcispec.md)가 소유한다.
@@ -62,7 +62,7 @@ LIMIT %d OFFSET %d
 | ACTCINAME | 실제 CI 이름 | 직접 | `o.os_name` | 전건 보유. 원문 |
 | CLASSSTRUCTUREID | 분류 | 변환 | 상수 분류명 | `SYS.OPERATINGSYSTEM` 조회값 |
 | DESCRIPTION | 설명 | 원천없음 | – | OS 원천에 메모 필드가 없다 |
-| LASTSCANDT | 최종 발견 시각 | 변환 | `c.last_discovered` | 부모 Computer 값. OS 원천에 없음 |
+| LASTSCANDT | 최종 발견 시각 | 변환 | `c.last_discovered` | **확정.** 부모 Computer 값. OS 원천에 없음 |
 | HASLD | 상세 설명 있음 | 상수 | – | 0 |
 | CHANGEBY | 변경자 | 상수 | – | `Device42` |
 | CHANGEDATE | 변경 날짜 | 변환 | 매핑 시각 | JVM 기본 시간대 |

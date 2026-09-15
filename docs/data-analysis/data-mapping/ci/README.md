@@ -33,15 +33,15 @@ OS·Disk·Filesystem·IP의 원천 관측은 [OS·Disk·Filesystem·IP 원천 �
 | Computer | [computer.md](types/computer.md) | 본체·스펙 저장 구현 및 자동 테스트 완료. [실행 준비](types/computer-run.md)의 설정·BIOS 날짜 속성 등록 후 실제 적재·UI 검증 필요 |
 | Database | [database.md](types/database.md) | 원천 10컬럼 사용처·SQL 작성; 본체 이름·메모·분류, 이름 속성 대응. 추가 속성·적용 설정·필수값 미결 |
 | Database Instance | [database-instance.md](types/database-instance.md) | 원천 9컬럼·Resource 보강·SQL 작성; 본체 이름·메모·분류, 이름·제품명·버전 문자열 속성 대응. 추가 속성·관계·필수값 미결 |
-| OS | [os.md](types/os.md) | 매핑 작성 완료. 분류 SYS.OPERATINGSYSTEM, 속성 4개. EOL·EOS 대응 속성 없음. 적재 구현 미착수 |
-| Disk | [disk.md](types/disk.md) | 매핑 작성 완료. 분류 DEV.DISKDRIVE, 속성 3개. 제조사·펌웨어·미디어 유형은 원천 전건 비어 있음. 적재 구현 미착수 |
-| Filesystem | [filesystem.md](types/filesystem.md) | 매핑 작성 완료. 분류 SYS.FILESYSTEM, 속성 4개. 컨테이너 마운트 선별 미결. 적재 구현 미착수 |
-| IP | [ip.md](types/ip.md) | 본체·속성만 작성. 분류 NET.IPADDRESS, 속성 1개. **Computer와 직접 관계 규칙이 없어 경로 결정 필요** |
+| OS | [os.md](types/os.md) | 본체·스펙 적재 구현 및 자동 테스트 완료. 분류 SYS.OPERATINGSYSTEM, 속성 4개. 관계 미적재. EOL·EOS 대응 속성 없음 |
+| Disk | [disk.md](types/disk.md) | 본체·스펙 적재 구현 및 자동 테스트 완료. 분류 DEV.DISKDRIVE, 속성 3개. 관계 미적재. 제조사·펌웨어는 원천 전건 비어 있음 |
+| Filesystem | [filesystem.md](types/filesystem.md) | 본체·스펙 적재 구현 및 자동 테스트 완료. 분류 SYS.FILESYSTEM, 속성 4개. 관계 미적재. 컨테이너·가상 마운트는 제외 |
+| IP | [ip.md](types/ip.md) | 본체·스펙 적재 구현 및 자동 테스트 완료. 분류 NET.IPADDRESS, 속성 1개. **관계 규칙이 없어 미적재. 경로 결정 필요** |
 
 기준정보 보완과 나머지 정책은 [ISSUE-8·11](../../open-issues.md)에 둔다.
-Computer 본체·속성은 구현했다. OS·Disk·Filesystem·IP는 매핑까지 작성했고 적재 구현은 미착수다.
-관계는 네 유형 모두 확정하지 않았다. 규칙 관측 결과는 분류 조사 문서에 있다.
-실제 Maximo 적재·UI 검증은 전 유형 미완료다.
+Computer·OS·Disk·Filesystem·IP 다섯 유형의 본체·속성을 구현했다. 공통 쓰기는 ActCiWriter,
+공통 스펙 매핑은 CiSpecMapper가 담당한다. 관계는 다섯 유형 모두 적재하지 않는다.
+규칙 관측 결과는 분류 조사 문서에 있다. 실제 Maximo 적재·UI 검증은 전 유형 미완료다.
 
 ## Target
 

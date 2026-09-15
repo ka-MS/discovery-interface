@@ -2,7 +2,7 @@
 
 > Target: MAXIMO.ACTCI · MAXIMO.ACTCISPEC
 > 원천·메타데이터 확인: 2026-09-15 · D42 .68 / .35 · Maximo BLUDB
-> 구현: 없음 · 상태: 본체·속성만 작성. **관계 경로가 미결이라 적재 착수 전 결정이 필요하다.**
+> 구현: IpCiIntegrate · 상태: 본체·스펙 적재 구현 및 자동 테스트 완료. **관계는 규칙이 없어 적재하지 않는다.**
 > 분류 선택 이유·관계 선택지는 [IP 수집 설계](../../../design/ci/ip.md)에 있다.
 
 공통 컬럼 정의는 [ACTCI](../actci.md), [ACTCISPEC](../actcispec.md)가 소유한다.
