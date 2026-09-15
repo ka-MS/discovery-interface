@@ -5,7 +5,9 @@
 #   ./run.sh asset
 #   ./run.sh asset software conversion
 #
-# 잡 이름은 Spring 빈 이름이다: asset, ci, software, conversion
+# 잡 이름은 Spring 빈 이름이다: asset, ci, ci-relation, software, conversion
+# ci 는 CI 본체·스펙에 이어 관계까지 적재한다. ci-relation 은 관계만 적재한다.
+# ./run.sh ci ci-relation 처럼 둘 다 주면 관계가 두 번 돈다. MERGE 라 결과는 같다.
 # 등록되지 않은 이름은 JobRunner 가 경고 없이 무시한다.
 #
 set -euo pipefail
