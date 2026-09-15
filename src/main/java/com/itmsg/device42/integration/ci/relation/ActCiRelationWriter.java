@@ -26,6 +26,9 @@ public class ActCiRelationWriter {
 
     /** @return 적재에 성공한 관계 건수. 걸러진 건과 실패한 건은 각각 로그로 남는다. */
     public int write(List<ActCiRelationUpsert> data) {
+        // CiRelationJob이 관계 소스마다 페이지 단위로 write()를 호출하므로 이 시각은
+        // 잡 전체의 단일 실행 시각이 아니라 페이지 단위 시각이다. 본체 task(OsCiIntegrate.mapData 등)도
+        // 배치당 하나의 LocalDateTime.now()를 쓰는 같은 컨벤션이다.
         LocalDateTime changeDate = LocalDateTime.now();
         int loaded = 0;
 

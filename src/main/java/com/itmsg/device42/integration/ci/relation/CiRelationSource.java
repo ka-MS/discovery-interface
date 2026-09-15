@@ -38,6 +38,7 @@ public enum CiRelationSource {
     }
 
     public String pageQuery(long offset, int limit) {
+        // formatted 인자 순서는 파라미터 순서(offset, limit)와 반대다: %d는 SQL의 LIMIT, OFFSET 순서.
         return pageQuery.formatted(limit, offset);
     }
 
