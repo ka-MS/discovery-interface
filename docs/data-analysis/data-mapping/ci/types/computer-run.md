@@ -13,7 +13,8 @@
 - 변경 시각과 발견 시각의 저장 기준은 JVM 기본 시간대다.
   발견 시각의 원천 오프셋을 해석한 뒤 해당 시간대로 변환한다.
 - BIOS 출시일을 수집하려면 ASSETATTRIBUTE에 전역 ALN 속성 `COMPUTERSYSTEM_BIOSRELEASEDATE`를 준비한다.
-  현재 미등록이다. 분류 템플릿 없이도 명시적 추가 속성 경로를 사용할 수 있지만,
+  2026-09-15 전역 속성과 `CI.COMPUTERSYSTEM` 템플릿이 등록됐고 ACTCI 템플릿은 아직 없다.
+  분류 템플릿 없이도 명시적 추가 속성 경로를 사용할 수 있지만,
   화면 표시·승격은 별도 검증 대상이다. 두 분류에 템플릿을 등록하면 기존 템플릿 경로가 우선한다.
   [등록 SQL](../../../../../src/main/resources/db/maximo/ci-computer-bios-release-date.sql)은
   별도 실행용이며 구분자는 `@`다. 이번 수정에서 실행하지 않았다.

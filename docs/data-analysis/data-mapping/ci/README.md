@@ -40,7 +40,7 @@ OS·Disk·Filesystem·IP의 원천 관측은 [OS·Disk·Filesystem·IP 원천 �
 | Database Instance | [database-instance.md](types/database-instance.md) | 원천 9컬럼·Resource 보강·SQL 작성; 본체 이름·메모·분류, 이름·제품명·버전 문자열 속성 대응. 추가 속성·관계·필수값 미결 |
 | OS | [os.md](types/os.md) | 본체·스펙 적재 구현 및 자동 테스트 완료. 분류 SYS.OPERATINGSYSTEM, 속성 5개(대조 기준 CI.OS). 관계 미적재. EOL·EOS 대응 속성 없음 |
 | Disk | [disk.md](types/disk.md) | 본체·스펙 적재 구현 및 자동 테스트 완료. 분류 DEV.DISKDRIVE, 속성 3개(CI 대조 기준 없음). 관계 미적재. 제조사·펌웨어는 원천 전건 비어 있음 |
-| Filesystem | [filesystem.md](types/filesystem.md) | 본체·스펙 적재 구현 및 자동 테스트 완료. 분류 SYS.FILESYSTEM, 속성 4개(대조 기준 CI.FILESYSTEM). 관계 미적재. 컨테이너·가상 마운트는 제외 |
+| Filesystem | [filesystem.md](types/filesystem.md) | 본체·스펙 적재 구현 및 자동 테스트 완료. 분류 SYS.FILESYSTEM, 속성 5개(대조 기준 CI.FILESYSTEM). 관계 미적재. 컨테이너·가상 마운트는 제외 |
 | IP | [ip.md](types/ip.md) | 본체·스펙 적재 구현 및 자동 테스트 완료. 분류 NET.IPADDRESS, 속성 4개(대조 기준 CI.IPADDRESS). 장비 연결 IP 전체 수집. **관계 규칙이 없어 미적재. 경로 결정 필요** |
 
 기준정보 보완과 나머지 정책은 [ISSUE-8·11](../../open-issues.md)에 둔다.

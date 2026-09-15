@@ -107,7 +107,7 @@ ALNVALUE는 문자열, NUMVALUE는 숫자다. 한 행에서 값 컬럼 하나만
 | BIOSMANUFACTURER | BIOS 제조사 | ALNVALUE | 직접 | b.name | 기존 ACTCI 스펙 사용; BIOSNAME에 제조사명을 넣지 않음 |
 | ROMVERSION | BIOS 버전 | ALNVALUE | 직접 | d.bios_version | 기존 ACTCI 스펙 사용; BIOS revision·firmware revision과 합치지 않음 |
 | CPUCORESINSTALLED | 장비 총 코어 수 | NUMVALUE | 변환 | d.total_cpus × d.core_per_cpu | bigint 곱. 하나라도 NULL이면 NULL; threads_per_core를 곱하지 않음 |
-| BIOSRELEASEDATE | BIOS 출시일 원문 | ALNVALUE | 직접 | d.bios_release_date | 추가 정의할 속성. 원문 보존; 아래 등록 전제 참조 |
+| BIOSRELEASEDATE | BIOS 출시일 원문 | ALNVALUE | 직접 | d.bios_release_date | 원문 보존. 전역 속성·CI 분류 등록됨, ACTCI 템플릿 미등록. 아래 참조 |
 
 코어 수는 D42의 “CPU 수 × CPU당 코어 수”로 계산한 해당 장비의 보고 총량이다.
 VM에서는 VM에 보고된 구성으로 해석하며 호스트의 물리 코어 수나 활성 코어 수를 뜻하지 않는다.
@@ -118,7 +118,12 @@ CPU 파트 수·모델별 cores 합계로 대체하지 않는다.
 GBYTE·MBYTE·GHZ·MHZ는 Maximo에 등록되어 있다. 단위 누락·미지원 표기에는 임의 단위를 붙이지 않는다.
 IBM CDM 원래 단위와 동일하다고 가정하지 않으며 승격·후속 연계도 값과 단위를 함께 처리해야 한다.
 
-**추가 속성 등록 전제:** `COMPUTERSYSTEM_BIOSRELEASEDATE`는 이번 문서에서 정한 ALN 속성명이며 현재 미등록이다.
+**추가 속성 등록 상태:** `COMPUTERSYSTEM_BIOSRELEASEDATE`는 2026-09-15 사용자가 수동 등록했다.
+전역 `ASSETATTRIBUTE`(ASSETATTRIBUTEID 3065338, ALN, ORGID·SITEID 없음)와
+`CI.COMPUTERSYSTEM`의 `CLASSSPEC`(CLASSSPECID 19395931, OBJECTNAME='CI', SEQUENCE 2)이 있다.
+**ACTCI 쪽 `SYS.COMPUTERSYSTEM`에는 아직 템플릿이 없다.**
+따라서 적재는 계속 명시적 추가 속성 경로를 쓰며 `CLASSSPECID=NULL`, `DISPLAYSEQUENCE=180`이다.
+ACTCI 템플릿을 등록하면 기존 경로가 자동으로 우선한다.
 ASSETATTRIBUTE에 전역 ALN 정의가 정확히 한 건 있어야 사용한다. 분류 템플릿이 없으면
 명시적 추가 속성으로 CLASSSPECID=NULL, DISPLAYSEQUENCE=180, MANDATORY=0을 사용한다.
 SECTION·LINKEDTOATTRIBUTE·LINKEDTOSECTION은 NULL, 단위는 속성 정의를 따른다.
