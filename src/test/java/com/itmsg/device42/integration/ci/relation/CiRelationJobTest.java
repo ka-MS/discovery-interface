@@ -138,8 +138,25 @@ class CiRelationJobTest {
 
         new CiRelationJob(factory, writer).run();
 
-        verify(factory, atLeast(CiRelationSource.values().length)).openConnection();
+        /*
+         * openConnection() 4회: 소스1 실패(1) + 소스2 DISK 건수·페이지(2) + 소스3 FILESYSTEM 건수(1).
+         * atLeast(values().length)이던 이전 단언은 "루프가 소스2 직후 멈춘 회귀"도
+         * 통과시켰다(그 경우도 3회는 채워진다). times(4)로 정확히 조인다.
+         */
+        verify(factory, times(4)).openConnection();
         verify(writer, atLeastOnce()).write(anyList());
+
+        /*
+         * 호출 횟수만으로는 "세 번째 소스에 도달했다"를 증명하지 못한다 — FILESYSTEM의
+         * countRs.next()가 DISK의 건수 호출로 이미 소진돼 0건으로 조용히 스킵되는 것과
+         * "루프가 소스3에 아예 도달하지 못한 것"을 구분할 수 없기 때문이다. 실행된 SQL을
+         * 직접 캡처해 FILESYSTEM 고유 테이블(view_mountpoint_v2)이 조회됐는지 확인한다.
+         */
+        var executedQueries = ArgumentCaptor.forClass(String.class);
+        verify(statement, times(3)).executeQuery(executedQueries.capture());
+        assertThat(executedQueries.getAllValues())
+                .as("세 번째 소스(FILESYSTEM)의 건수 쿼리가 실제로 실행됐다")
+                .anyMatch(sql -> sql.contains("view_mountpoint_v2"));
     }
 
     /**
