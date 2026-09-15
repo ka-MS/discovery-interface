@@ -21,6 +21,7 @@ DB·Instance 전체 원천 컬럼과 참조 구조는 [원천 구조](../../know
 
 OS·Disk·Filesystem·IP의 원천 관측은 [OS·Disk·Filesystem·IP 원천 조사](../../knowledge/device42/ci-component-inventory.md),
 분류·스펙·관계 규칙은 [OS·Disk·Filesystem·IP 분류 조사](../../knowledge/maximo/ci-component-classifications.md),
+승격 범위 설정은 [CI 승격 범위](../../knowledge/maximo/ci-promotion-scope.md),
 수집 구성안은 `../../design/ci/` 의 [os](../../design/ci/os.md)·[disk](../../design/ci/disk.md)·[filesystem](../../design/ci/filesystem.md)·[ip](../../design/ci/ip.md)에 있다.
 
 공통 7열 표는 전체 컬럼·참조 규칙을 소유한다. 유형 문서 본문에는 실제 조회 SQL과

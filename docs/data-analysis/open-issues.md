@@ -201,6 +201,10 @@ ASSETATTRIBUTE 등 연결 정보와 Maximo 애플리케이션 동작까지 검�
 - **중복 속성 선택.** OS의 `VERSIONSTRING`·`NAME`, IP의 `STRINGNOTATION`, Disk의 `MEDIAACCESSDEVICE_NAME`이 각각 다른 속성과 중복이다. 한쪽만 채택해야 한다.
 - **`MODELOBJECT_CDMSOURCE`·`SOURCETOKEN` 채택 여부.** 네 분류 모두 공통으로 갖는다. 연계 출처와 원천 키를 남기는 용도로 쓸지 정해야 한다.
 - **CI 계열 대조 기준.** 적재 대상은 ACTCI 분류지만 수집 속성 선택의 기준선은 `CIROOT` 아래 CI 분류다. OS는 `CI.OS`(7개), Filesystem은 `CI.FILESYSTEM`(16개), IP는 `CI.IPADDRESS`(6개)이며 **Disk는 대응 분류가 없다.** 2026-09-15 조사에서 확인해 반영했다.
+- **승격 범위 정본은 `CITEMPLATE`이다.** 2026-09-15 확인했다. 어떤 ACTCI 분류가 어떤 CI 분류로 승격되는지가 여기 설정돼 있으며 범위 14개·매핑 158행이다. 관측은 [CI 승격 범위](knowledge/maximo/ci-promotion-scope.md). 이전 문서들이 "승격 미검증"으로만 적었던 부분을 대체한다.
+- **Filesystem 승격 매핑을 추가했다.** 기본 구성은 `CI.FILESYSTEM`을 `SYS.LOCALFILESYSTEM`에만 매핑하는데 이 ETL은 `SYS.FILESYSTEM`으로 적재한다. 2026-09-15 매핑 행을 추가했다(`CITEMPLATE` 164번). `CI.FILESYSTEM`에 ACTCI 분류 둘이 걸린 것은 158행 중 유일한 경우이며 승격 동작은 미검증이다. 화면의 「유효성 검증」으로 확인해야 한다.
+- **Disk는 승격할 수 없다.** `DEV.DISKDRIVE`가 `CITEMPLATE`에 한 행도 없다. CI 계열에 디스크 분류가 없다는 관측과 같은 결론이다. ISSUE-8의 관리 단위 재검토 근거다.
+- **가상 Computer 승격 범위에 자식이 없다.** `CI.VIRTUALCOMPUTERSYSTEM` 범위는 자기 자신 1행뿐인데 `CI.COMPUTERSYSTEM` 범위는 OS·Filesystem·IP를 포함한 9행이다. 2026-09-15 적재 기준 Computer 70대 중 65대가 가상이므로, 현재 설정으로는 가상 서버를 승격해도 본체만 올라간다. 기준정보 변경은 이 ETL 범위가 아니다.
 - **CI 기준 밖 속성의 승격 전달.** `OPERATINGSYSTEM_KERNELARCHITECTURE`는 `CI.OS`에 없는데 채택했다. Computer의 BIOS 출시일·CPU 코어 수와 같은 의도적 추가다. ACTCI→CI 승격에서 이런 속성이 누락되는지는 미검증이다. 승격 자체가 미구현이다.
 - **Disk의 승격 대상 분류 부재.** CI 계열에 디스크 분류가 없어 승격할 곳이 없다. 관리 단위 재검토 근거로 ISSUE-8에도 걸었다.
 - **LASTSCANDT 원천.** IP만 `last_discovered`를 전건 갖는다. OS·Disk·Filesystem은 부모 Computer의 값을 쓰는 안을 추천했다.

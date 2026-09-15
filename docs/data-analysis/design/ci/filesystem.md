@@ -47,6 +47,34 @@ nfs·nfs4가 두 서버 모두 존재한다. 원격 파일시스템을 `SYS.LOCA
 종류별로 분류를 나누는 안도 있으나, `overlay`·`squashfs`·`VMFS`·`devtmpfs`에 대응하는
 분류가 없어 일부를 적재할 수 없게 된다. Computer가 범용 분류를 쓴 선례와도 맞지 않는다.
 
+### SYS.LOCALFILESYSTEM과의 차이 — 2026-09-15 재검토
+
+두 분류의 **속성 33개가 완전히 동일하다.** 한쪽에만 있는 속성이 없다.
+계층상으로도 부모-자식이 아니라 둘 다 `SYS.COMPUTERSYSTEM` 아래 형제다.
+`SYS.NFSFILESYSTEM`·`SYS.REMOTEFILESYSTEM`·`SYS.UNIX.UNIXFILESYSTEM` 등도 같은 층에 있다.
+
+관계 규칙은 `SYS.LOCALFILESYSTEM`이 완전한 상위집합이다. Computer→FS `CONTAINS`는 동일하고,
+`SYS.LOCALFILESYSTEM`에만 `RELATION.STOREDON` 18개가 더 있다. 반대는 0개다.
+대상은 `DEV.DISKPARTITION`·`DEV.STORAGEVOLUME`·`SYS.VMWARE.VMWAREDATASTORE` 등이다.
+
+다만 **`DEV.DISKDRIVE`로 가는 규칙은 양쪽 다 없다.** 이 ETL이 적재하는 Disk CI와는
+어느 쪽을 골라도 연결할 수 없다. STOREDON을 쓰려면 파티션·볼륨 CI를 새로 도입해야 한다.
+
+제외 필터 적용 후 남은 원천의 약 30%가 로컬이 아니다.
+
+| 성격 | .68 (69건) | .35 (60건) |
+| --- | ---: | ---: |
+| 로컬 (xfs·ext4·NTFS·vfat·FAT32·ext3) | 50 | 42 |
+| 원격 (nfs·nfs4) | 5 | 6 |
+| 이동식 (iso9660·UDF) | 8 | 3 |
+| 클러스터 (VMFS) | 4 | 9 |
+
+nfs 마운트를 `LOCALFILESYSTEM`으로 적재하면 분류가 사실과 어긋난다. `SYS.FILESYSTEM`을 유지한다.
+
+**승격 범위는 별도 설정이 필요했다.** Maximo 기본 구성은 `CI.FILESYSTEM`을
+`SYS.LOCALFILESYSTEM`에만 매핑한다. 2026-09-15 `SYS.FILESYSTEM` 매핑 행을 추가해
+승격 경로를 열었다. 상세는 [CI 승격 범위](../../knowledge/maximo/ci-promotion-scope.md).
+
 ## 3. 스펙 대조표
 
 **대조 기준은 `CI.FILESYSTEM`(CCI00026) 16개다.** 적재 대상은 `SYS.FILESYSTEM`이며
@@ -157,3 +185,4 @@ Computer가 출발점이다. 양쪽 Computer 분류 모두 같은 규칙을 갖�
 | `filesystem` 원문 속성 미등록 | 이번 범위 제외 추천 | ISSUE-11 |
 | LASTSCANDT 원천 | 부모 Computer 값 사용 추천 | ISSUE-11 |
 | 배열 `DISTINCT ON` 유지 여부 | 유지 추천 | ISSUE-9 |
+| 승격 1:N 매핑 검증 | `CI.FILESYSTEM`에 ACTCI 분류 둘이 걸린 유일한 경우. 동작 미검증 | ISSUE-11 |

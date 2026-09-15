@@ -120,6 +120,7 @@ Device42의 상세 제약은 `../knowledge/device42/doql-constraints.md` 에 있
 | `maximo/ci-definition-scope.sql` | CI 정의 캐시가 읽는 템플릿의 조직·사이트 범위, 스펙 키 중복, 조인 증폭 |
 | `device42/ci-component-source.sql` | OS·Disk·Filesystem·IP 원천 뷰 형태, PK 유일성, Computer 연결분, 값 보유율, 배열 연결 분포 |
 | `maximo/ci-component-classifications.sql` | 네 유형의 ACTCI 분류 후보·스펙·적용 설정과 Computer 분류쌍 관계 규칙 |
+| `maximo/ci-promotion-scope.sql` | CITEMPLATE의 승격 범위, 범위별 CI↔ACTCI 분류 매핑, 적재 분류의 등록 여부 |
 | `maximo/ci-db-target-mapping.sql` | 일반 DB·DB Server의 속성 설정과 분류쌍 관계 규칙 |
 | `maximo/ci-db-spec-analysis.sql` | 일반 DB·DB Server의 전체 속성명·타입·적용 설정 조사 |
 | `maximo/ci-relation-rules.sql` | RELATION·RELATIONRULES 구조, 적용 범위와 기존 CI 규칙 일치 여부 |

@@ -93,4 +93,5 @@ LIMIT %d OFFSET %d
 | 식별자 접두어 | `view_part_v1`이 CPU·RAM과 공용이라 `PART` 대 `DISK` 선택 필요. ISSUE-11 |
 | ACTCINAME 중복 | 같은 모델 디스크가 같은 이름을 갖는다. 슬롯·장비명 부가 검토. ISSUE-11 |
 | 원천 커버리지 | 표본 Computer 95 / 85대 중 18 / 19대만 디스크 보유. ISSUE-8 |
+| 승격 불가 | `DEV.DISKDRIVE`가 `CITEMPLATE`에 0행이다. CI로 승격할 수 없다. ISSUE-8 |
 | 관계 | `RELATION.CONTAINS`(Computer→Disk) 추천. `USEWITH`가 CI라 미검증. ISSUE-11 |

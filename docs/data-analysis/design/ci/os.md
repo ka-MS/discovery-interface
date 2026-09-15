@@ -60,8 +60,10 @@ ESXi·Windows(10/11/Server)·macOS·FreeBSD·Solaris·Cisco IOS·VxWorks·Samsun
 Computer가 `CI.COMPUTERSYSTEM` 18개에 BIOS 출시일·CPU 코어 수를 더한 것과 같은 성격이다.
 기준선을 벗어나는 추가는 이유와 함께 명시한다는 관례를 따른다.
 
-**승격 시 누락 위험이 있다.** CI 계열에 대응 스펙이 없으므로 ACTCI→CI 승격에서
-이 값이 전달되지 않을 수 있다. 승격 자체가 미구현·미검증이라 확인된 사실은 아니다. ISSUE-11.
+**승격 시 누락 위험이 있다.** `SYS.OPERATINGSYSTEM`은 승격 범위에서 `CI.OS`로 매핑되는데
+(`CITEMPLATE` 71번), `CI.OS`에 이 속성이 없으므로 승격에서 값이 전달되지 않을 수 있다.
+실제 동작은 확인한 적이 없다. 이 ETL은 승격을 구현하지 않는다.
+설정은 [CI 승격 범위](../../knowledge/maximo/ci-promotion-scope.md) 참조. ISSUE-11.
 
 ### 미대응 — EOL·EOS
 
