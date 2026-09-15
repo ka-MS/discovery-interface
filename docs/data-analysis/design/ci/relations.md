@@ -103,13 +103,13 @@ Computer → Disk도 Disk 도메인 정의가 소유한다. Computer가 등장�
 ## 관계 조회의 계약
 
 - 본체와 같은 수집 범위·필터를 적용한다.
-- 관계 생성에 필요한 키와 분류 판별 정보만 조회한다. 본체 속성은 다시 읽지 않는다.
+- 관계 생성에 필요한 연결 키만 조회한다. 본체 속성은 다시 읽지 않는다.
 - 전체 ACTCI를 메모리에 올려 이름으로 찾지 않는다. 양 끝은 원천의 확인된 연결 키로 만든다.
 - 본체 task가 관계 후보를 누적해 다음 단계로 넘기는 방식보다, 관계 단계가 원천의 연결 키만
   다시 읽는 안을 우선한다. 보관 규모·수명 관리가 필요 없고 관계만 재실행할 수 있다.
 
-공통 Writer에 넘기는 값은 출발 ACTCINUM, 도착 ACTCINUM, 관계 규칙이다.
-규칙에는 정확한 relationnum과 예상 출발·도착 CLASSSTRUCTUREID가 들어간다.
+공통 Writer에 넘기는 값은 출발 ACTCINUM, 도착 ACTCINUM, 정확한 relationnum 셋뿐이다.
+예상 분류는 넘기지 않는다. 근거는 [공통 매핑 3절](../../data-mapping/ci/actcirelation.md#3-공통-저장-sql-제안)에 있다.
 SQL의 저장 위치·Java 타입·정의 등록 방식은 구현 시 정한다.
 문서화를 위해 범용 플러그인 구조나 설정 체계를 미리 설계하지 않는다.
 
@@ -130,15 +130,12 @@ SQL의 저장 위치·Java 타입·정의 등록 방식은 구현 시 정한다.
 `enums.ci.CiRelationRule`에 업무상 관계 규칙을 명시하는 안이다.
 카테고리 두 개만으로 관계를 자동 결정하지 않는다. 같은 두 유형에도 다른 의미의 관계가 존재한다.
 
-각 규칙이 가질 값:
-- 정확한 relationnum
-- 허용 출발·도착 CiClassification 집합
-- 원천에서 정한 기본 저장 방향
+각 규칙이 가질 값은 **정확한 relationnum과 원천에서 정한 기본 저장 방향**이다.
+예: COMPUTER_CONTAINS_DISK는 Computer → Disk 방향, relationnum=RELATION.CONTAINS.
 
-예: COMPUTER_CONTAINS_DISK는 출발 {COMPUTER,VIRTUAL_COMPUTER},
-도착 {DISK_DRIVE}, relationnum=RELATION.CONTAINS.
-CLASSSTRUCTUREID·관계 규칙은 CI 작업 시작 시 해당 정의만 조회하여 검증할 수 있다.
-전체 RELATIONRULES를 전역 캐시하거나 숫자 ID를 enum에 넣을 필요는 없다.
+허용 분류 집합은 enum에 넣지 않는다. 분류 검사는 MERGE가 실제 ACTCI 행과
+RELATIONRULES로 하므로 코드가 같은 목록을 이중으로 들고 있을 이유가 없다.
+전체 RELATIONRULES를 전역 캐시하거나 숫자 ID를 enum에 넣을 필요도 없다.
 CARDINALITY·CONTAINMENT·REVRELATIONSHIP은 DB 정의를 확인하며 enum에 별도 정본을 만들지 않는다.
 
 DTO 제안: sourceCiNum, targetCiNum, rule. SWAPPED는 규칙 메타데이터의 단순 복사 값이 아니다.
@@ -147,12 +144,12 @@ DTO 제안: sourceCiNum, targetCiNum, rule. SWAPPED는 규칙 메타데이터의
 ## 저장 전제와 이번 조사 한계
 
 [ACTCIRELATION 공통 매핑](../../data-mapping/ci/actcirelation.md)의 고유키와 가드를 사용한다.
-양 끝 존재뿐 아니라 실제 분류가 매핑의 예상 분류와 일치하고 해당 관계 규칙이 있는지 확인한다.
+양 끝 ACTCI가 실제로 있는지, 그 둘의 실제 분류쌍에 해당 관계 규칙이 있는지 확인한다.
 기존 행이 있다는 것은 **이번 실행에서 본체 갱신에 성공했다는 뜻은 아니다**.
 현재 ActCiWriter는 성공 건수만 반환하므로 이번 실행 성공 CI만 연결하려면 결과 계약을 추가해야 한다.
-현재 최소안은 저장된 본체의 존재·분류·규칙을 검사하는 것으로, 갱신 성공 여부 검증과 구분한다.
+현재 최소안은 저장된 본체의 존재와 규칙을 검사하는 것으로, 갱신 성공 여부 검증과 구분한다.
 
-관계가 0건 처리됐다고 항상 오류는 아니다. 미존재·분류 불일치·규칙 미등록을 나타낼 수 있다.
+관계가 0건 처리됐다고 항상 오류는 아니다. 양 끝 미존재나 규칙 미등록을 나타낼 수 있다.
 원인을 구분하려면 실패 건만 추가 조회하거나 사전 캐시와 비교한다.
 관계 삭제·재부착 시 이전 관계 정리·원천 스냅샷 일관성·동시 실행 정책은 이번에 확정하지 않는다.
 따라서 MERGE만 구현한 상태를 이동·삭제까지 현행화되는 기능이라고 설명하지 않는다.
