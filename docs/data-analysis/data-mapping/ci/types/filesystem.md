@@ -76,7 +76,7 @@ LIMIT %d OFFSET %d
 ## 4. 속성 매핑
 
 적재 분류 `SYS.FILESYSTEM` · **대조 기준 `CI.FILESYSTEM`(CCI00026, 16개)**.
-채택한 네 개가 모두 CI 기준 안에 있다. 선택 근거는 [Filesystem 수집 설계](../../../design/ci/filesystem.md) 3절.
+CI 기준 네 개에 `MODELOBJECT_LABEL`을 더한 다섯 개다. 선택 근거는 [Filesystem 수집 설계](../../../design/ci/filesystem.md) 3절.
 값이 없는 속성은 행을 만들지 않는다.
 
 | ASSETATTRID | 한글 의미 | 값 컬럼 | 구분 | Source | 변환·조건 |
@@ -85,6 +85,7 @@ LIMIT %d OFFSET %d
 | FILESYSTEM_TYPE | 파일시스템 유형 | ALNVALUE | 직접 | `m.fstype_name` | 115 / 141건 |
 | FILESYSTEM_CAPACITY | 용량 | NUMVALUE | 변환 | `m.capacity` | 114 / 140건. MB 해석. 5절 |
 | FILESYSTEM_AVAILABLESPACE | 사용 가능 공간 | NUMVALUE | 변환 | `m.free_capacity` | 106 / 129건. MB 해석 |
+| MODELOBJECT_LABEL | 레이블 | ALNVALUE | 직접 | `m.label` | 24 / 8건. **CI 기준 밖 의도적 추가** |
 
 ## 5. 미대응·미결
 
@@ -94,6 +95,6 @@ LIMIT %d OFFSET %d
 | 마운트 경로 길이 | 컨테이너 경로가 약 130자다. ACTCINAME 192자·ALNVALUE 254자 한계에 근접. 절단·생략 규칙 필요. ISSUE-11 |
 | 용량 단위 | **확정.** `MEASUREUNITID='MBYTE'`를 지정한다 |
 | `m.filesystem` | 93 / 133건 보유하나 대응 속성 없음. 추가 등록 필요. 이번 범위 제외 추천 |
-| `m.label` | 24 / 8건. `MODELOBJECT_LABEL` 채택 여부 미정 |
+| MODELOBJECT_LABEL 승격 전달 | CI 계열 분류에 `MODELOBJECT_` 속성이 0개다. 누락될 수 있다. 미검증. ISSUE-11 |
 | 관계 | [Computer 출발 관계 매핑](computer.md#7-관계-매핑--2026-09-15)에 RELATION.CONTAINS의 원천 SQL·방향 정의. 배열 연결 쌍 보존 필요. 관계 저장·UI 검증 미완료. ISSUE-11 |
 | 승격 1:N 매핑 | `CI.FILESYSTEM`에 ACTCI 분류 둘이 걸린 유일한 경우. 동작 미검증. ISSUE-11 |

@@ -201,13 +201,14 @@ ASSETATTRIBUTE 등 연결 정보와 Maximo 애플리케이션 동작까지 검�
 - **`IPADDRESS_ADDRESSTYPE` 코드 규약** 미확인.
 - **중복 속성 선택.** OS의 `VERSIONSTRING`·`NAME`, IP의 `STRINGNOTATION`, Disk의 `MEDIAACCESSDEVICE_NAME`이 각각 다른 속성과 중복이다. 한쪽만 채택해야 한다.
 - **`MODELOBJECT_CDMSOURCE`·`SOURCETOKEN` 채택 여부.** 네 분류 모두 공통으로 갖는다. 연계 출처와 원천 키를 남기는 용도로 쓸지 정해야 한다.
+- **Computer의 CI 기준 대조를 다시 해야 한다.** BIOSRELEASEDATE 등록으로 `CI.COMPUTERSYSTEM`이 19개가 됐다. 현재 수집 18개와 대조하면 기준 밖이 BIOSMANUFACTURER·ROMVERSION·CPUCORESINSTALLED 3개, 기준에 있는데 미수집이 FQDN·MANAGEDSYSTEMNAME·SIGNATURE·SYSTEMBOARDUUID 4개다. 2026-09-15 관측.
 - **CI 계열 대조 기준.** 적재 대상은 ACTCI 분류지만 수집 속성 선택의 기준선은 `CIROOT` 아래 CI 분류다. OS는 `CI.OS`(7개), Filesystem은 `CI.FILESYSTEM`(16개), IP는 `CI.IPADDRESS`(6개)이며 **Disk는 대응 분류가 없다.** 2026-09-15 조사에서 확인해 반영했다.
 - **승격 범위 정본은 `CITEMPLATE`이다.** 2026-09-15 확인했다. 어떤 ACTCI 분류가 어떤 CI 분류로 승격되는지가 여기 설정돼 있으며 범위 14개·매핑 158행이다. 관측은 [CI 승격 범위](knowledge/maximo/ci-promotion-scope.md). 이전 문서들이 "승격 미검증"으로만 적었던 부분을 대체한다.
 - **Filesystem 승격 매핑을 추가했다.** 기본 구성은 `CI.FILESYSTEM`을 `SYS.LOCALFILESYSTEM`에만 매핑하는데 이 ETL은 `SYS.FILESYSTEM`으로 적재한다. 2026-09-15 매핑 행을 추가했다(`CITEMPLATE` 164번). `CI.FILESYSTEM`에 ACTCI 분류 둘이 걸린 것은 158행 중 유일한 경우이며 승격 동작은 미검증이다. 화면의 「유효성 검증」으로 확인해야 한다.
 - **Disk는 승격할 수 없다.** `DEV.DISKDRIVE`가 `CITEMPLATE`에 한 행도 없다. CI 계열에 디스크 분류가 없다는 관측과 같은 결론이다. ISSUE-8의 관리 단위 재검토 근거다.
 - **가상 Computer 승격 범위에 자식이 없다.** `CI.VIRTUALCOMPUTERSYSTEM` 범위는 자기 자신 1행뿐인데 `CI.COMPUTERSYSTEM` 범위는 OS·Filesystem·IP를 포함한 9행이다. 2026-09-15 적재 기준 Computer 70대 중 65대가 가상이므로, 현재 설정으로는 가상 서버를 승격해도 본체만 올라간다. 기준정보 변경은 이 ETL 범위가 아니다.
 - **`MODELOBJECT_CDMSOURCE`·`SOURCETOKEN` 미채택 확정.** CI 계열 분류에 `MODELOBJECT_` 속성이 0개라 승격에서 전달되지 않고, `ACTCINUM`·`CHANGEBY`와 정보가 중복된다. 시스템 전체 기존 값도 0건이다. 2026-09-15 결정.
-- **`MODELOBJECT_LABEL`은 IP만 채택했다.** 원천 `i.label`에 실제 값이 있어 넣었다. CI 계열에 없으므로 승격 전달은 기대하지 않는다. Filesystem의 `m.label`(24 / 8건)을 맞출지는 미결이다.
+- **`MODELOBJECT_LABEL`은 IP와 Filesystem에서 채택했다.** 원천에 실제 값이 있어 넣었다(IP 55 / 59건, Filesystem 24 / 8건). CI 계열에 없으므로 승격 전달은 기대하지 않는다.
 - **CI 기준 밖 속성의 승격 전달.** `OPERATINGSYSTEM_KERNELARCHITECTURE`는 `CI.OS`에 없는데 채택했다. Computer의 BIOS 출시일·CPU 코어 수와 같은 의도적 추가다. ACTCI→CI 승격에서 이런 속성이 누락되는지는 미검증이다. 승격 자체가 미구현이다.
 - **Disk의 승격 대상 분류 부재.** CI 계열에 디스크 분류가 없어 승격할 곳이 없다. 관리 단위 재검토 근거로 ISSUE-8에도 걸었다.
 - **LASTSCANDT 원천.** IP만 `last_discovered`를 전건 갖는다. OS·Disk·Filesystem은 부모 Computer의 값을 쓰는 안을 추천했다.
@@ -232,7 +233,7 @@ compatibility_level의 일반 분류 속성 대응은 미정이며, DB 제품 �
 본체·스펙 대응 및 SQL은 [Computer 매핑](data-mapping/ci/types/computer.md), 관계 구성안은 [수집 설계](design/ci/computer.md)에 둔다.
 등록된 분류·스펙·관계는 [분류 조사 결과](knowledge/maximo/computer-classification-specs.md)에서 확인했다.
 
-- BIOS 출시일 원문용 COMPUTERSYSTEM_BIOSRELEASEDATE(ALN) 전역 속성 정의 준비 및 UI·승격 검증. 현재 미등록이다. 명시적 추가 속성 경로는 구현했으며 템플릿 등록 시 기존 경로가 우선한다. 기준정보·업무 행 변경은 수행하지 않았다.
+- BIOS 출시일 원문용 COMPUTERSYSTEM_BIOSRELEASEDATE(ALN). **2026-09-15 사용자가 전역 ASSETATTRIBUTE와 CI.COMPUTERSYSTEM 템플릿을 수동 등록했다.** ACTCI 쪽 SYS.COMPUTERSYSTEM 템플릿은 아직 없어 적재는 계속 명시적 추가 속성 경로(CLASSSPECID=NULL, DISPLAYSEQUENCE=180)를 쓴다. ACTCI 템플릿 등록 시 기존 경로가 자동 우선한다. UI·승격 검증은 남아 있다.
 - 사용 분류 enum 기반 공통 캐시와 명시적 추가 속성 처리: [캐시 설계](design/ci/definition-cache.md). 실제 Maximo에서 새 캐시 SQL·추가 속성 경로의 동작 확인은 후속 검증.
 - sourceId=`D42:<원천 개체 종류>:<원천 PK>` 기반 본체·스펙 저장을 구현했다. 신규 숫자 ID는 각 Maximo 시퀀스 NEXT VALUE를 사용하며 기존 ID를 유지한다. 실제 Maximo 동시 채번·적재 검증은 남아 있다.
 - FQDN·SIGNATURE 대응과 MANAGEDSYSTEMNAME·SYSTEMBOARDUUID 원천 보강. 매핑 규칙에 따른 단위 표시·승격 후 전달 및 조건부 CPU·MAC 보강의 UI 확인.

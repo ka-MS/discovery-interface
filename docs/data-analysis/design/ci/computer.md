@@ -45,7 +45,7 @@ OS·설치 SW·IP의 실제 경로·코드·방향은 관계 설계에서 정한
 | 정할 항목 | 추천안 | 확인·결정할 부분 |
 | --- | --- | --- |
 | 대상·분류 | 합의: 물리 Computer는 SYS.COMPUTERSYSTEM, VM은 SYS.VIRTUALCOMPUTERSYSTEM | 수집 서브타입·필터는 매핑 문서에 작성하고 두 서버에서 실행 확인 |
-| 1차 스펙 | 합의: CI.COMPUTERSYSTEM의 18개를 기준으로 BIOS·CPU 코어 수 추가 | 항목별 원천 대응·미대응 및 추가 등록 전제는 매핑 문서가 정본 |
+| 1차 스펙 | 합의: CI.COMPUTERSYSTEM 기준에 BIOS·CPU 코어 수 추가. **2026-09-15 BIOSRELEASEDATE가 CI.COMPUTERSYSTEM에 등록되어 기준이 19개가 됐다** | 항목별 원천 대응·미대응은 매핑 문서가 정본. CI 기준 대조 갱신 필요 |
 | 동일 CI 판정 | 합의: 같은 원천 ID는 갱신, 원천 ID가 바뀌면 새 CI로 취급. 복합 원천 키는 ACTCINUM에 저장 | 이름·UUID·시리얼이 같아도 다른 원천 ID를 기존 CI로 자동 통합하지 않음. 숫자 PK의 시퀀스 예약 구현은 별도 확인 |
 | 값·단위 | 원천 수치와 단위를 함께 보존하는 매핑 작성 | 단위별 코드는 매핑 문서 참조. UI·승격 후 값과 단위 전달은 검증 필요 |
 | 빈 값·오류 | 정상적으로 확인된 빈 값은 빈 상태로 반영. 신규 빈 스펙은 생성하지 않고 기존 ETL 관리 스펙의 값은 비움 | 원천 조회 실패·변환 실패는 빈 값과 구분해 기존 정상값 보존. 명시적 삭제와 수집 미완료를 구분할 수 없는 원천은 보존·기록할지 결정 |
@@ -136,7 +136,7 @@ Computer의 메모리 총량·CPU 요약과 개별 CPU의 상세 스펙은 집�
 | device.type / virtualsubtype | Computer 분류 분기 및 VIRTUAL | TYPE은 CDM 유형 ComputerSystem 상수로 매핑. physical/virtual을 TYPE에 넣지 않음 |
 | device.last_discovered | Computer 본체 ACTCI.LASTSCANDT | 스펙이 아닌 본체 필드; 누락 처리 정책 필요 |
 | BIOS vendor.name | Computer: COMPUTERSYSTEM_BIOSMANUFACTURER | 직접 대응 후보 |
-| device.bios_version / bios_release_date | Computer: ROMVERSION / 추가 정의 BIOSRELEASEDATE | 출시일 원문용 ALN 정의는 현재 미등록 |
+| device.bios_version / bios_release_date | Computer: ROMVERSION / 추가 정의 BIOSRELEASEDATE | 2026-09-15 전역 속성·CI 분류 등록. ACTCI 템플릿은 미등록 |
 | device.ram + ram_size_type | Computer: COMPUTERSYSTEM_MEMORYSIZE | 단위 변환 필요 |
 | device.total_cpus / core_per_cpu / cpu_speed | Computer: NUMCPUS / CPUCORESINSTALLED / CPUSPEED | 파생 코어 수 의미·속도 단위 확인 |
 | CPU partmodel.cores / speed + speed_unit / vendor.name | CPU: CPU_CPUCORESINSTALLED / CPUSPEED / MANUFACTURER | 코어 의미·단위 확인 후 대응 |
