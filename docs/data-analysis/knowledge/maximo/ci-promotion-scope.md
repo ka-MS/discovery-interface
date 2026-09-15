@@ -56,6 +56,10 @@ Maximo 화면의 「승격 범위」가 이 테이블이다. 분류 계열 두 �
 이 ETL이 `SYS.FILESYSTEM`으로 적재하므로 2026-09-15 사용자가 매핑 행을 추가했다.
 ROWSTAMP가 8520731로 기본값 행들(1556xxx대)과 구분된다.
 
+2026-09-15 이 범위에서 OS → 물리 Computer 한 쌍의 승격을 검증했다.
+OS CI 생성과 RELATION.INSTALLEDON 관계·부모 보존을 UI 및 DB에서 확인했다.
+[샘플 검증 기록](computer-ci-relations.md#oscomputer-승격-샘플-검증). Filesystem·IP 승격 검증을 의미하지 않는다.
+
 **`CI.FILESYSTEM`에 ACTCI 분류 둘이 걸린 것은 158행 전체에서 유일한 경우다.**
 IBM 기본 구성에 없는 형태이므로 승격 동작은 검증 대상이다. 화면의 「유효성 검증」으로 확인한다.
 

@@ -11,7 +11,7 @@
 | --- | --- | --- | --- |
 | COMPUTER_CONTAINS_DISK | Computer → Disk | RELATION.CONTAINS | 원천·분류쌍 확인. 구현 가능 |
 | COMPUTER_CONTAINS_FILESYSTEM | Computer → Filesystem | RELATION.CONTAINS | 원천·분류쌍 확인. 구현 가능 |
-| OS_INSTALLED_ON_COMPUTER | OS → Computer | RELATION.INSTALLEDON | 원천·분류쌍 확인. 구현 가능, SWAPPED·표시 확인 필요 |
+| OS_INSTALLED_ON_COMPUTER | OS → Computer | RELATION.INSTALLEDON | 물리 Computer 단건 INSERT·SWAPPED=0·승격·표시 확인. 자동 저장 구현·가상 Computer 검증은 별도 |
 | VM_VIRTUALIZES_HOST | VM → Host Computer | RELATION.VIRTUALIZES | 후보. 1:1 설정·SWAPPED·표시 검증 전 보류 |
 | COMPUTER_CONTAINS_INTERFACE | Computer → Interface | RELATION.CONTAINS | Interface CI 미구현. 별도 유형 도입 후 |
 | INTERFACE_BINDS_IP | Interface → IP | RELATION.BINDSTO | Interface 도입·카디널리티·미연결 IP 처리 검토 후 |
@@ -19,6 +19,7 @@
 
 Computer는 물리·가상 두 분류를 허용한다. 표의 구현 가능은 소스/타겟 매핑이 갖춰졌다는 뜻이며,
 운영 적재·화면·승격 검증을 완료했다는 뜻은 아니다.
+OS → 물리 Computer의 단건 결과는 [검증 기록](../../knowledge/maximo/computer-ci-relations.md#oscomputer-승격-샘플-검증)을 참조한다.
 OS는 설치 사실을 매핑한다. device 연결만으로 실행 상태까지 확인한 것으로 보고 RUNSON을 함께 만들지 않는다.
 
 ## 관계도 — 화살표는 저장 방향
