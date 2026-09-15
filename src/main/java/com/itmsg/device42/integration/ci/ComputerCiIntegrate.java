@@ -18,8 +18,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -154,13 +152,7 @@ public class ComputerCiIntegrate implements CiIntegrationTask {
 
     private ActCiUpsert mapActCi(ComputerSource source, ClassificationDefinition definition,
                                  LocalDateTime applyDateTime) {
-        LocalDateTime lastScan = null;
-        if (source.lastDiscovered() != null && !source.lastDiscovered().isBlank()) {
-            String timestamp = source.lastDiscovered().trim().replace(' ', 'T')
-                    .replaceFirst("([+-]\\d{2})$", "$1:00");
-            lastScan = OffsetDateTime.parse(timestamp)
-                    .atZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime();
-        }
+        LocalDateTime lastScan = SourceTimestamp.toLocalDateTime(source.lastDiscovered());
         return new ActCiUpsert(
                 "D42:DEVICE:" + source.devicePk(), source.name(), definition.classStructureId(),
                 source.notes(), lastScan, CHANGE_BY, applyDateTime, LANG_CODE);
@@ -227,28 +219,16 @@ public class ComputerCiIntegrate implements CiIntegrationTask {
         };
     }
 
-    private static final String COMPUTER_FILTER = """
-            d.type IN ('physical', 'virtual')
-            AND (d.network_device = false OR d.network_device IS NULL)
-            AND (
-                (d.type = 'physical' AND d.physicalsubtype IN
-                    ('Generic', 'Rackable', 'Blade', 'WorkStation', 'ThinClient', 'Laptop'))
-                OR
-                (d.type = 'virtual' AND d.virtualsubtype IN
-                    ('Internal VM', 'Amazon EC2 Instance', 'VMWare', 'Hyper-V'))
-            )
-            """;
-
     private static final String TOTAL_COUNT_QUERY = """
             SELECT COUNT(*) FROM view_device_v2 d WHERE
-            """ + COMPUTER_FILTER;
+            """ + CiSourceFilter.COMPUTER;
 
     private static final String SOURCE_QUERY = """
             WITH computer AS (
                 SELECT d.*
                 FROM view_device_v2 d
                 WHERE
-            """ + COMPUTER_FILTER + """
+            """ + CiSourceFilter.COMPUTER + """
             ), cpu AS (
                 SELECT p.device_fk,
                     COUNT(DISTINCT NULLIF(TRIM(pm.name), '')) AS model_count,
