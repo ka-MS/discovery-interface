@@ -35,6 +35,8 @@ class IpCiIntegrateTest {
         jdbc.update("INSERT INTO MAXIMO.CLASSUSEWITH VALUES ('IPA','ACTCI')");
         seedSpec(800, "IPADDRESS_DOTNOTATION");
         seedSpec(801, "IPADDRESS_STRINGNOTATION");
+        seedSpec(802, "IPADDRESS_MANAGEDSYSTEMNAME");
+        seedSpec(803, "MODELOBJECT_LABEL");
     }
 
     private void seedSpec(long id, String attribute) {
@@ -50,10 +52,9 @@ class IpCiIntegrateTest {
     }
 
     @Test
-    void mapsBodyAndBothAddressSpecsUsingOwnScanTime() {
+    void mapsBodyAndFourSpecsUsingOwnScanTime() {
         integration.putData(integration.mapData(
-                List.of(new IpSource(3, 100, "192.168.2.57", "메모", "2026-08-26T07:15:00Z")),
-                definitionLoader.load()));
+                List.of(ip(3, "192.168.2.57", "web-01", "ens160")), definitionLoader.load()));
 
         assertThat(jdbc.queryForObject("SELECT ACTCINUM FROM MAXIMO.ACTCI", String.class)).isEqualTo("D42:IPADDRESS:3");
         assertThat(jdbc.queryForObject("SELECT ACTCINAME FROM MAXIMO.ACTCI", String.class)).isEqualTo("192.168.2.57");
@@ -63,9 +64,12 @@ class IpCiIntegrateTest {
                 .isEqualTo(OffsetDateTime.parse("2026-08-26T07:15:00Z")
                         .atZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime());
         assertThat(jdbc.queryForList("SELECT ASSETATTRID FROM MAXIMO.ACTCISPEC ORDER BY ASSETATTRID", String.class))
-                .containsExactly("IPADDRESS_DOTNOTATION", "IPADDRESS_STRINGNOTATION");
-        assertThat(jdbc.queryForList("SELECT DISTINCT ALNVALUE FROM MAXIMO.ACTCISPEC", String.class))
-                .containsExactly("192.168.2.57");
+                .containsExactly("IPADDRESS_DOTNOTATION", "IPADDRESS_MANAGEDSYSTEMNAME",
+                        "IPADDRESS_STRINGNOTATION", "MODELOBJECT_LABEL");
+        assertThat(text("IPADDRESS_DOTNOTATION")).isEqualTo("192.168.2.57");
+        assertThat(text("IPADDRESS_STRINGNOTATION")).isEqualTo("192.168.2.57");
+        assertThat(text("IPADDRESS_MANAGEDSYSTEMNAME")).isEqualTo("web-01");
+        assertThat(text("MODELOBJECT_LABEL")).isEqualTo("ens160");
     }
 
     @Test
@@ -73,8 +77,7 @@ class IpCiIntegrateTest {
         jdbc.update("DELETE FROM MAXIMO.CLASSUSEWITH WHERE CLASSSTRUCTUREID='IPA'");
 
         var mapped = integration.mapData(
-                List.of(new IpSource(3, 100, "192.168.2.57", null, "2026-08-26T07:15:00Z")),
-                definitionLoader.load());
+                List.of(ip(3, "192.168.2.57", "web-01", null)), definitionLoader.load());
 
         assertThat(mapped).isEmpty();
     }
@@ -98,5 +101,44 @@ class IpCiIntegrateTest {
                 .contains("HOST(i.ip_address)")
                 .contains("DISTINCT ON (i.ipaddress_pk)")
                 .contains("LIMIT 5 OFFSET 10");
+    }
+
+    @Test
+    void sourceQueryCollectsEveryDeviceAttachedAddressNotOnlyComputers() throws Exception {
+        var factory = mock(Device42ConnectionFactory.class);
+        var connection = mock(java.sql.Connection.class);
+        var statement = mock(java.sql.Statement.class);
+        var rs = mock(java.sql.ResultSet.class);
+        when(factory.openConnection()).thenReturn(connection);
+        when(connection.createStatement()).thenReturn(statement);
+        when(statement.executeQuery(anyString())).thenReturn(rs);
+        when(rs.next()).thenReturn(false);
+
+        new IpCiIntegrate(factory, new ActCiWriter(jdbc), new CiSpecMapper()).getData(0, 10);
+
+        var sql = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(statement).executeQuery(sql.capture());
+        assertThat(sql.getValue())
+                .doesNotContain("physicalsubtype")
+                .doesNotContain("virtualsubtype")
+                .doesNotContain("network_device");
+    }
+
+    @Test
+    void missingLabelCreatesNoLabelSpec() {
+        integration.putData(integration.mapData(
+                List.of(ip(4, "10.0.0.1", "db-01", null)), definitionLoader.load()));
+
+        assertThat(jdbc.queryForList("SELECT ASSETATTRID FROM MAXIMO.ACTCISPEC ORDER BY ASSETATTRID", String.class))
+                .containsExactly("IPADDRESS_DOTNOTATION", "IPADDRESS_MANAGEDSYSTEMNAME",
+                        "IPADDRESS_STRINGNOTATION");
+    }
+
+    private static IpSource ip(long pk, String address, String deviceName, String label) {
+        return new IpSource(pk, 100, address, deviceName, label, "메모", "2026-08-26T07:15:00Z");
+    }
+
+    private String text(String attributeId) {
+        return jdbc.queryForObject("SELECT ALNVALUE FROM MAXIMO.ACTCISPEC WHERE ASSETATTRID=?", String.class, attributeId);
     }
 }
