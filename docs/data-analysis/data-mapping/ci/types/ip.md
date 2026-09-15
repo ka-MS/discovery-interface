@@ -75,11 +75,14 @@ LIMIT %d OFFSET %d
 
 ## 4. 속성 매핑
 
-분류 `NET.IPADDRESS`. 채울 수 있는 속성이 주소 하나다.
+적재 분류 `NET.IPADDRESS` · **대조 기준 `CI.IPADDRESS`(CCI00011, 6개)**.
+CI 기준 6개 중 원천 대응이 있는 것은 주소 표기 둘뿐이며 같은 값이 들어간다.
+선택 근거는 [IP 수집 설계](../../../design/ci/ip.md) 3절.
 
 | ASSETATTRID | 한글 의미 | 값 컬럼 | 구분 | Source | 변환·조건 |
 | --- | --- | --- | --- | --- | --- |
 | IPADDRESS_DOTNOTATION | 점 표기 주소 | ALNVALUE | 변환 | `i.ip_address` | `HOST()`. 전건 |
+| IPADDRESS_STRINGNOTATION | 문자열 표기 주소 | ALNVALUE | 변환 | `i.ip_address` | `HOST()`. CI 기준 속성. DOTNOTATION과 같은 값 |
 
 ## 5. 미대응·미결
 
@@ -88,7 +91,6 @@ LIMIT %d OFFSET %d
 | **관계 경로** | `SYS.*COMPUTERSYSTEM`↔`NET.IPADDRESS` 규칙이 양방향 0건이다. CDM 경로는 `Computer → NET.IPINTERFACE → NET.IPADDRESS`다. Interface CI 도입은 범위 확대라 **사용자 결정 필요**. ISSUE-8 |
 | 서브넷 마스크 | `b.mask_bits` 전건 보유하나 `NET.IPADDRESS`에 자리 없음. `NET.IPNETWORK` 별도 CI 필요. ISSUE-8 |
 | `b.gateway` | 컬럼은 있으나 두 서버 모두 값 0건 |
-| IPADDRESS_STRINGNOTATION | DOTNOTATION과 중복. 한쪽 선택 필요 |
 | IPADDRESS_ADDRESSTYPE | NUMERIC. IPv4/IPv6 코드 규약 미확인. ISSUE-11 |
 | `i.label` | 55 / 59건. `MODELOBJECT_LABEL` 채택 여부 미정 |
 | 채울 속성이 하나뿐 | 독립 CI 유지 여부 재확인 대상. ISSUE-8 |

@@ -29,19 +29,20 @@
 
 ## 3. 스펙 대조표
 
-| ASSETATTRID | 자료형 | 원천 | 채택 | 비고 |
-| --- | --- | --- | --- | --- |
-| IPADDRESS_DOTNOTATION | ALN | `HOST(i.ip_address)` | 채택 | 전건. `192.168.2.127` |
-| IPADDRESS_STRINGNOTATION | ALN | `HOST(i.ip_address)` | 보류 | DOTNOTATION과 중복 |
-| IPADDRESS_ADDRESSTYPE | NUMERIC | IPv4 / IPv6 구분 | 보류 | **코드 규약 미확인** |
-| IPADDRESS_ADDRESSSPACE | ALN | 대응 없음 | 미채택 | |
-| IPADDRESS_BYTENOTATION | ALN | 대응 없음 | 미채택 | |
-| MODELOBJECT_LABEL | ALN | `i.label` | 검토 | 55 / 59건. 공백 제외 |
-| MODELOBJECT_CDMSOURCE | ALN | 상수 `Device42` | 검토 | |
-| MODELOBJECT_SOURCETOKEN | ALN | `D42:IPADDRESS:<pk>` | 검토 | |
-| 나머지 | – | – | 미채택 | 원천 대응 없음 |
+**대조 기준은 `CI.IPADDRESS`(CCI00011) 6개다.** 적재 대상은 `NET.IPADDRESS`이며
+두 분류의 고유 속성 구성이 사실상 같다. 관측은 [분류 조사](../../knowledge/maximo/ci-component-classifications.md) 6절.
 
-**채울 수 있는 속성이 사실상 주소 하나다.** 네 유형 중 가장 빈약하다.
+| ASSETATTRID | CI.IPADDRESS | 자료형 | 원천 | 채택 | 비고 |
+| --- | :---: | --- | --- | --- | --- |
+| IPADDRESS_DOTNOTATION | ○ | ALN | `HOST(i.ip_address)` | 채택 | 전건. `192.168.2.57` |
+| IPADDRESS_STRINGNOTATION | ○ | ALN | `HOST(i.ip_address)` | 채택 | CI 기준 속성. DOTNOTATION과 같은 값 |
+| IPADDRESS_ADDRESSTYPE | ○ | NUMERIC | IPv4 / IPv6 구분 | 미채택 | **코드 규약 미확인** |
+| IPADDRESS_ADDRESSSPACE | ○ | ALN | – | 미채택 | 원천 없음 |
+| IPADDRESS_BYTENOTATION | ○ | ALN | – | 미채택 | 원천 없음 |
+| IPADDRESS_MANAGEDSYSTEMNAME | ○ | ALN | – | 미채택 | 원천 없음 |
+
+CI 기준 6개 중 원천 대응이 있는 것은 주소 표기 둘뿐이다. 둘 다 같은 값이 들어간다.
+**채울 수 있는 정보가 사실상 주소 하나다.** 네 유형 중 가장 빈약하다.
 
 `CAST(i.ip_address AS VARCHAR)`는 `192.168.2.127/32`를 낸다. 실제 프리픽스가 아닌 `/32`가
 붙으므로 쓰지 않는다. `HOST()`로 주소만 뽑는다.

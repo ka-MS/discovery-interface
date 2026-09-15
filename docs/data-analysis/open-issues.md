@@ -200,6 +200,9 @@ ASSETATTRIBUTE 등 연결 정보와 Maximo 애플리케이션 동작까지 검�
 - **`IPADDRESS_ADDRESSTYPE` 코드 규약** 미확인.
 - **중복 속성 선택.** OS의 `VERSIONSTRING`·`NAME`, IP의 `STRINGNOTATION`, Disk의 `MEDIAACCESSDEVICE_NAME`이 각각 다른 속성과 중복이다. 한쪽만 채택해야 한다.
 - **`MODELOBJECT_CDMSOURCE`·`SOURCETOKEN` 채택 여부.** 네 분류 모두 공통으로 갖는다. 연계 출처와 원천 키를 남기는 용도로 쓸지 정해야 한다.
+- **CI 계열 대조 기준.** 적재 대상은 ACTCI 분류지만 수집 속성 선택의 기준선은 `CIROOT` 아래 CI 분류다. OS는 `CI.OS`(7개), Filesystem은 `CI.FILESYSTEM`(16개), IP는 `CI.IPADDRESS`(6개)이며 **Disk는 대응 분류가 없다.** 2026-09-15 조사에서 확인해 반영했다.
+- **CI 기준 밖 속성의 승격 전달.** `OPERATINGSYSTEM_KERNELARCHITECTURE`는 `CI.OS`에 없는데 채택했다. Computer의 BIOS 출시일·CPU 코어 수와 같은 의도적 추가다. ACTCI→CI 승격에서 이런 속성이 누락되는지는 미검증이다. 승격 자체가 미구현이다.
+- **Disk의 승격 대상 분류 부재.** CI 계열에 디스크 분류가 없어 승격할 곳이 없다. 관리 단위 재검토 근거로 ISSUE-8에도 걸었다.
 - **LASTSCANDT 원천.** IP만 `last_discovered`를 전건 갖는다. OS·Disk·Filesystem은 부모 Computer의 값을 쓰는 안을 추천했다.
 
 ### 속성 대응 검토안

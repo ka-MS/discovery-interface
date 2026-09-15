@@ -34,23 +34,34 @@ ESXi·Windows(10/11/Server)·macOS·FreeBSD·Solaris·Cisco IOS·VxWorks·Samsun
 
 ## 3. 스펙 대조표
 
-`CI.*` 기준 속성 중 원천 대응이 있는 것만 채택한다. `MODELOBJECT_*` 공통 14개는 별도 판단한다.
+**대조 기준은 `CI.OS`(CCI00013) 7개다.** 적재 대상은 ACTCI 쪽 `SYS.OPERATINGSYSTEM`이지만,
+수집 속성 선택은 CI 계열을 기준선으로 삼는다. Computer가 `CI.COMPUTERSYSTEM` 18개를
+기준으로 삼은 것과 같다. 관측은 [분류 조사](../../knowledge/maximo/ci-component-classifications.md) 6절.
 
-| ASSETATTRID | 자료형 | 원천 | 채택 | 비고 |
-| --- | --- | --- | --- | --- |
-| OPERATINGSYSTEM_OSNAME | ALN | `o.os_name` | 채택 | 전건 보유 |
-| OPERATINGSYSTEM_OSVERSION | ALN | `o.os_version` | 채택 | 41 / 37건. 공백 제외 |
-| OPERATINGSYSTEM_KERNELVERSION | ALN | `o.os_version_no` | 채택 | 23 / 19건. 공백 제외 |
-| OPERATINGSYSTEM_KERNELARCHITECTURE | ALN | `o.os_arch_name` | 채택 | 21 / 19건 |
-| OPERATINGSYSTEM_VERSIONSTRING | ALN | `o.os_name` | 보류 | OSNAME과 중복. 한쪽만 쓴다 |
-| OPERATINGSYSTEM_NAME | ALN | `o.os_name` | 보류 | 본체 ACTCINAME과 중복 |
-| MODELOBJECT_CDMSOURCE | ALN | 상수 `Device42` | 검토 | 연계 출처 표시 |
-| MODELOBJECT_SOURCETOKEN | ALN | `D42:DEVICEOS:<pk>` | 검토 | 원천 키 보존 |
-| 나머지 OPERATINGSYSTEM_ 30개 | – | – | 미채택 | 원천 대응 없음 |
+| ASSETATTRID | CI.OS | 자료형 | 원천 | 채택 | 비고 |
+| --- | :---: | --- | --- | --- | --- |
+| OPERATINGSYSTEM_OSNAME | ○ | ALN | `o.os_name` | 채택 | 전건 보유 |
+| OPERATINGSYSTEM_NAME | ○ | ALN | `o.os_name` | 채택 | CI 기준 속성. OSNAME과 같은 값 |
+| OPERATINGSYSTEM_OSVERSION | ○ | ALN | `o.os_version` | 채택 | 41 / 37건. 공백 제외 |
+| OPERATINGSYSTEM_KERNELVERSION | ○ | ALN | `o.os_version_no` | 채택 | 23 / 19건. 공백 제외 |
+| OPERATINGSYSTEM_FQDN | ○ | ALN | – | 미채택 | 원천 없음 |
+| OPERATINGSYSTEM_OSMODE | ○ | ALN | – | 미채택 | 원천 없음 |
+| OPERATINGSYSTEM_OSCONFIDENCE | ○ | NUMERIC | – | 미채택 | 원천 없음 |
+| **OPERATINGSYSTEM_KERNELARCHITECTURE** | **✗** | ALN | `o.os_arch_name` | **채택** | **CI 기준 밖 의도적 추가.** 아래 참조 |
+| 나머지 OPERATINGSYSTEM_ 29개 | ✗ | – | – | 미채택 | `SYS.OPERATINGSYSTEM`에만 있고 원천 대응 없음 |
 
-제조사는 `o.os_fk` → `view_os_v1.vendor_fk` → `view_vendor_v1.name`으로 보강할 수 있으나
-`SYS.OPERATINGSYSTEM`에 제조사 속성이 없다. `os_name`이 이미 제조사를 포함한
-정규화 문자열(`IBM Red Hat Enterprise Linux 8.10`)이므로 별도 적재하지 않는다.
+`MODELOBJECT_CDMSOURCE`·`SOURCETOKEN`은 두 분류 모두에 있으나 채택 여부 미정이다.
+
+### CI 기준 밖 추가 — KERNELARCHITECTURE
+
+`OPERATINGSYSTEM_KERNELARCHITECTURE`는 `CI.OS`에 없고 `SYS.OPERATINGSYSTEM`에만 있다.
+원천 `os_arch_name`이 21 / 19건 있어 채택했다.
+
+Computer가 `CI.COMPUTERSYSTEM` 18개에 BIOS 출시일·CPU 코어 수를 더한 것과 같은 성격이다.
+기준선을 벗어나는 추가는 이유와 함께 명시한다는 관례를 따른다.
+
+**승격 시 누락 위험이 있다.** CI 계열에 대응 스펙이 없으므로 ACTCI→CI 승격에서
+이 값이 전달되지 않을 수 있다. 승격 자체가 미구현·미검증이라 확인된 사실은 아니다. ISSUE-11.
 
 ### 미대응 — EOL·EOS
 
@@ -140,4 +151,5 @@ CI 갱신 추적 키 절이다.
 | LASTSCANDT 원천 | 부모 Computer 값 사용 추천 | ISSUE-11 |
 | 관계 코드 선택과 ACTCI 적용 여부 | INSTALLEDON 추천, USEWITH=CI 미검증 | ISSUE-11 |
 | 수집 대상 범위 | Computer 연결분 추천 | ISSUE-8 |
-| VERSIONSTRING·NAME 중복 채택 | 한쪽만 선택 필요 | ISSUE-11 |
+| OPERATINGSYSTEM_VERSIONSTRING | CI 기준 밖. OSVERSION과 중복이라 미채택 | – |
+| KERNELARCHITECTURE 승격 전달 | CI 기준 밖 속성의 승격 동작 미검증 | ISSUE-11 |

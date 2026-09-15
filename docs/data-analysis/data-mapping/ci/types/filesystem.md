@@ -71,7 +71,9 @@ LIMIT %d OFFSET %d
 
 ## 4. 속성 매핑
 
-분류 `SYS.FILESYSTEM`. 값이 없는 속성은 행을 만들지 않는다.
+적재 분류 `SYS.FILESYSTEM` · **대조 기준 `CI.FILESYSTEM`(CCI00026, 16개)**.
+채택한 네 개가 모두 CI 기준 안에 있다. 선택 근거는 [Filesystem 수집 설계](../../../design/ci/filesystem.md) 3절.
+값이 없는 속성은 행을 만들지 않는다.
 
 | ASSETATTRID | 한글 의미 | 값 컬럼 | 구분 | Source | 변환·조건 |
 | --- | --- | --- | --- | --- | --- |
