@@ -40,6 +40,7 @@ class FilesystemCiIntegrateTest {
         seedSpec(701, "FILESYSTEM_TYPE", "ALN");
         seedSpec(702, "FILESYSTEM_CAPACITY", "NUMERIC");
         seedSpec(703, "FILESYSTEM_AVAILABLESPACE", "NUMERIC");
+        seedSpec(704, "MODELOBJECT_LABEL", "ALN");
     }
 
     private void seedSpec(long id, String attribute, String dataType) {
@@ -56,7 +57,7 @@ class FilesystemCiIntegrateTest {
 
     @Test
     void mapsBodyAndSpecsWithMegabyteUnit() {
-        persist(new FilesystemSource(4, 100, "/", "xfs",
+        persist(new FilesystemSource(4, 100, "/", "xfs", "root-vol",
                 new BigDecimal("122673.00"), new BigDecimal("93352.00"), "2026-09-15T00:00:00Z"));
 
         assertThat(jdbc.queryForObject("SELECT ACTCINUM FROM MAXIMO.ACTCI", String.class)).isEqualTo("D42:MOUNTPOINT:4");
@@ -66,11 +67,12 @@ class FilesystemCiIntegrateTest {
         assertThat(unit("FILESYSTEM_CAPACITY")).isEqualTo("MBYTE");
         assertThat(unit("FILESYSTEM_AVAILABLESPACE")).isEqualTo("MBYTE");
         assertThat(text("FILESYSTEM_TYPE")).isEqualTo("xfs");
+        assertThat(text("MODELOBJECT_LABEL")).isEqualTo("root-vol");
     }
 
     @Test
     void missingCapacityCreatesNoCapacitySpec() {
-        persist(new FilesystemSource(5, 100, "/boot", "ext4", null, null, "2026-09-15T00:00:00Z"));
+        persist(new FilesystemSource(5, 100, "/boot", "ext4", null, null, null, "2026-09-15T00:00:00Z"));
 
         assertThat(jdbc.queryForList("SELECT ASSETATTRID FROM MAXIMO.ACTCISPEC ORDER BY ASSETATTRID", String.class))
                 .containsExactly("FILESYSTEM_MOUNTPOINT", "FILESYSTEM_TYPE");
@@ -92,6 +94,7 @@ class FilesystemCiIntegrateTest {
         var sql = org.mockito.ArgumentCaptor.forClass(String.class);
         verify(statement).executeQuery(sql.capture());
         assertThat(sql.getValue())
+                .contains("m.label")
                 .contains("'overlay'").contains("'devtmpfs'").contains("'squashfs'").contains("'efivarfs'")
                 .contains("NOT IN");
     }
@@ -100,7 +103,7 @@ class FilesystemCiIntegrateTest {
     void missingClassificationSkipsEveryFilesystem() {
         jdbc.update("DELETE FROM MAXIMO.CLASSUSEWITH WHERE CLASSSTRUCTUREID='FS'");
 
-        var mapped = integration.mapData(List.of(new FilesystemSource(4, 100, "/", "xfs",
+        var mapped = integration.mapData(List.of(new FilesystemSource(4, 100, "/", "xfs", null,
                 BigDecimal.TEN, BigDecimal.ONE, "2026-09-15T00:00:00Z")), definitionLoader.load());
 
         assertThat(mapped).isEmpty();
