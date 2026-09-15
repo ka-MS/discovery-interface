@@ -96,6 +96,7 @@ public class IpCiIntegrate implements CiIntegrationTask {
                 try {
                     data.add(new IpSource(
                             ipAddressPk, rs.getLong("device_fk"), rs.getString("ip_address"),
+                            rs.getString("device_name"), rs.getString("label"),
                             rs.getString("notes"), rs.getString("last_discovered")));
                 } catch (SQLException e) {
                     log.error("IP 원천 변환에 실패했습니다. ipAddressPk={}", ipAddressPk, e);
@@ -127,6 +128,8 @@ public class IpCiIntegrate implements CiIntegrationTask {
                 List<ActCiSpecUpsert> specs = new ArrayList<>();
                 specMapper.addSpec(specs, definitions, actCi, IpSpec.DOT_NOTATION, source.ipAddress(), null);
                 specMapper.addSpec(specs, definitions, actCi, IpSpec.STRING_NOTATION, source.ipAddress(), null);
+                specMapper.addSpec(specs, definitions, actCi, IpSpec.MANAGED_SYSTEM_NAME, source.deviceName(), null);
+                specMapper.addSpec(specs, definitions, actCi, IpSpec.LABEL, source.label(), null);
 
                 mappedData.add(new CiUpsert(actCi, List.copyOf(specs)));
             } catch (RuntimeException e) {
@@ -140,32 +143,34 @@ public class IpCiIntegrate implements CiIntegrationTask {
         return writer.write(data);
     }
 
+    /**
+     * IP는 장비에 종속된 개체가 아니라 독립 CI이므로 부모 유형으로 좁히지 않는다.
+     * 장비에 연결된 주소를 모두 가져오며, 서브넷에만 할당된 주소는 제외한다.
+     * 장비 유형을 추가해도 이 조회를 고치지 않는다.
+     */
     private static final String TOTAL_COUNT_QUERY = """
             SELECT COUNT(*)
             FROM view_ipaddress_v2 i
             WHERE EXISTS (
-                SELECT 1 FROM view_device_v2 d
-                WHERE d.device_pk = ANY(i.device_fks) AND
-            """ + CiSourceFilter.COMPUTER + """
+                SELECT 1 FROM view_device_v2 d WHERE d.device_pk = ANY(i.device_fks)
             )
             """;
 
-    /** device_fks가 최대 3~7개라 조인이 같은 주소를 여러 행으로 만든다. DISTINCT ON으로 하나만 남긴다. */
+    /**
+     * device_fks가 최대 3~7개라 조인이 같은 주소를 여러 행으로 만든다. DISTINCT ON으로 하나만 남긴다.
+     * 여러 장비에 걸린 주소는 device_pk가 가장 작은 장비의 이름을 MANAGEDSYSTEMNAME에 쓴다.
+     */
     private static final String SOURCE_QUERY = """
-            WITH computer AS (
-                SELECT d.device_pk
-                FROM view_device_v2 d
-                WHERE
-            """ + CiSourceFilter.COMPUTER + """
-            )
             SELECT DISTINCT ON (i.ipaddress_pk)
-                i.ipaddress_pk, c.device_pk AS device_fk,
+                i.ipaddress_pk, d.device_pk AS device_fk,
                 HOST(i.ip_address) AS ip_address,
+                NULLIF(TRIM(d.name), '') AS device_name,
+                NULLIF(TRIM(i.label), '') AS label,
                 NULLIF(TRIM(i.notes), '') AS notes,
                 i.last_discovered
             FROM view_ipaddress_v2 i
-            JOIN computer c ON c.device_pk = ANY(i.device_fks)
-            ORDER BY i.ipaddress_pk, c.device_pk
+            JOIN view_device_v2 d ON d.device_pk = ANY(i.device_fks)
+            ORDER BY i.ipaddress_pk, d.device_pk
             LIMIT %d OFFSET %d
             """;
 }
