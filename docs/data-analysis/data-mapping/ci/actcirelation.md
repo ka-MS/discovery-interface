@@ -56,8 +56,13 @@ SWAPPED는 저장 순서 변경 여부를 나타내는 별도 필드이며
 ## 3. 공통 저장 SQL 제안
 
 호출자가 승인된 규칙과 실제 원천 연결로 sourceci/targetci를 만든다.
-캐시에서 얻은 **예상 출발·도착 CLASSSTRUCTUREID**를 함께 전달한다.
 동일 관계 입력 중복은 세 컬럼 키로 제거하고, 양 끝과 규칙 확인은 MERGE의 USING 안에서 한다.
+
+**예상 분류를 파라미터로 받지 않는다.** ACTCINUM은 원천 PK에서 결정적으로 만들어지므로
+OS 조회가 만든 `D42:DEVICEOS:<pk>`가 Computer 분류일 수 없다. 입력과 대조해봐야 중복이다.
+규칙 확인에는 조인된 ACTCI 행의 **실제 CLASSSTRUCTUREID**를 쓴다. 그래서 도착 분류가
+`SYS.COMPUTERSYSTEM`·`SYS.VIRTUALCOMPUTERSYSTEM` 둘 다 허용되는 관계도 분기 없이 처리된다.
+RELATIONRULES에 두 분류쌍 행이 모두 있기 때문이다.
 
 ```sql
 MERGE INTO MAXIMO.ACTCIRELATION AS target
@@ -66,17 +71,13 @@ USING (
            input.SWAPPED,input.CHANGEBY,input.CHANGEDATE
     FROM (VALUES (
         CAST(? AS VARCHAR(150)), CAST(? AS VARCHAR(150)),
-        CAST(? AS VARCHAR(192)), CAST(? AS VARCHAR(25)),
-        CAST(? AS VARCHAR(25)), CAST(? AS INTEGER),
+        CAST(? AS VARCHAR(192)), CAST(? AS INTEGER),
         CAST(? AS VARCHAR(100)), CAST(? AS TIMESTAMP)
     )) AS input (
-        SOURCECI,TARGETCI,RELATIONNUM,
-        SOURCECLASS,TARGETCLASS,SWAPPED,CHANGEBY,CHANGEDATE
+        SOURCECI,TARGETCI,RELATIONNUM,SWAPPED,CHANGEBY,CHANGEDATE
     )
     JOIN MAXIMO.ACTCI s ON s.ACTCINUM=input.SOURCECI
-                          AND s.CLASSSTRUCTUREID=input.SOURCECLASS
     JOIN MAXIMO.ACTCI t ON t.ACTCINUM=input.TARGETCI
-                          AND t.CLASSSTRUCTUREID=input.TARGETCLASS
     WHERE EXISTS (
         SELECT 1 FROM MAXIMO.RELATIONRULES r
         WHERE r.RELATIONNUM=input.RELATIONNUM
@@ -105,14 +106,13 @@ WHEN NOT MATCHED THEN INSERT (
 );
 ```
 
-파라미터 순서는 sourceCiNum, targetCiNum, relationNum, expectedSourceClassId,
-expectedTargetClassId, swapped, changeBy, changeDate다.
+파라미터 순서는 sourceCiNum, targetCiNum, relationNum, swapped, changeBy, changeDate다.
 선정된 기존 규칙만 사용한다는 프로젝트 정책을 SQL에 반영한 것이며,
 Maximo의 모든 관계 적재 방식에 대한 제약이라고 주장하지 않는다.
 
 - 부모/자식 존재 확인을 별도 SELECT로 반복할 필요는 없다.
 - 규칙 조인을 EXISTS로 처리해 규칙 행 중복 때문에 한 관계 후보가 여러 행으로 늘어나지 않게 한다.
-- 0건은 양 끝 미존재·분류 불일치·규칙 부재 가능성을 뜻한다. 최초 로그에 한 원인으로 단정하지 않는다.
+- 0건은 양 끝 미존재 또는 실제 분류쌍의 규칙 부재 가능성을 뜻한다. 최초 로그에 한 원인으로 단정하지 않는다.
 - 저장 예외는 해당 관계를 기록하고 다음 관계로 진행하는 안이다.
 - 가드는 현재 저장 상태를 확인한다. 외부 동시 삭제까지 물리 FK처럼 보장하지 않는다.
 - MERGE 키가 달라진 새 관계는 추가된다. 이전 호스트·장비 관계 삭제는 자동 수행하지 않는다.
@@ -123,7 +123,7 @@ Maximo의 모든 관계 적재 방식에 대한 제약이라고 주장하지 않
 D42의 논리키 관계 SELECT와 Maximo의 분류쌍·키·참조 메타데이터는 실조회했다.
 공통 MERGE는 **실행하지 않은 초안**이다. 구현할 때 다음을 확인한다.
 
-1. 양 끝 정상/누락/분류 불일치/규칙 부재별 적재 여부.
+1. 양 끝 정상/누락, 실제 분류쌍의 규칙 부재별 적재 여부.
 2. 재실행 시 관계 한 행 유지와 ACTCIRELATIONID 보존.
 3. OS → 물리 Computer 단건은 SWAPPED=0, CI 승격 후 관계 방향·부모 보존 확인. 다른 분류쌍·복수 관계·탐색은 추가 검증.
 4. 관계 하나의 저장 실패 뒤 나머지 관계 계속 처리.
