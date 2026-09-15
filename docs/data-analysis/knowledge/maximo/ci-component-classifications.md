@@ -195,3 +195,46 @@ IP를 어떻게 연결할지는 수집 구성안에서 정한다.
 `RELATIONRULES`의 분류쌍 규칙은 존재하므로 `ACTCIRELATION`의 분류쌍 조건은 만족하지만,
 관계 정의 자체가 ACTCI용으로 표시돼 있지 않다. 실제 적재·UI 표시 가능 여부는 미검증이다.
 이 차이는 ISSUE-11에서 다룬다.
+
+## 6. CI 계열 대조 기준
+
+> 관측 2026-09-15 · 재조회는 같은 쿼리 파일의 `ci-root-children`·`ci-side-specs`·`ci-side-storage-search` 블록
+
+분류 계열이 둘이다. 적재 대상은 `ACTUALCIROOTCLASS` 아래의 ACTCI 분류지만,
+**수집할 속성을 고르는 대조 기준은 `CIROOT` 아래의 CI 분류**다.
+Computer가 `CI.COMPUTERSYSTEM` 18개를 기준선으로 삼은 것과 같다.
+근거는 [Computer 관련 분류 조사](computer-classification-specs.md) 1절.
+
+`CIROOT`(CCI00001) 아래에 24개 분류가 있다. 네 유형과 관련된 것은 셋이다.
+
+| 유형 | CI 계열 대조 분류 | CLASSSTRUCTUREID | 스펙 수 |
+| --- | --- | --- | ---: |
+| OS | CI.OS | CCI00013 | 7 |
+| Filesystem | CI.FILESYSTEM | CCI00026 | 16 |
+| IP | CI.IPADDRESS | CCI00011 | 6 |
+| Disk | **없음** | – | – |
+
+`CI.OS` 7개는 FQDN, KERNELVERSION, NAME, OSCONFIDENCE, OSMODE, OSNAME, OSVERSION이다.
+`ACTCI` 쪽 `SYS.OPERATINGSYSTEM`이 갖는 `OPERATINGSYSTEM_KERNELARCHITECTURE`는 **여기에 없다**.
+
+`CI.IPADDRESS` 6개는 ADDRESSSPACE, ADDRESSTYPE, BYTENOTATION, DOTNOTATION,
+MANAGEDSYSTEMNAME, STRINGNOTATION이다.
+
+`CI.FILESYSTEM` 16개는 AVAILABLEINODES, AVAILABLESPACE, BUILDLEVEL, CAPACITY,
+FILESYSTEMBLOCKSIZE, LEVEL, MAJORVERSION, MANAGEDSYSTEMNAME, MAXBLOCKS, MAXFILESIZE,
+MODIFIER, MOUNTPOINT, RELEASE, TOTALINODES, TYPE, VERSIONSTRING이다.
+`SYS.FILESYSTEM`의 고유 19개에서 ISPLACEHOLDER·LOCATIONTAG·SERVICEPACK을 뺀 것과 같다.
+
+### Disk는 CI 계열 대응 분류가 없다
+
+`CIROOT` 자식 24개에 디스크·저장 장치 분류가 없다. `CI.%DISK%`·`CI.%MEDIA%`·
+`CI.%STORAGE%`·`CI.%DRIVE%`로 CI 적용 분류 전체를 검색하면 `CI.IPSTORAGESWITCHFUNCTION`
+한 건만 나오는데, 부모가 `CI.FUNCTION`(CCI00003)이고 스위치 기능이라 디스크와 무관하다.
+
+따라서 Disk는 대조 기준 없이 ACTCI 쪽 `DEV.DISKDRIVE`만 보고 속성을 골라야 한다.
+승격 대상 CI 분류가 없다는 뜻이기도 하다. 관리 단위 재검토 근거로 ISSUE-8에 남긴다.
+
+### 승격 영향은 미검증이다
+
+CI 기준 밖 속성이 ACTCI→CI 승격에서 실제로 누락되는지는 이 환경에서 확인한 적이 없다.
+승격 자체를 구현하지 않았다. 구조상 위험으로만 기록한다. ISSUE-11.

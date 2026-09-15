@@ -49,16 +49,21 @@ nfs·nfs4가 두 서버 모두 존재한다. 원격 파일시스템을 `SYS.LOCA
 
 ## 3. 스펙 대조표
 
-| ASSETATTRID | 자료형 | 원천 | 채택 | 비고 |
-| --- | --- | --- | --- | --- |
-| FILESYSTEM_MOUNTPOINT | ALN | `m.mountpoint` | 채택 | 전건. 7절 길이 주의 |
-| FILESYSTEM_TYPE | ALN | `m.fstype_name` | 채택 | 115 / 141건 |
-| FILESYSTEM_CAPACITY | NUMERIC | `m.capacity` | 채택 | 114 / 140건. 7절 단위 |
-| FILESYSTEM_AVAILABLESPACE | NUMERIC | `m.free_capacity` | 채택 | 106 / 129건 |
-| MODELOBJECT_LABEL | ALN | `m.label` | 검토 | 24 / 8건. 낮다 |
-| MODELOBJECT_CDMSOURCE | ALN | 상수 `Device42` | 검토 | |
-| MODELOBJECT_SOURCETOKEN | ALN | `D42:MOUNTPOINT:<pk>` | 검토 | |
-| 나머지 15개 | – | – | 미채택 | 원천 대응 없음 |
+**대조 기준은 `CI.FILESYSTEM`(CCI00026) 16개다.** 적재 대상은 `SYS.FILESYSTEM`이며
+CI 기준 16개는 `SYS.FILESYSTEM` 고유 19개에서 ISPLACEHOLDER·LOCATIONTAG·SERVICEPACK을 뺀 것과 같다.
+관측은 [분류 조사](../../knowledge/maximo/ci-component-classifications.md) 6절.
+
+| ASSETATTRID | CI.FILESYSTEM | 자료형 | 원천 | 채택 | 비고 |
+| --- | :---: | --- | --- | --- | --- |
+| FILESYSTEM_MOUNTPOINT | ○ | ALN | `m.mountpoint` | 채택 | 전건. 7절 길이 주의 |
+| FILESYSTEM_TYPE | ○ | ALN | `m.fstype_name` | 채택 | 115 / 141건 |
+| FILESYSTEM_CAPACITY | ○ | NUMERIC | `m.capacity` | 채택 | 114 / 140건. 7절 단위 |
+| FILESYSTEM_AVAILABLESPACE | ○ | NUMERIC | `m.free_capacity` | 채택 | 106 / 129건 |
+| 나머지 CI 기준 12개 | ○ | – | – | 미채택 | inode·블록 크기·버전 등 원천 대응 없음 |
+| MODELOBJECT_LABEL | ✗ | ALN | `m.label` | 검토 | 24 / 8건. 낮다 |
+| MODELOBJECT_CDMSOURCE·SOURCETOKEN | ✗ | ALN | 연계 출처·원천 키 | 검토 | |
+
+**채택한 네 개가 모두 CI 기준 안에 있다.** 기준선을 벗어난 추가가 없다.
 
 원천 `filesystem`(파일시스템 원천 문자열, 93 / 133건)에 대응할 속성이 없다.
 `fstype_name`이 종류를 담으므로 원문까지 넣을 자리가 필요하면 추가 속성 등록이 필요하다.

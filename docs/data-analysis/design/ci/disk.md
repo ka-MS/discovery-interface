@@ -26,6 +26,14 @@
 
 ## 3. 스펙 대조표
 
+**CI 계열에 대조 분류가 없다.** `CIROOT` 자식 24개에 디스크·저장 장치 분류가 없고,
+`CI.%DISK%`·`CI.%MEDIA%`·`CI.%STORAGE%`·`CI.%DRIVE%`로 CI 적용 분류를 전수 검색해도
+`CI.IPSTORAGESWITCHFUNCTION` 한 건뿐인데 스위치 기능이라 무관하다.
+관측은 [분류 조사](../../knowledge/maximo/ci-component-classifications.md) 6절.
+
+다른 세 유형과 달리 기준선 없이 ACTCI 쪽 `DEV.DISKDRIVE`만 보고 골랐다.
+승격 대상 CI 분류가 없다는 뜻이기도 하다. 9절 미결에 남긴다.
+
 | ASSETATTRID | 자료형 | 원천 | 채택 | 비고 |
 | --- | --- | --- | --- | --- |
 | MEDIAACCESSDEVICE_MODEL | ALN | `pm.name` | 채택 | 23 / 19건 |
@@ -114,6 +122,7 @@ Computer의 메모리·CPU 속도는 값과 원천 단위를 함께 매핑하고
 | 항목 | 상태 | 추적 |
 | --- | --- | --- |
 | 채울 속성이 3개뿐 | 독립 CI 유지 여부 재확인 | ISSUE-8 |
+| CI 계열 대조 분류 없음 | 승격 대상 CI 분류가 없다. 관리 단위 재검토 근거 | ISSUE-8 |
 | 원천 커버리지 부족 | 18 / 19대만 디스크 보유 | ISSUE-8 |
 | 용량 단위 코드 | `TBYTE` 존재 미확인. GB 정규화 대안 | ISSUE-11 |
 | 식별자 접두어 | `PART` 대 `DISK` | ISSUE-11 |

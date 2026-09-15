@@ -70,14 +70,17 @@ LIMIT %d OFFSET %d
 
 ## 4. 속성 매핑
 
-분류 `SYS.OPERATINGSYSTEM`. 값이 없는 속성은 행을 만들지 않는다.
+적재 분류 `SYS.OPERATINGSYSTEM` · **대조 기준 `CI.OS`(CCI00013, 7개)**.
+속성 선택은 CI 계열을 기준선으로 삼는다. 선택 근거는 [OS 수집 설계](../../../design/ci/os.md) 3절.
+값이 없는 속성은 행을 만들지 않는다.
 
 | ASSETATTRID | 한글 의미 | 값 컬럼 | 구분 | Source | 변환·조건 |
 | --- | --- | --- | --- | --- | --- |
 | OPERATINGSYSTEM_OSNAME | OS 이름 | ALNVALUE | 직접 | `o.os_name` | 전건. 제조사·제품·버전 합친 정규화 문자열 |
+| OPERATINGSYSTEM_NAME | 이름 | ALNVALUE | 직접 | `o.os_name` | CI 기준 속성. OSNAME과 같은 값 |
 | OPERATINGSYSTEM_OSVERSION | OS 버전 | ALNVALUE | 직접 | `o.os_version` | 41 / 37건 |
 | OPERATINGSYSTEM_KERNELVERSION | 커널 버전 | ALNVALUE | 직접 | `o.os_version_no` | 23 / 19건 |
-| OPERATINGSYSTEM_KERNELARCHITECTURE | 커널 아키텍처 | ALNVALUE | 직접 | `o.os_arch_name` | 21 / 19건. `64-bit` 형태 |
+| OPERATINGSYSTEM_KERNELARCHITECTURE | 커널 아키텍처 | ALNVALUE | 직접 | `o.os_arch_name` | 21 / 19건. **CI 기준 밖 의도적 추가** |
 
 ## 5. 미대응·미결
 
@@ -85,7 +88,8 @@ LIMIT %d OFFSET %d
 | --- | --- |
 | `o.eol`·`o.eos` | 대응 속성 없음. 사업 범위 EOS 관리 대상. ISSUE-11 |
 | 제조사 | `view_os_v1.vendor_fk`로 보강 가능하나 분류에 속성 없음. `os_name`에 포함 |
-| OPERATINGSYSTEM_VERSIONSTRING·NAME | OSNAME과 중복이라 보류. 한쪽 선택 필요 |
+| OPERATINGSYSTEM_VERSIONSTRING | CI 기준 밖. OSVERSION과 중복이라 미채택 |
+| KERNELARCHITECTURE 승격 전달 | CI 기준 밖 속성이라 ACTCI→CI 승격에서 누락될 수 있다. 미검증. ISSUE-11 |
 | MODELOBJECT_CDMSOURCE·SOURCETOKEN | 연계 출처·원천 키 보존용. 채택 여부 미정 |
 | 관계 | `RELATION.INSTALLEDON` 추천. `USEWITH`가 CI라 ACTCI 적재 미검증. ISSUE-11 |
 | 수집 대상 범위 | Computer 연결분만 추천. 두 서버 비율 30% / 80%로 차이 큼. ISSUE-8 |
