@@ -3,8 +3,6 @@ package com.itmsg.device42.integration.ci.relation;
 import com.itmsg.device42.integration.ci.CiSourceFilter;
 import com.itmsg.device42.integration.ci.FilesystemCiIntegrate;
 
-import java.util.stream.Collectors;
-
 /**
  * 관계 하나의 정의. 관계를 늘릴 때 늘어나는 것은 이 enum의 상수 하나뿐이다.
  * 조회 반복·DTO 변환·저장·집계는 CiRelationJob이 공유한다.
@@ -45,10 +43,6 @@ public enum CiRelationSource {
 
     /** DOQL이 FROM 서브쿼리를 막아 건수 SQL과 페이지 SQL을 따로 둔다. */
     private static final class Queries {
-        private static final String EXCLUDED_TYPES_SQL = FilesystemCiIntegrate.EXCLUDED_TYPES.stream()
-                .map(type -> "'" + type + "'")
-                .collect(Collectors.joining(", "));
-
         static final String OS_COUNT = """
                 SELECT COUNT(*)
                 FROM view_deviceos_v1 o
@@ -101,7 +95,7 @@ public enum CiRelationSource {
                 SELECT COUNT(*)
                 FROM view_mountpoint_v2 m
                 JOIN view_device_v2 d ON d.device_pk = ANY(m.device_fks)
-                WHERE (m.fstype_name IS NULL OR m.fstype_name NOT IN (""" + EXCLUDED_TYPES_SQL + """
+                WHERE (m.fstype_name IS NULL OR m.fstype_name NOT IN (""" + FilesystemCiIntegrate.EXCLUDED_TYPES_SQL + """
                 ))
                 AND
                 """ + CiSourceFilter.COMPUTER;
@@ -117,7 +111,7 @@ public enum CiRelationSource {
                        'D42:MOUNTPOINT:' || CAST(m.mountpoint_pk AS varchar) AS targetci
                 FROM view_mountpoint_v2 m
                 JOIN computer c ON c.device_pk = ANY(m.device_fks)
-                WHERE (m.fstype_name IS NULL OR m.fstype_name NOT IN (""" + EXCLUDED_TYPES_SQL + """
+                WHERE (m.fstype_name IS NULL OR m.fstype_name NOT IN (""" + FilesystemCiIntegrate.EXCLUDED_TYPES_SQL + """
                 ))
                 ORDER BY sourceci, targetci
                 LIMIT %d OFFSET %d

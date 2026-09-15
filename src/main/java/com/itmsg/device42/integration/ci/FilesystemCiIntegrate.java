@@ -37,7 +37,8 @@ public class FilesystemCiIntegrate implements CiIntegrationTask {
      */
     public static final List<String> EXCLUDED_TYPES = List.of("overlay", "devtmpfs", "squashfs", "efivarfs");
 
-    private static final String EXCLUDED_TYPES_SQL = EXCLUDED_TYPES.stream()
+    /** EXCLUDED_TYPES를 DOQL IN 절에 넣을 수 있게 join한 문자열. CiRelationSource도 재사용한다. */
+    public static final String EXCLUDED_TYPES_SQL = EXCLUDED_TYPES.stream()
             .map(type -> "'" + type + "'").collect(Collectors.joining(", "));
 
     private final Device42ConnectionFactory connectionFactory;
