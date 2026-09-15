@@ -1,7 +1,7 @@
 package com.itmsg.device42.enums.ci;
 
 /** 전체 ASSETATTRID를 명시한다. 추가 표시 순서가 있는 항목만 템플릿 없이 수집할 수 있다. */
-public enum ComputerSpec {
+public enum ComputerSpec implements CiSpec {
     NAME("COMPUTERSYSTEM_NAME"),
     SERIAL_NUMBER("COMPUTERSYSTEM_SERIALNUMBER"),
     UUID("COMPUTERSYSTEM_UUID"),
@@ -35,16 +35,24 @@ public enum ComputerSpec {
         this.additionalMandatory = additionalMandatory;
     }
 
+    @Override
     public String attributeId() {
         return attributeId;
     }
 
+    @Override
     public Integer additionalDisplaySequence() {
         return additionalDisplaySequence;
     }
 
+    @Override
     public boolean additionalMandatory() {
         return additionalMandatory;
+    }
+
+    @Override
+    public boolean requiresUnit() {
+        return this == MEMORY_SIZE || this == CPU_SPEED;
     }
 
     public boolean appliesTo(CiClassification classification) {

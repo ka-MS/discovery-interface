@@ -37,7 +37,7 @@ class ComputerCiIntegrateTest {
         new ResourceDatabasePopulator(new ClassPathResource("ci/schema.sql")).execute(dataSource);
         jdbc = spy(new JdbcTemplate(dataSource));
         definitionLoader = new CiDefinitionLoader(jdbc);
-        integration = new ComputerCiIntegrate(mock(Device42ConnectionFactory.class), jdbc);
+        integration = new ComputerCiIntegrate(mock(Device42ConnectionFactory.class), new ActCiWriter(jdbc), new CiSpecMapper());
         seedDefinitions();
     }
 
@@ -208,7 +208,7 @@ class ComputerCiIntegrateTest {
     @Test
     void readsAllOffsetsEvenWhenAnEntirePageFailsMapping() {
         List<Long> offsets = new ArrayList<>();
-        var task = new ComputerCiIntegrate(mock(Device42ConnectionFactory.class), jdbc) {
+        var task = new ComputerCiIntegrate(mock(Device42ConnectionFactory.class), new ActCiWriter(jdbc), new CiSpecMapper()) {
             @Override public long getTotalCount() {
                 return 2001;
             }
@@ -252,7 +252,7 @@ class ComputerCiIntegrateTest {
         when(rs.getLong("device_pk")).thenReturn(7L, 7L, 8L, 8L);
         when(rs.getBigDecimal("total_cpus")).thenReturn(new BigDecimal("1.5"), BigDecimal.ONE);
 
-        var task = new ComputerCiIntegrate(factory, jdbc);
+        var task = new ComputerCiIntegrate(factory, new ActCiWriter(jdbc), new CiSpecMapper());
         var rows = task.getData(100, 100);
 
         assertThat(rows).hasSize(1);
