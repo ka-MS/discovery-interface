@@ -5,7 +5,10 @@
 > 메타데이터 재조회: 2026-09-15 · MAXIMO / BLUDB.
 > 관계 설계: [Computer 중심 관계](../../design/ci/relations.md).
 > 관측 근거: [관계 정의](../../knowledge/maximo/computer-ci-relations.md).
-> 아래 공통 MERGE는 미실행 초안이다. OS → 물리 Computer 한 쌍은 **별도 INSERT·CI 승격·UI 표시를 검증했다**. [샘플 결과](../../knowledge/maximo/computer-ci-relations.md#oscomputer-승격-샘플-검증).
+> 아래 공통 MERGE는 2026-09-15 `./run.sh ci-relation`으로 운영 Maximo에 실행해 세 관계
+> (OS_INSTALLED_ON_COMPUTER 63건·COMPUTER_CONTAINS_DISK 19건·COMPUTER_CONTAINS_FILESYSTEM 60건)를
+> 적재했고 재실행에서 `ACTCIRELATIONID` 유지를 확인했다. 검증 쿼리는
+> [관계 적재 검증](../../exploration-queries/maximo/ci-relation-load-check.sql). OS → 물리 Computer 한 쌍은 **별도 INSERT·CI 승격·UI 표시를 검증했다**. [샘플 결과](../../knowledge/maximo/computer-ci-relations.md#oscomputer-승격-샘플-검증).
 
 호출 위치는 CI 본체 적재 이후의 관계 단계 하나다.
 본체 task는 이 Writer를 호출하지 않는다. [실행 구조](../../design/ci/relations.md#실행-위치--ci-본체-적재-이후-별도-단계).
@@ -58,9 +61,11 @@ SWAPPED는 저장 순서 변경 여부를 나타내는 별도 필드이며
 호출자가 승인된 규칙과 실제 원천 연결로 sourceci/targetci를 만든다.
 동일 관계 입력 중복은 세 컬럼 키로 제거하고, 양 끝과 규칙 확인은 MERGE의 USING 안에서 한다.
 
-**예상 분류를 파라미터로 받지 않는다.** ACTCINUM은 원천 PK에서 결정적으로 만들어지므로
-OS 조회가 만든 `D42:DEVICEOS:<pk>`가 Computer 분류일 수 없다. 입력과 대조해봐야 중복이다.
-규칙 확인에는 조인된 ACTCI 행의 **실제 CLASSSTRUCTUREID**를 쓴다. 그래서 도착 분류가
+**예상 분류를 파라미터로 받지 않는다.** 현재 최소 정책은 저장된 ACTCI의
+**실제 CLASSSTRUCTUREID** 쌍에 등록된 관계 규칙이 있는지 확인하는 것이다.
+ACTCINUM의 접두어는 DB에 저장된 분류를 강제하지 않는다. 원천 매핑이 의도한 분류와의
+일치 여부는 별도로 검사하지 않으며, 기존 CI의 분류가 올바르게 관리된다는 전제를 둔다.
+기존 분류가 잘못되어도 그 분류쌍에 규칙이 있으면 이 가드는 통과한다. 그래서 도착 분류가
 `SYS.COMPUTERSYSTEM`·`SYS.VIRTUALCOMPUTERSYSTEM` 둘 다 허용되는 관계도 분기 없이 처리된다.
 RELATIONRULES에 두 분류쌍 행이 모두 있기 때문이다.
 
@@ -117,18 +122,23 @@ Maximo의 모든 관계 적재 방식에 대한 제약이라고 주장하지 않
 - 가드는 현재 저장 상태를 확인한다. 외부 동시 삭제까지 물리 FK처럼 보장하지 않는다.
 - MERGE 키가 달라진 새 관계는 추가된다. 이전 호스트·장비 관계 삭제는 자동 수행하지 않는다.
 - 신규 NULL 필드들은 기존 행에서 덮어쓰지 않는다.
+- 가드는 RELATIONRULES 행의 존재만 확인하고 CARDINALITY는 읽지 않는다. 원천이 1:N인데 등록된 규칙이
+  1:1이어도 경고 없이 그대로 INSERT한다. VM→Host가 그 사례다(호스트 하나에 VM 최대 17개, 등록 규칙은 1:1).
+  enum 상수 하나를 추가하는 구조가 그 자체로 안전을 보장하지는 않는다. 카디널리티 대조는
+  [ISSUE-11](../../open-issues.md#issue-11-actual-ci-분류속성관계와-식별자-매핑)에서 추적한다.
 
 ## 4. 검증 수준과 후속
 
 D42의 논리키 관계 SELECT와 Maximo의 분류쌍·키·참조 메타데이터는 실조회했다.
-공통 MERGE는 **실행하지 않은 초안**이다. 구현할 때 다음을 확인한다.
+공통 MERGE는 2026-09-15 `./run.sh ci-relation`으로 운영 Maximo에 실제 실행했다.
+아래 여섯 항목 중 이번에 확인한 것과 확인하지 않은 것을 구분한다.
 
-1. 양 끝 정상/누락, 실제 분류쌍의 규칙 부재별 적재 여부.
-2. 재실행 시 관계 한 행 유지와 ACTCIRELATIONID 보존.
-3. OS → 물리 Computer 단건은 SWAPPED=0, CI 승격 후 관계 방향·부모 보존 확인. 다른 분류쌍·복수 관계·탐색은 추가 검증.
-4. 관계 하나의 저장 실패 뒤 나머지 관계 계속 처리.
-5. 관계 단계가 본체 적재 이후에 실행되어 뒤쪽 배치의 상대 CI를 놓치지 않는지.
-6. 여러 장비 배열·여러 IP를 첫 번째 하나로 줄이지 않는지.
+1. 양 끝 정상/누락, 실제 분류쌍의 규칙 부재별 적재 여부. **자동 테스트 확인.** `ActCiRelationWriterTest`에서 H2로 정상 저장·양 끝 누락·규칙 및 관계 코드 부재 시 건너뜀을 확인했다. 실제 DB의 `orphan-check`=0, `rule-check`=0은 저장 결과에 고아 관계·규칙 없는 관계가 없다는 관측이며, 누락·규칙 부재 입력을 넣어 가드 동작을 검증한 결과는 아니다.
+2. 재실행 시 관계 한 행 유지와 ACTCIRELATIONID 보존. **확인.** 재실행 후 `relation-count` 합계 143건(RELATION.CONTAINS 79 + RELATION.INSTALLEDON 63 + RELATION.RUNSON 1) 전 행의 ID가 적재 직후 스냅샷과 동일했고(`relation-rows.tsv` diff 없음), 수동 샘플 6001도 유지됐다.
+3. OS → 물리 Computer 단건은 SWAPPED=0, CI 승격 후 관계 방향·부모 보존 확인. 다른 분류쌍·복수 관계·탐색은 추가 검증. **분류쌍 확인.** 도착이 물리(SYS.COMPUTERSYSTEM) 5건·가상(SYS.VIRTUALCOMPUTERSYSTEM) 58건 모두 관측됐다. 신규로 자동 적재된 62건의 CI 승격은 이번에 재검증하지 않았다. 기존 수동 샘플 6001 한 쌍만 승격까지 확인된 상태다.
+4. 관계 하나의 DB 저장 예외 뒤 나머지 관계 계속 처리. **자동 테스트 확인, 실제 Maximo에서는 미검증.** `ActCiRelationWriterTest.continuesAfterDatabaseRejectsFirstRelation`에서 H2 CHECK 제약으로 양 끝·규칙이 정상인 첫 관계의 저장을 거부하고, 다음 관계만 저장되며 성공 건수가 1인지 확인했다. 실제 Maximo 적재에서는 저장 오류가 발생하지 않아 예외 경로를 재현하지 않았다.
+5. 관계 단계가 본체 적재 이후에 실행되어 뒤쪽 배치의 상대 CI를 놓치지 않는지. **실행 순서는 자동 테스트 확인, 실제 DB 시나리오는 미검증.** `CiIntegrationJobTest`에서 본체 task 종료 후 관계 호출 및 본체 실패 후 관계 진행을 확인했다. 실제 적재 검증은 `ci-relation` 단독 실행이므로 뒤쪽 본체 배치의 상대 CI를 연결하는 시나리오는 재현하지 않았다.
+6. 여러 장비 배열·여러 IP를 첫 번째 하나로 줄이지 않는지. **Writer의 다중 연결 저장·재실행은 자동 테스트 확인, 원천 추출부터 전달까지는 미검증.** `ActCiRelationWriterTest.keepsBothComputerLinksToOneFilesystemAndTheirIdsOnRerun`에서 Filesystem 하나와 물리·가상 Computer 둘의 관계 DTO를 직접 전달해 두 관계가 저장되고, 순서를 바꿔 재실행해도 각 관계 키·ID가 유지되는지 확인했다. `CiRelationJobTest`는 SQL 문자열의 `ANY(m.device_fks)` 사용과 `DISTINCT ON` 부재만 확인한다. 원천(D42 .35, 수집 필터 적용) 재조회는 `pair_cnt=60, mountpoint_cnt=60`으로 다중 장비 표본이 없었고, 적재 후 `filesystem-array-fanout`도 0건이었다. 실제 배열에서 SQL이 두 행을 추출하고 Job이 모두 전달하는 검증은 별도로 남아 있다. IP 관계는 아직 구현하지 않았다.
 
 VM·IP의 기준정보와 이동·삭제·동시 실행·표시 미결은
 [ISSUE-11](../../open-issues.md#issue-11-actual-ci-분류속성관계와-식별자-매핑)에서 추적한다.

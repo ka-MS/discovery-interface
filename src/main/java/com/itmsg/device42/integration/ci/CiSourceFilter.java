@@ -1,11 +1,11 @@
 package com.itmsg.device42.integration.ci;
 
 /** 모든 CI 유형이 같은 Computer 집합을 부모로 삼도록 조건을 한 곳에 둔다. 별칭은 d다. */
-final class CiSourceFilter {
+public final class CiSourceFilter {
     private CiSourceFilter() {
     }
 
-    static final String COMPUTER = """
+    public static final String COMPUTER = """
             d.type IN ('physical', 'virtual')
             AND (d.network_device = false OR d.network_device IS NULL)
             AND (

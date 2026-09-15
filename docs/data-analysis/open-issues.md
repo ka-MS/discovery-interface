@@ -271,7 +271,11 @@ compatibility_level의 일반 분류 속성 대응은 미정이며, DB 제품 �
 [공통 저장 초안](data-mapping/ci/actcirelation.md).
 Disk·Filesystem 포함 및 OS 설치 관계의 원천·분류쌍 매핑을 작성했다.
 OS → 물리 Computer 한 쌍은 SWAPPED=0으로 INSERT한 뒤 CI 승격·관계 표시·부모 보존을 확인했다.
-[검증 기록](knowledge/maximo/computer-ci-relations.md#oscomputer-승격-샘플-검증). 제품 관계 적재·공통 MERGE는 미구현/미검증이다.
+[검증 기록](knowledge/maximo/computer-ci-relations.md#oscomputer-승격-샘플-검증).
+공통 MERGE(ActCiRelationWriter)와 OS→Computer·Computer→Disk·Computer→Filesystem 세 관계는 구현했고
+2026-09-15 `./run.sh ci-relation` 운영 적재로 검증했다(ACTCIRELATION 143행, 고아·규칙 위반 0건, 재실행 멱등성 확인).
+신규 적재분의 CI 승격, 관계의 이동·삭제, VM→Host·Interface→IP, 배열 펼침 경로는 아직 미검증이다.
+검증 수준과 남은 항목은 [공통 매핑 4절](data-mapping/ci/actcirelation.md#4-검증-수준과-후속)을 참조한다.
 실행 위치는 CI 본체 적재 이후의 별도 관계 단계로 정리했다.
 GUID 두 컬럼은 샘플 승격 결과에 따라 신규 NULL로 결정해 미결에서 내렸다.
 

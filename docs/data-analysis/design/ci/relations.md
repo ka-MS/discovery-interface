@@ -1,6 +1,7 @@
 # Computer 중심 CI 관계 설계
 
-> 2026-09-15 조사 결과에 따른 구현 제안. 관계 코드·분류쌍은 재조회했으며 관계 적재 코드는 변경하지 않았다.
+> 2026-09-15 조사 결과에 따른 설계다. OS→Computer·Computer→Disk·Computer→Filesystem 세 관계는
+> 구현해 운영 적재까지 검증했다(아래 표). VM→Host·Interface→IP는 여전히 설계 단계 제안이며 코드가 없다.
 > 원천 근거: [D42 관계 원천](../../knowledge/device42/computer-ci-relations.md).
 > 타겟 근거: [Maximo 관계 정의](../../knowledge/maximo/computer-ci-relations.md).
 > 미결 정본: [ISSUE-11](../../open-issues.md#issue-11-actual-ci-분류속성관계와-식별자-매핑).
@@ -9,16 +10,15 @@
 
 | 규칙 이름 제안 | 저장 방향 | 정확한 relationnum | 판정 |
 | --- | --- | --- | --- |
-| COMPUTER_CONTAINS_DISK | Computer → Disk | RELATION.CONTAINS | 원천·분류쌍 확인. 구현 가능 |
-| COMPUTER_CONTAINS_FILESYSTEM | Computer → Filesystem | RELATION.CONTAINS | 원천·분류쌍 확인. 구현 가능 |
-| OS_INSTALLED_ON_COMPUTER | OS → Computer | RELATION.INSTALLEDON | 물리 Computer 단건 INSERT·SWAPPED=0·승격·표시 확인. 자동 저장 구현·가상 Computer 검증은 별도 |
+| COMPUTER_CONTAINS_DISK | Computer → Disk | RELATION.CONTAINS | 2026-09-15 `./run.sh ci-relation` 자동 적재 19건, 재실행 `ACTCIRELATIONID` 동일 확인(멱등성) |
+| COMPUTER_CONTAINS_FILESYSTEM | Computer → Filesystem | RELATION.CONTAINS | 2026-09-15 자동 적재 60건, 재실행 ID 동일 확인. `filesystem-array-fanout` 0건 — 원천(D42 .35) 재조회로 원인 확인: `device_fks`가 Computer 둘 이상인 마운트포인트가 현재 없음(`pair_cnt=mountpoint_cnt=60`). 적재 결함 아님. 배열 펼침 경로 자체는 미검증 |
+| OS_INSTALLED_ON_COMPUTER | OS → Computer | RELATION.INSTALLEDON | 2026-09-15 자동 적재 63건(물리 5·가상 58 분류쌍 모두 관측), 기존 수동 샘플 `ACTCIRELATIONID=6001` 유지·재실행 ID 동일 확인(멱등성) |
 | VM_VIRTUALIZES_HOST | VM → Host Computer | RELATION.VIRTUALIZES | 후보. 1:1 설정·SWAPPED·표시 검증 전 보류 |
 | COMPUTER_CONTAINS_INTERFACE | Computer → Interface | RELATION.CONTAINS | Interface CI 미구현. 별도 유형 도입 후 |
 | INTERFACE_BINDS_IP | Interface → IP | RELATION.BINDSTO | Interface 도입·카디널리티·미연결 IP 처리 검토 후 |
 | COMPUTER_IP 직접 연결 | 미선정 | 미선정 | 명시 규칙 없음. 기존 코드의 이름만 빌려 연결하지 않음 |
 
-Computer는 물리·가상 두 분류를 허용한다. 표의 구현 가능은 소스/타겟 매핑이 갖춰졌다는 뜻이며,
-운영 적재·화면·승격 검증을 완료했다는 뜻은 아니다.
+Computer는 물리·가상 두 분류를 허용한다.
 OS → 물리 Computer의 단건 결과는 [검증 기록](../../knowledge/maximo/computer-ci-relations.md#oscomputer-승격-샘플-검증)을 참조한다.
 OS는 설치 사실을 매핑한다. device 연결만으로 실행 상태까지 확인한 것으로 보고 RUNSON을 함께 만들지 않는다.
 
@@ -135,7 +135,7 @@ Disk·Filesystem의 요구까지 대조했다.
 
 | 요구 | 어디서 처리되나 | OS | Disk | Filesystem |
 | --- | --- | --- | --- | --- |
-| 물리·가상 Computer 판별 | **불필요.** MERGE가 실제 ACTCI 분류로 RELATIONRULES를 본다 | 도착이 둘 | 출발이 둘 | 출발이 둘 |
+| 물리·가상 Computer 판별 | MERGE가 저장된 ACTCI 분류로 RELATIONRULES를 확인. 원천의 예상 분류와 대조하지 않는 최소 정책 | 도착이 둘 | 출발이 둘 | 출발이 둘 |
 | 배열의 전체 연결 | 페이지 SQL. `c.device_pk=ANY(m.device_fks)`가 쌍으로 펼친다 | 해당 없음 | 해당 없음 | 필요 |
 | 관계별 수집 필터 | 페이지 SQL 안 | Computer 조인 | `pm.type_name='Hard Disk'` | fstype 제외 목록 |
 | 안정적 페이징 | 공통 실행기. 정렬 키가 `sourceci,targetci`로 동일 | 가능 | 가능 | 가능 |
@@ -144,8 +144,11 @@ Disk·Filesystem의 요구까지 대조했다.
 Filesystem만 원천 한 행이 여러 쌍을 내지만 그것은 조인 결과일 뿐이고,
 실행기·DTO·Writer는 똑같이 쌍 하나를 처리한다. 구조를 바꿀 필요가 없다.
 
-이 대조는 **문서상 확인**이다. 실제 적재 검증은 OS부터 하며
-OS 결과를 Disk·Filesystem의 검증으로 확대하지 않는다.
+이 대조는 2026-09-15 `./run.sh ci-relation` 운영 적재로 검증했다. 한 번의 실행에서
+OS_INSTALLED_ON_COMPUTER(63건)·COMPUTER_CONTAINS_DISK(19건)·COMPUTER_CONTAINS_FILESYSTEM(60건)
+세 관계가 모두 적재됐고, 세 상수 모두 같은 `CiRelationJob`·`ActCiRelationWriter`를 거쳤다.
+공통 구조를 관계별로 분기하지 않았다. 재실행에서도 세 관계 모두 `ACTCIRELATIONID`가
+유지됐다(멱등성). 검증 쿼리는 [관계 적재 검증](../../exploration-queries/maximo/ci-relation-load-check.sql).
 
 ## 본체 중복 제거와 관계 보존
 

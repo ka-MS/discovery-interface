@@ -1,6 +1,7 @@
 package com.itmsg.device42.integration.ci;
 
 import com.itmsg.device42.integration.IntegrationJob;
+import com.itmsg.device42.integration.ci.relation.CiRelationJob;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -14,10 +15,13 @@ public class CiIntegrationJob implements IntegrationJob {
 
     private final List<CiIntegrationTask> tasks;
     private final CiDefinitionLoader definitionLoader;
+    private final CiRelationJob relationJob;
 
-    public CiIntegrationJob(List<CiIntegrationTask> tasks, CiDefinitionLoader definitionLoader) {
+    public CiIntegrationJob(List<CiIntegrationTask> tasks, CiDefinitionLoader definitionLoader,
+                            CiRelationJob relationJob) {
         this.tasks = tasks;
         this.definitionLoader = definitionLoader;
+        this.relationJob = relationJob;
     }
 
     @Override
@@ -38,5 +42,7 @@ public class CiIntegrationJob implements IntegrationJob {
                         taskName, e);
             }
         }
+
+        relationJob.run();
     }
 }

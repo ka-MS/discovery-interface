@@ -1,5 +1,6 @@
 package com.itmsg.device42.integration.ci;
 
+import com.itmsg.device42.integration.ci.relation.CiRelationJob;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -19,7 +20,7 @@ class CiIntegrationJobTest {
         CiIntegrationTask computer = mock(CiIntegrationTask.class);
         CiIntegrationTask next = mock(CiIntegrationTask.class);
         doThrow(new IllegalStateException("source failure")).when(computer).integrate(first);
-        CiIntegrationJob job = new CiIntegrationJob(List.of(computer, next), loader);
+        CiIntegrationJob job = new CiIntegrationJob(List.of(computer, next), loader, mock(CiRelationJob.class));
 
         job.run();
         job.run();
@@ -40,11 +41,42 @@ class CiIntegrationJobTest {
         CiDefinitionCache first = new CiDefinitionCache(Map.of(), Map.of(), Set.of(), Map.of());
         when(loader.load()).thenReturn(first).thenThrow(new IllegalStateException("definitions unavailable"));
         CiIntegrationTask computer = mock(CiIntegrationTask.class);
-        CiIntegrationJob job = new CiIntegrationJob(List.of(computer), loader);
+        CiIntegrationJob job = new CiIntegrationJob(List.of(computer), loader, mock(CiRelationJob.class));
         job.run();
 
         assertThatThrownBy(job::run).hasMessageContaining("definitions unavailable");
         verify(computer, times(1)).integrate(first);
         verifyNoMoreInteractions(computer);
+    }
+
+    @Test
+    void runsRelationStageAfterEveryBodyTask() {
+        CiDefinitionLoader loader = mock(CiDefinitionLoader.class);
+        CiDefinitionCache definitions = new CiDefinitionCache(Map.of(), Map.of(), Set.of(), Map.of());
+        when(loader.load()).thenReturn(definitions);
+        CiIntegrationTask computer = mock(CiIntegrationTask.class);
+        CiIntegrationTask os = mock(CiIntegrationTask.class);
+        CiRelationJob relations = mock(CiRelationJob.class);
+
+        new CiIntegrationJob(List.of(computer, os), loader, relations).run();
+
+        var order = inOrder(computer, os, relations);
+        order.verify(computer).integrate(definitions);
+        order.verify(os).integrate(definitions);
+        order.verify(relations).run();
+    }
+
+    @Test
+    void runsRelationStageEvenAfterBodyTaskFailure() {
+        CiDefinitionLoader loader = mock(CiDefinitionLoader.class);
+        CiDefinitionCache definitions = new CiDefinitionCache(Map.of(), Map.of(), Set.of(), Map.of());
+        when(loader.load()).thenReturn(definitions);
+        CiIntegrationTask failing = mock(CiIntegrationTask.class);
+        doThrow(new IllegalStateException("source failure")).when(failing).integrate(definitions);
+        CiRelationJob relations = mock(CiRelationJob.class);
+
+        new CiIntegrationJob(List.of(failing), loader, relations).run();
+
+        verify(relations).run();
     }
 }

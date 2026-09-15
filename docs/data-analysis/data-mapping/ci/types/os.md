@@ -2,7 +2,7 @@
 
 > Target: MAXIMO.ACTCI · MAXIMO.ACTCISPEC
 > 원천·메타데이터 확인: 2026-09-15 · D42 .68 / .35 · Maximo BLUDB
-> 구현: OsCiIntegrate · 상태: 본체·스펙 적재 구현 및 자동 테스트 완료. 관계 자동 적재 미구현. OS → 물리 Computer 단건 INSERT·CI 승격·관련 CI 표시 확인. 속성별 검증은 별도.
+> 구현: OsCiIntegrate · 상태: 본체·스펙 적재 구현 및 자동 테스트 완료. 관계 자동 적재 2026-09-15 운영 검증 완료(63건, 물리·가상 분류쌍 모두 확인, 재실행 멱등성 확인). OS → 물리 Computer 단건 INSERT·CI 승격·관련 CI 표시 확인. 속성별 검증은 별도.
 > 분류 선택 이유·관계 추천안·미결 근거는 [OS 수집 설계](../../../design/ci/os.md)에 있다.
 
 공통 컬럼 정의는 [ACTCI](../actci.md), [ACTCISPEC](../actcispec.md)가 소유한다.
@@ -91,13 +91,16 @@ LIMIT %d OFFSET %d
 | OPERATINGSYSTEM_VERSIONSTRING | CI 기준 밖. OSVERSION과 중복이라 미채택 |
 | KERNELARCHITECTURE 승격 전달 | `SYS.OPERATINGSYSTEM`은 승격 범위에서 `CI.OS`로 매핑되는데 `CI.OS`에 이 속성이 없다. 누락 가능. 미검증. ISSUE-11 |
 | MODELOBJECT_CDMSOURCE·SOURCETOKEN | 미채택. CI 계열 분류에 `MODELOBJECT_` 속성이 0개라 승격에서 전달되지 않고, `ACTCINUM`·`CHANGEBY`와 중복이다 |
-| 관계 | 6절의 RELATION.INSTALLEDON 매핑. 물리 Computer 단건은 SWAPPED=0 적재·승격·UI 확인. 가상 Computer·자동 저장은 미검증. ISSUE-11 |
+| 관계 | 6절의 RELATION.INSTALLEDON 매핑. 자동 저장 구현·2026-09-15 운영 검증 완료(63건, 물리 5·가상 58, 재실행 멱등성 확인). CI 승격은 기존 수동 샘플(ACTCIRELATIONID=6001) 단건만 확인했고 신규 적재된 62건의 승격은 미검증. ISSUE-11 |
 | 수집 대상 범위 | Computer 연결분만 추천. 두 서버 비율 30% / 80%로 차이 큼. ISSUE-8 |
 
 ## 6. 관계 매핑 — 2026-09-15
 
 [관계 설계](../../../design/ci/relations.md)의 우선 구현 매핑이다.
-관계 적재는 미구현이다. OsCiIntegrate 안이 아니라 모든 CI 본체 적재가 끝난 뒤의
+2026-09-15 `./run.sh ci-relation`으로 운영 적재를 검증했다. 63건 조회·63건 적재, 도착 분류는
+물리 Computer(SYS.COMPUTERSYSTEM) 5건·가상 Computer(SYS.VIRTUALCOMPUTERSYSTEM) 58건 모두
+관측됐고, 재실행에서 `ACTCIRELATIONID`가 유지됐다(멱등성). CI 승격까지는 이번에 재검증하지
+않았다. OsCiIntegrate 안이 아니라 모든 CI 본체 적재가 끝난 뒤의
 [관계 단계](../../../design/ci/relations.md#실행-위치--ci-본체-적재-이후-별도-단계)에서 저장하며,
 조회 정의는 연결 키를 가진 OS 도메인이 소유한다.
 
