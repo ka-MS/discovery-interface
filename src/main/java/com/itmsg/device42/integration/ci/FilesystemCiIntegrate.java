@@ -105,7 +105,7 @@ public class FilesystemCiIntegrate implements CiIntegrationTask {
                 try {
                     data.add(new FilesystemSource(
                             mountPointPk, rs.getLong("device_fk"), rs.getString("mountpoint"),
-                            rs.getString("fstype_name"), rs.getBigDecimal("capacity"),
+                            rs.getString("fstype_name"), rs.getString("label"), rs.getBigDecimal("capacity"),
                             rs.getBigDecimal("free_capacity"), rs.getString("last_discovered")));
                 } catch (SQLException e) {
                     log.error("Filesystem 원천 변환에 실패했습니다. mountPointPk={}", mountPointPk, e);
@@ -139,6 +139,7 @@ public class FilesystemCiIntegrate implements CiIntegrationTask {
                 specMapper.addSpec(specs, definitions, actCi, FilesystemSpec.TYPE, source.type(), null);
                 specMapper.addSpec(specs, definitions, actCi, FilesystemSpec.CAPACITY, source.capacity(), CAPACITY_UNIT);
                 specMapper.addSpec(specs, definitions, actCi, FilesystemSpec.AVAILABLE_SPACE, source.freeCapacity(), CAPACITY_UNIT);
+                specMapper.addSpec(specs, definitions, actCi, FilesystemSpec.LABEL, source.label(), null);
 
                 mappedData.add(new CiUpsert(actCi, List.copyOf(specs)));
             } catch (RuntimeException e) {
@@ -175,6 +176,7 @@ public class FilesystemCiIntegrate implements CiIntegrationTask {
                 m.mountpoint_pk, c.device_pk AS device_fk,
                 NULLIF(TRIM(m.mountpoint), '') AS mountpoint,
                 NULLIF(TRIM(m.fstype_name), '') AS fstype_name,
+                NULLIF(TRIM(m.label), '') AS label,
                 m.capacity, m.free_capacity, c.last_discovered
             FROM view_mountpoint_v2 m
             JOIN computer c ON c.device_pk = ANY(m.device_fks)
