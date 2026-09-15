@@ -91,7 +91,7 @@ LIMIT %d OFFSET %d
 | OPERATINGSYSTEM_VERSIONSTRING | CI 기준 밖. OSVERSION과 중복이라 미채택 |
 | KERNELARCHITECTURE 승격 전달 | `SYS.OPERATINGSYSTEM`은 승격 범위에서 `CI.OS`로 매핑되는데 `CI.OS`에 이 속성이 없다. 누락 가능. 미검증. ISSUE-11 |
 | MODELOBJECT_CDMSOURCE·SOURCETOKEN | 미채택. CI 계열 분류에 `MODELOBJECT_` 속성이 0개라 승격에서 전달되지 않고, `ACTCINUM`·`CHANGEBY`와 중복이다 |
-| 관계 | 6절의 RELATION.INSTALLEDON 매핑. 물리 Computer 단건은 SWAPPED=0 적재·승격·UI 확인. 가상 Computer·자동 저장은 미검증. ISSUE-11 |
+| 관계 | 6절의 RELATION.INSTALLEDON 매핑. 자동 저장 구현·2026-09-15 운영 검증 완료(63건, 물리 5·가상 58, 재실행 멱등성 확인). CI 승격은 기존 수동 샘플(ACTCIRELATIONID=6001) 단건만 확인했고 신규 적재된 62건의 승격은 미검증. ISSUE-11 |
 | 수집 대상 범위 | Computer 연결분만 추천. 두 서버 비율 30% / 80%로 차이 큼. ISSUE-8 |
 
 ## 6. 관계 매핑 — 2026-09-15

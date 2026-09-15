@@ -1,6 +1,7 @@
 # Computer 중심 CI 관계 설계
 
-> 2026-09-15 조사 결과에 따른 구현 제안. 관계 코드·분류쌍은 재조회했으며 관계 적재 코드는 변경하지 않았다.
+> 2026-09-15 조사 결과에 따른 설계다. OS→Computer·Computer→Disk·Computer→Filesystem 세 관계는
+> 구현해 운영 적재까지 검증했다(아래 표). VM→Host·Interface→IP는 여전히 설계 단계 제안이며 코드가 없다.
 > 원천 근거: [D42 관계 원천](../../knowledge/device42/computer-ci-relations.md).
 > 타겟 근거: [Maximo 관계 정의](../../knowledge/maximo/computer-ci-relations.md).
 > 미결 정본: [ISSUE-11](../../open-issues.md#issue-11-actual-ci-분류속성관계와-식별자-매핑).
@@ -17,8 +18,7 @@
 | INTERFACE_BINDS_IP | Interface → IP | RELATION.BINDSTO | Interface 도입·카디널리티·미연결 IP 처리 검토 후 |
 | COMPUTER_IP 직접 연결 | 미선정 | 미선정 | 명시 규칙 없음. 기존 코드의 이름만 빌려 연결하지 않음 |
 
-Computer는 물리·가상 두 분류를 허용한다. 표의 구현 가능은 소스/타겟 매핑이 갖춰졌다는 뜻이며,
-운영 적재·화면·승격 검증을 완료했다는 뜻은 아니다.
+Computer는 물리·가상 두 분류를 허용한다.
 OS → 물리 Computer의 단건 결과는 [검증 기록](../../knowledge/maximo/computer-ci-relations.md#oscomputer-승격-샘플-검증)을 참조한다.
 OS는 설치 사실을 매핑한다. device 연결만으로 실행 상태까지 확인한 것으로 보고 RUNSON을 함께 만들지 않는다.
 
