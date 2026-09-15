@@ -69,7 +69,7 @@ class CiRelationJobTest {
     }
 
     @Test
-    void readsEveryPageAndReportsLoadedCount() throws Exception {
+    void readsSinglePageAndReportsLoadedCount() throws Exception {
         var factory = mock(Device42ConnectionFactory.class);
         stubCount(factory, 2);
         var writer = mock(ActCiRelationWriter.class);
@@ -82,6 +82,62 @@ class CiRelationJobTest {
         assertThat(captured.getAllValues().getFirst())
                 .containsExactly(new ActCiRelationUpsert(
                         "D42:DEVICEOS:147", "D42:DEVICE:173", "RELATION.INSTALLEDON"));
+    }
+
+    /**
+     * DEFAULT_BATCH_SIZE=1000이라 위 단일 페이지 테스트는 offset += 1000 루프나
+     * 마지막 페이지 clamp(limit = min(1000, total - offset))를 실행하지 않는다.
+     * 이 테스트는 건수 1500을 스텁해 실제로 두 페이지를 돌게 하고, 두 번째 페이지 SQL이
+     * LIMIT 500 OFFSET 1000을 담는지 실행된 SQL을 캡처해 확인한다.
+     */
+    @Test
+    void readsEveryPageWhenSourceSpansMultipleBatches() throws Exception {
+        var factory = mock(Device42ConnectionFactory.class);
+        var connection = mock(Connection.class);
+        var statement = mock(Statement.class);
+        when(factory.openConnection()).thenReturn(connection);
+        when(connection.createStatement()).thenReturn(statement);
+
+        var osCountRs = mock(ResultSet.class);
+        when(osCountRs.next()).thenReturn(true, false);
+        when(osCountRs.getLong(1)).thenReturn(1500L);
+
+        var zeroCountRs = mock(ResultSet.class);
+        when(zeroCountRs.next()).thenReturn(true, false);
+        when(zeroCountRs.getLong(1)).thenReturn(0L);
+
+        var firstPageRs = mock(ResultSet.class);
+        when(firstPageRs.next()).thenReturn(true, false);
+        when(firstPageRs.getString("sourceci")).thenReturn("D42:DEVICEOS:1");
+        when(firstPageRs.getString("targetci")).thenReturn("D42:DEVICE:1");
+
+        var secondPageRs = mock(ResultSet.class);
+        when(secondPageRs.next()).thenReturn(true, false);
+        when(secondPageRs.getString("sourceci")).thenReturn("D42:DEVICEOS:2");
+        when(secondPageRs.getString("targetci")).thenReturn("D42:DEVICE:2");
+
+        when(statement.executeQuery(anyString())).thenAnswer(invocation -> {
+            String sql = invocation.<String>getArgument(0);
+            if (sql.contains("COUNT(*)")) {
+                return sql.contains("view_deviceos_v1") ? osCountRs : zeroCountRs;
+            }
+            return sql.contains("OFFSET 1000") ? secondPageRs : firstPageRs;
+        });
+
+        var writer = mock(ActCiRelationWriter.class);
+        when(writer.write(anyList())).thenReturn(1);
+
+        new CiRelationJob(factory, writer).run();
+
+        // OS 소스만 1500건이라 offset 0(limit 1000)·1000(limit 500) 두 페이지가 돌고,
+        // Disk·Filesystem은 0건이라 write()를 부르지 않는다.
+        verify(writer, times(2)).write(anyList());
+
+        var executedQueries = ArgumentCaptor.forClass(String.class);
+        verify(statement, atLeastOnce()).executeQuery(executedQueries.capture());
+        assertThat(executedQueries.getAllValues())
+                .as("두 번째 페이지 SQL이 LIMIT 500 OFFSET 1000을 담는다")
+                .anyMatch(sql -> sql.contains("LIMIT 500 OFFSET 1000"));
     }
 
     @Test
