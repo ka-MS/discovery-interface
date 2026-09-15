@@ -7,6 +7,9 @@
 > 관측 근거: [관계 정의](../../knowledge/maximo/computer-ci-relations.md).
 > 아래 공통 MERGE는 미실행 초안이다. OS → 물리 Computer 한 쌍은 **별도 INSERT·CI 승격·UI 표시를 검증했다**. [샘플 결과](../../knowledge/maximo/computer-ci-relations.md#oscomputer-승격-샘플-검증).
 
+호출 위치는 CI 본체 적재 이후의 관계 단계 하나다.
+본체 task는 이 Writer를 호출하지 않는다. [실행 구조](../../design/ci/relations.md#실행-위치--ci-본체-적재-이후-별도-단계).
+
 ## 1. 관계 키
 
 - 물리 PK: ACTCIRELATIONID.
@@ -37,8 +40,14 @@ Computer 관계 조사 결과를 DB 관계의 승인으로 해석하지 않는�
 | CHANGEDATE | 변경 날짜 | DATETIME(10) | Y | 변환 | 관계 매핑 시각 | 기존 CI와 같은 JVM 기본 시간대. 원천 발견 시각이 아님 |
 | ANCESTORCI | 상위 실제 CI | UPPER(150) | Y | 원천없음 | 별도 상위 원천 없음 | 신규 NULL. SOURCECI를 무조건 복사하지 않음 |
 | BASELINEDATE | 기준선 날짜 | DATETIME(10) | Y | 원천없음 | D42 관계 기준선 없음 | 신규 NULL |
-| SOURCECIGUID | 소스 실제 CI GUID | ALN(192) | Y | 미결 | ACTCI.GUID | 이번 최소안 신규 NULL. GUID 생성·복사 규칙 추가 시 별도 검증 |
-| TARGETCIGUID | 대상 실제 CI GUID | ALN(192) | Y | 미결 | ACTCI.GUID | 이번 최소안 신규 NULL. 기존 값은 MERGE에서 유지 |
+| SOURCECIGUID | 소스 실제 CI GUID | ALN(192) | Y | 원천없음 | D42 GUID 없음 | 신규 NULL. 아래 관측 참조. 기존 값은 MERGE에서 유지 |
+| TARGETCIGUID | 대상 실제 CI GUID | ALN(192) | Y | 원천없음 | D42 GUID 없음 | 신규 NULL. 기존 값은 MERGE에서 유지 |
+
+**GUID 두 컬럼을 NULL로 두는 근거:** OS → 물리 Computer 샘플을 GUID 없이 INSERT한 뒤
+CI 승격과 관계·부모 보존이 정상 동작했다. GUID는 UI가 만든 관계에서 관측되는 값이며
+우리 원천에는 대응 값이 없다. 승격이 이를 요구하지 않는 것이 확인됐으므로 미결에서 내린다.
+단건 관측이므로 다른 분류쌍에서 승격 문제가 보이면 재검토한다.
+기존 행의 GUID는 MERGE의 UPDATE 대상이 아니다. NULL로 덮어쓰지 않는다.
 
 CONTAINMENT·REVRELATIONSHIP·CARDINALITY는 ACTCIRELATION 컬럼이 아니다.
 SWAPPED는 저장 순서 변경 여부를 나타내는 별도 필드이며
@@ -118,8 +127,8 @@ D42의 논리키 관계 SELECT와 Maximo의 분류쌍·키·참조 메타데이�
 2. 재실행 시 관계 한 행 유지와 ACTCIRELATIONID 보존.
 3. OS → 물리 Computer 단건은 SWAPPED=0, CI 승격 후 관계 방향·부모 보존 확인. 다른 분류쌍·복수 관계·탐색은 추가 검증.
 4. 관계 하나의 저장 실패 뒤 나머지 관계 계속 처리.
-5. 같은 유형의 뒤쪽 배치에 호스트가 있는 경우 관계 누락 방지.
+5. 관계 단계가 본체 적재 이후에 실행되어 뒤쪽 배치의 상대 CI를 놓치지 않는지.
 6. 여러 장비 배열·여러 IP를 첫 번째 하나로 줄이지 않는지.
 
-VM·IP의 기준정보, 이동·삭제·동시 실행·표시 및 GUID 처리 미결은
+VM·IP의 기준정보와 이동·삭제·동시 실행·표시 미결은
 [ISSUE-11](../../open-issues.md#issue-11-actual-ci-분류속성관계와-식별자-매핑)에서 추적한다.
