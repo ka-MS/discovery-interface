@@ -34,7 +34,7 @@ Computer 관계 조사 결과를 DB 관계의 승인으로 해석하지 않는�
 | ACTCIRELATIONID | 고유 ID | BIGINT(19) | N | 채번 | MAXIMO.ACTCIRELATIONSEQ | INSERT에서 NEXT VALUE. 기존 행 ID 유지. 증가폭 사이 번호 임의 사용 금지 |
 | SOURCECI | 소스 실제 구성 품목 번호 | UPPER(150) | N | 변환 | 유형별 원천 연결 키 | 유형 매핑의 출발 ACTCINUM |
 | TARGETCI | 대상 실제 구성 품목 번호 | UPPER(150) | N | 변환 | 유형별 원천 연결 키 | 유형 매핑의 도착 ACTCINUM |
-| RELATIONNUM | 관계 | UPPER(192) | N | 상수 | 확정할 CiRelationRule | RELATION·RELATIONRULES에서 확인된 정확한 코드 |
+| RELATIONNUM | 관계 | UPPER(192) | N | 상수 | CiRelationSource 상수 | RELATION·RELATIONRULES에서 확인된 정확한 코드 |
 | SWAPPED | 스왑됨 | YORN(1) | Y | 상수 | 사전 정의한 저장 방향 | OS → 물리 Computer는 0으로 단건 승격·표시 확인. 다른 관계는 검증 필요. 규칙 SWAPPED를 그대로 복사하지 않음 |
 | CHANGEBY | 변경자 | UPPER(100) | Y | 상수 | 기존 CI 적재 규약 | Device42 |
 | CHANGEDATE | 변경 날짜 | DATETIME(10) | Y | 변환 | 관계 매핑 시각 | 기존 CI와 같은 JVM 기본 시간대. 원천 발견 시각이 아님 |
