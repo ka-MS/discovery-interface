@@ -15,7 +15,7 @@
 | 분류 | `DEV.DISKDRIVE` 한 개 |
 | ACTCINUM | `D42:PART:<part_pk>` |
 | 스펙 참조 | ACTCINUM·CLASSSTRUCTUREID는 본체와 동일, REFOBJECTID=ACTCIID |
-| 관계 | 확정하지 않는다. 추천안은 설계 문서 |
+| 관계 | [Computer 출발 관계 매핑](computer.md#7-관계-매핑--2026-09-15)에 원천·분류쌍 대조 완료. 저장 구현·UI 검증은 별도 |
 
 `view_part_v1`에는 `type_name`이 없다. 파트 종류는 `view_partmodel_v1` 조인으로 판정한다.
 `p.pcount`는 두 서버 모두 전건 1이므로 수량으로 해석하지 않는다. 한 행이 디스크 한 개다.
@@ -94,4 +94,4 @@ LIMIT %d OFFSET %d
 | ACTCINAME 중복 | 같은 모델 디스크가 같은 이름을 갖는다. 슬롯·장비명 부가 검토. ISSUE-11 |
 | 원천 커버리지 | 표본 Computer 95 / 85대 중 18 / 19대만 디스크 보유. ISSUE-8 |
 | 승격 불가 | `DEV.DISKDRIVE`가 `CITEMPLATE`에 0행이다. CI로 승격할 수 없다. ISSUE-8 |
-| 관계 | `RELATION.CONTAINS`(Computer→Disk) 추천. `USEWITH`가 CI라 미검증. ISSUE-11 |
+| 관계 | [Computer 출발 관계 매핑](computer.md#7-관계-매핑--2026-09-15)에 RELATION.CONTAINS의 원천 SQL·방향 정의. 관계 저장·UI 검증 미완료. ISSUE-11 |

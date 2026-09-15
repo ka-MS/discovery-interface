@@ -29,23 +29,43 @@
 
 ## 3. 스펙 대조표
 
-**대조 기준은 `CI.IPADDRESS`(CCI00011) 6개다.** 적재 대상은 `NET.IPADDRESS`이며
-두 분류의 고유 속성 구성이 사실상 같다. 관측은 [분류 조사](../../knowledge/maximo/ci-component-classifications.md) 6절.
+**대조 기준은 `CI.IPADDRESS`(CCI00011) 6개다.** 적재 대상은 `NET.IPADDRESS`(22개 = `IPADDRESS_` 8 + `MODELOBJECT_` 14)다.
+관측은 [분류 조사](../../knowledge/maximo/ci-component-classifications.md) 6절.
 
 | ASSETATTRID | CI.IPADDRESS | 자료형 | 원천 | 채택 | 비고 |
 | --- | :---: | --- | --- | --- | --- |
-| IPADDRESS_DOTNOTATION | ○ | ALN | `HOST(i.ip_address)` | 채택 | 전건. `192.168.2.57` |
+| IPADDRESS_DOTNOTATION | ○ | ALN | `HOST(i.ip_address)` | 채택 | 전건 |
 | IPADDRESS_STRINGNOTATION | ○ | ALN | `HOST(i.ip_address)` | 채택 | CI 기준 속성. DOTNOTATION과 같은 값 |
-| IPADDRESS_ADDRESSTYPE | ○ | NUMERIC | IPv4 / IPv6 구분 | 미채택 | **코드 규약 미확인** |
+| IPADDRESS_MANAGEDSYSTEMNAME | ○ | ALN | 연결 장비의 `d.name` | 채택 | 여러 장비면 `device_pk` 최소인 장비 |
+| IPADDRESS_ADDRESSTYPE | ○ | NUMERIC | v4/v6 판정 가능 | 미채택 | **코드 규약 없음.** 아래 참조 |
 | IPADDRESS_ADDRESSSPACE | ○ | ALN | – | 미채택 | 원천 없음 |
 | IPADDRESS_BYTENOTATION | ○ | ALN | – | 미채택 | 원천 없음 |
-| IPADDRESS_MANAGEDSYSTEMNAME | ○ | ALN | – | 미채택 | 원천 없음 |
+| **MODELOBJECT_LABEL** | **✗** | ALN | `i.label` | **채택** | 55 / 59건. **CI 기준 밖 의도적 추가** |
+| MODELOBJECT_CDMSOURCE·SOURCETOKEN | ✗ | ALN | 상수·원천 키 | 미채택 | 아래 참조 |
+| 나머지 MODELOBJECT_ 11개 | ✗ | – | – | 미채택 | 원천 없음 |
 
-CI 기준 6개 중 원천 대응이 있는 것은 주소 표기 둘뿐이다. 둘 다 같은 값이 들어간다.
-**채울 수 있는 정보가 사실상 주소 하나다.** 네 유형 중 가장 빈약하다.
+### ADDRESSTYPE는 값을 정할 수 없다
 
-`CAST(i.ip_address AS VARCHAR)`는 `192.168.2.127/32`를 낸다. 실제 프리픽스가 아닌 `/32`가
-붙으므로 쓰지 않는다. `HOST()`로 주소만 뽑는다.
+v4/v6 판정 자체는 원천에서 된다. 그러나 `IPADDRESS_ADDRESSTYPE`은 NUMERIC인데
+`ASSETATTRIBUTE.DOMAINID`가 비어 있고 `ACTCISPEC`·`CISPEC` 통틀어 기존 값이 **0건**이다.
+코드 규약을 Maximo 메타데이터에서 알 수 없어 임의 값을 넣지 않는다.
+
+분류를 `NET.IPV4ADDRESS`·`NET.IPV6ADDRESS`로 나누면 코드 없이도 구분이 표현된다.
+9절 미결에 남긴다.
+
+### MODELOBJECT_CDMSOURCE·SOURCETOKEN을 쓰지 않는 이유
+
+네 유형 공통 결정이다. 2026-09-15 확인했다.
+
+- **CI 계열 분류에 `MODELOBJECT_` 속성이 하나도 없다.** `CI.IPADDRESS` 0/6, `CI.OS` 0/7,
+  `CI.FILESYSTEM` 0/16, `CI.COMPUTERSYSTEM` 0/19다. ACTCI 쪽은 모두 14개씩 갖는다.
+  적재해도 승격에서 전달되지 않는다.
+- 같은 정보를 이미 담고 있다. `ACTCINUM`이 `D42:IPADDRESS:<pk>`로 원천 키를,
+  `CHANGEBY='Device42'`가 연계 출처를 나타낸다.
+- `ACTCISPEC`·`CISPEC` 전체에 이 두 속성의 기존 값이 0건이다. 환경 선례가 없다.
+
+`MODELOBJECT_LABEL`은 다르다. 원천 `i.label`에 실제 값이 있어 채택했다.
+다만 위와 같은 이유로 승격 전달은 기대하지 않는다.
 
 ### 서브넷 마스크가 들어갈 자리가 없다
 
@@ -77,8 +97,13 @@ Computer 연결은 관계 N개로 표현한다. 조회에서 Computer를 조인�
 
 ## 6. 관계 — 직접 규칙이 없다
 
-**네 유형 중 유일하게 Computer와 직접 연결할 수 없다.**
+**네 유형 중 유일하게 Computer와 직접 연결하는 명시 규칙이 없다.**
 `SYS.*COMPUTERSYSTEM`과 `NET.IPADDRESS` 사이에 `RELATIONRULES`가 양방향 모두 0건이다.
+
+2026-09-15 보완: 이는 물리 INSERT 불가라는 뜻이 아니다. 현재 검증된 규칙을 쓰는 설계에서
+직접 관계를 보류한다는 뜻이다. Interface 경로의 실제 연결·카디널리티 제한은
+[관계 설계](relations.md)와 [관계 원천](../../knowledge/device42/computer-ci-relations.md)을 따른다.
+Interface 하나의 도입만으로 공유 IP의 모든 장비 연결이 복구되지는 않는다.
 
 CDM이 정의한 경로는 인터페이스를 거친다.
 
@@ -108,19 +133,37 @@ Interface는 원천이 88 / 241건으로 충분하고 `device_fk` 직접 연결�
 
 3도 방어 가능하다. IP 속성이 주소 하나뿐이라 Interface 없이 얻는 정보가 적기 때문이다.
 
-## 7. 수집 대상 범위
+## 7. 수집 대상 범위 — 장비 연결 전체
 
-| 범위 | 건수 | 비율 |
-| --- | ---: | ---: |
-| 전체 IP | 297 / 543 | 100% |
-| 장비 연결 있음 | 105 / 111 | 35% / 20% |
-| Computer 연결 | 50 / 97 | 17% / 18% |
+| 범위 | 건수 | 수집 |
+| --- | ---: | --- |
+| 전체 IP | 297 / 543 | |
+| **장비 연결 있음** | **105 / 111** | **대상** |
+| 그중 Computer 연결 | 50 / 97 | |
+| 장비 연결 없음 | 192 / 432 | 제외 |
 
-**IP의 3분의 2는 어떤 장비에도 붙어 있지 않다**(192 / 432건). 서브넷에만 할당된 주소다.
+2026-09-15 결정이다. 처음에는 Computer 연결분만 수집했으나 범위를 넓혔다.
 
-추천은 **Computer 연결분만**이다. 장비 미연결 IP는 관계를 만들 대상이 없고,
-사업 범위의 수집 구분과도 연결되지 않는다. IP 주소 관리 자체가 목적이라면
-Subnet CI와 함께 별도로 설계할 사안이다.
+**IP는 장비에 종속된 개체가 아니라 독립 CI다.** 부모 유형으로 자식을 거르면
+장비 유형을 추가할 때마다 IP 조회를 고쳐야 한다. 네트워크 장비·컨테이너를
+CI로 추가하면 그 장비의 IP가 이미 들어와 있고 관계만 붙이면 된다.
+
+IP가 붙은 장비를 유형별로 세면 다음과 같다.
+
+| 장비 유형 | .68 | .35 | Computer 필터 대상 |
+| --- | ---: | ---: | :---: |
+| virtual VMWare / EC2 / Internal VM | 39 | 91 | ○ |
+| physical Generic | 12 | 6 | ○ |
+| type=unknown | 38 | 0 | ✗ |
+| virtual Docker Container | 17 | 10 | ✗ |
+| cluster (`network_device=true`) | 2 | 2 | ✗ |
+| Network Printer · PDU | 2 | 2 | ✗ |
+
+Computer 필터로는 `unknown` 38건과 Docker 27건이 빠진다. 실제 네트워크 장비
+(`network_device=true`) IP는 이 표본에 cluster 2건뿐이다.
+
+장비에 안 붙은 192 / 432건은 계속 제외한다. 서브넷에만 할당된 주소이고
+관계를 만들 대상이 없다.
 
 ## 8. 미결
 
@@ -130,5 +173,6 @@ Subnet CI와 함께 별도로 설계할 사안이다.
 | 채울 속성이 주소 하나 | 독립 CI 유지 여부 재확인 | ISSUE-8 |
 | 서브넷 마스크 적재 불가 | Subnet CI 필요. 이번 범위 밖 | ISSUE-8 |
 | `IPADDRESS_ADDRESSTYPE` 코드 규약 | 미확인 | ISSUE-11 |
-| 수집 대상 범위 | Computer 연결분 추천 | ISSUE-8 |
+| 분류를 v4/v6로 나눌지 | `NET.IPV4ADDRESS`·`NET.IPV6ADDRESS`가 속성 22개 동일하고 승격 범위에도 등록돼 있다. 원천 v6는 0 / 2건 | ISSUE-8 |
+| MODELOBJECT_LABEL 승격 전달 | CI 계열에 MODELOBJECT_ 속성이 없어 누락 가능. 미검증 | ISSUE-11 |
 | 배열 `DISTINCT ON` | 실제 필요. 적용 확정 | ISSUE-9 |

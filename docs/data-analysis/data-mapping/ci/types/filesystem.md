@@ -15,7 +15,7 @@
 | 분류 | `SYS.FILESYSTEM` 한 개. 로컬·원격·컨테이너를 구분하지 않는다 |
 | ACTCINUM | `D42:MOUNTPOINT:<mountpoint_pk>` |
 | 스펙 참조 | ACTCINUM·CLASSSTRUCTUREID는 본체와 동일, REFOBJECTID=ACTCIID |
-| 관계 | 확정하지 않는다. 추천안은 설계 문서 |
+| 관계 | [Computer 출발 관계 매핑](computer.md#7-관계-매핑--2026-09-15)에 원천·분류쌍 대조 완료. 저장 구현·UI 검증은 별도 |
 
 `SYS.LOCALFILESYSTEM`을 쓰지 않는다. 원천에 nfs·nfs4·overlay·VMFS·squashfs가 섞여 있어
 로컬 분류가 사실과 어긋난다. 두 분류의 속성 33개는 완전히 동일하며 계층상 형제다.
@@ -95,5 +95,5 @@ LIMIT %d OFFSET %d
 | 용량 단위 | **확정.** `MEASUREUNITID='MBYTE'`를 지정한다 |
 | `m.filesystem` | 93 / 133건 보유하나 대응 속성 없음. 추가 등록 필요. 이번 범위 제외 추천 |
 | `m.label` | 24 / 8건. `MODELOBJECT_LABEL` 채택 여부 미정 |
-| 관계 | `RELATION.CONTAINS`(Computer→Filesystem) 추천. `USEWITH`가 CI라 미검증. ISSUE-11 |
+| 관계 | [Computer 출발 관계 매핑](computer.md#7-관계-매핑--2026-09-15)에 RELATION.CONTAINS의 원천 SQL·방향 정의. 배열 연결 쌍 보존 필요. 관계 저장·UI 검증 미완료. ISSUE-11 |
 | 승격 1:N 매핑 | `CI.FILESYSTEM`에 ACTCI 분류 둘이 걸린 유일한 경우. 동작 미검증. ISSUE-11 |
