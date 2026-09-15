@@ -48,6 +48,7 @@ Computer 중심 관계 재조사(2026-09-15):
 - [Device42 연결](device42/computer-ci-relations.sql): 양쪽 서버의 직접 FK·배열 연결·VM 호스트·IP 포트 경로 및 매핑 SELECT.
 - [Maximo 규칙](maximo/computer-ci-relations.sql): 현재 분류 쌍·정확한 관계 코드·방향·플래그·고유키·참조 조건.
 - [OS–Computer 승격 확인](maximo/os-computer-promotion-check.sql): ACTCI 관계와 승격된 CI·관계·부모 식별자 대조.
+- [관계 적재 검증](maximo/ci-relation-load-check.sql): 적재 전후 건수·샘플 행·고아·규칙 위반·분류쌍 분포·배열 팬아웃.
 
 
 - 블록 구분은 `-- name: <이름>`. 이름에 쓸 수 있는 문자는 `[a-zA-Z0-9-]` 뿐이다.

@@ -263,7 +263,10 @@ TYPE의 ComputerSystem 값은 [IBM ComputerSystem 매핑](https://www.ibm.com/do
 
 관측·선택 근거는 [관계 설계](../../../design/ci/relations.md),
 Target 컬럼과 저장 SQL 제안은 [ACTCIRELATION](../actcirelation.md)을 참조한다.
-관계 적재 코드는 아직 구현하지 않았다. 관계는 본체 task 안이 아니라
+2026-09-15 `./run.sh ci-relation`으로 운영 적재를 검증했다. COMPUTER_CONTAINS_DISK 19건,
+COMPUTER_CONTAINS_FILESYSTEM 60건 모두 조회=적재이고, 재실행에서 `ACTCIRELATIONID`가
+유지됐다(멱등성). Filesystem의 `device_fks` 배열 팬아웃(마운트포인트 하나에 복수 장비)은
+이번 적재분에서 0건 관측 — 원천에 다중 연결이 있는지는 확인 필요. 관계는 본체 task 안이 아니라
 모든 CI 본체 적재가 끝난 뒤의 [관계 단계](../../../design/ci/relations.md#실행-위치--ci-본체-적재-이후-별도-단계)에서 저장한다.
 
 | 의미 | SOURCECI | TARGETCI | RELATIONNUM | 조회 정의 소유 |

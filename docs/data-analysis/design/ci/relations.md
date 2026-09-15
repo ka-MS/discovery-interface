@@ -9,9 +9,9 @@
 
 | 규칙 이름 제안 | 저장 방향 | 정확한 relationnum | 판정 |
 | --- | --- | --- | --- |
-| COMPUTER_CONTAINS_DISK | Computer → Disk | RELATION.CONTAINS | 원천·분류쌍 확인. 구현 가능 |
-| COMPUTER_CONTAINS_FILESYSTEM | Computer → Filesystem | RELATION.CONTAINS | 원천·분류쌍 확인. 구현 가능 |
-| OS_INSTALLED_ON_COMPUTER | OS → Computer | RELATION.INSTALLEDON | 물리 Computer 단건 INSERT·SWAPPED=0·승격·표시 확인. 자동 저장 구현·가상 Computer 검증은 별도 |
+| COMPUTER_CONTAINS_DISK | Computer → Disk | RELATION.CONTAINS | 2026-09-15 `./run.sh ci-relation` 자동 적재 19건, 재실행 `ACTCIRELATIONID` 동일 확인(멱등성) |
+| COMPUTER_CONTAINS_FILESYSTEM | Computer → Filesystem | RELATION.CONTAINS | 2026-09-15 자동 적재 60건, 재실행 ID 동일 확인. `filesystem-array-fanout` 조회는 0건 — 마운트포인트당 복수 장비 연결이 이번 적재분에 있는지는 원천 확인 필요 |
+| OS_INSTALLED_ON_COMPUTER | OS → Computer | RELATION.INSTALLEDON | 2026-09-15 자동 적재 63건(물리 5·가상 58 분류쌍 모두 관측), 기존 수동 샘플 `ACTCIRELATIONID=6001` 유지·재실행 ID 동일 확인(멱등성) |
 | VM_VIRTUALIZES_HOST | VM → Host Computer | RELATION.VIRTUALIZES | 후보. 1:1 설정·SWAPPED·표시 검증 전 보류 |
 | COMPUTER_CONTAINS_INTERFACE | Computer → Interface | RELATION.CONTAINS | Interface CI 미구현. 별도 유형 도입 후 |
 | INTERFACE_BINDS_IP | Interface → IP | RELATION.BINDSTO | Interface 도입·카디널리티·미연결 IP 처리 검토 후 |
@@ -144,8 +144,11 @@ Disk·Filesystem의 요구까지 대조했다.
 Filesystem만 원천 한 행이 여러 쌍을 내지만 그것은 조인 결과일 뿐이고,
 실행기·DTO·Writer는 똑같이 쌍 하나를 처리한다. 구조를 바꿀 필요가 없다.
 
-이 대조는 **문서상 확인**이다. 실제 적재 검증은 OS부터 하며
-OS 결과를 Disk·Filesystem의 검증으로 확대하지 않는다.
+이 대조는 2026-09-15 `./run.sh ci-relation` 운영 적재로 검증했다. 한 번의 실행에서
+OS_INSTALLED_ON_COMPUTER(63건)·COMPUTER_CONTAINS_DISK(19건)·COMPUTER_CONTAINS_FILESYSTEM(60건)
+세 관계가 모두 적재됐고, 세 상수 모두 같은 `CiRelationJob`·`ActCiRelationWriter`를 거쳤다.
+공통 구조를 관계별로 분기하지 않았다. 재실행에서도 세 관계 모두 `ACTCIRELATIONID`가
+유지됐다(멱등성). 검증 쿼리는 [관계 적재 검증](../../exploration-queries/maximo/ci-relation-load-check.sql).
 
 ## 본체 중복 제거와 관계 보존
 
