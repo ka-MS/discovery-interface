@@ -89,7 +89,7 @@ LIMIT %d OFFSET %d
 | `o.eol`·`o.eos` | 대응 속성 없음. 사업 범위 EOS 관리 대상. ISSUE-11 |
 | 제조사 | `view_os_v1.vendor_fk`로 보강 가능하나 분류에 속성 없음. `os_name`에 포함 |
 | OPERATINGSYSTEM_VERSIONSTRING | CI 기준 밖. OSVERSION과 중복이라 미채택 |
-| KERNELARCHITECTURE 승격 전달 | CI 기준 밖 속성이라 ACTCI→CI 승격에서 누락될 수 있다. 미검증. ISSUE-11 |
+| KERNELARCHITECTURE 승격 전달 | `SYS.OPERATINGSYSTEM`은 승격 범위에서 `CI.OS`로 매핑되는데 `CI.OS`에 이 속성이 없다. 누락 가능. 미검증. ISSUE-11 |
 | MODELOBJECT_CDMSOURCE·SOURCETOKEN | 연계 출처·원천 키 보존용. 채택 여부 미정 |
 | 관계 | `RELATION.INSTALLEDON` 추천. `USEWITH`가 CI라 ACTCI 적재 미검증. ISSUE-11 |
 | 수집 대상 범위 | Computer 연결분만 추천. 두 서버 비율 30% / 80%로 차이 큼. ISSUE-8 |

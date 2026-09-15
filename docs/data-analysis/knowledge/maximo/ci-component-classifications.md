@@ -234,7 +234,13 @@ MODIFIER, MOUNTPOINT, RELEASE, TOTALINODES, TYPE, VERSIONSTRING이다.
 따라서 Disk는 대조 기준 없이 ACTCI 쪽 `DEV.DISKDRIVE`만 보고 속성을 골라야 한다.
 승격 대상 CI 분류가 없다는 뜻이기도 하다. 관리 단위 재검토 근거로 ISSUE-8에 남긴다.
 
-### 승격 영향은 미검증이다
+### 승격 범위는 CITEMPLATE이 정한다
 
-CI 기준 밖 속성이 ACTCI→CI 승격에서 실제로 누락되는지는 이 환경에서 확인한 적이 없다.
-승격 자체를 구현하지 않았다. 구조상 위험으로만 기록한다. ISSUE-11.
+어떤 ACTCI 분류가 어떤 CI 분류로 승격되는지는 `MAXIMO.CITEMPLATE`에 설정돼 있다.
+상세는 [CI 승격 범위](ci-promotion-scope.md)에 별도로 둔다.
+
+적재 분류 중 `DEV.DISKDRIVE`만 이 테이블에 한 행도 없어 승격할 수 없다.
+CI 계열에 디스크 분류가 없다는 위 관측과 같은 결론이다.
+
+CI 기준 밖 속성이 승격에서 실제로 누락되는지는 이 환경에서 확인한 적이 없다.
+이 ETL은 승격을 구현하지 않는다. 구조상 위험으로만 기록한다. ISSUE-11.

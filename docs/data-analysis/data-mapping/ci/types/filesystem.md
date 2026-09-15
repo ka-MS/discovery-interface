@@ -18,7 +18,11 @@
 | 관계 | 확정하지 않는다. 추천안은 설계 문서 |
 
 `SYS.LOCALFILESYSTEM`을 쓰지 않는다. 원천에 nfs·nfs4·overlay·VMFS·squashfs가 섞여 있어
-로컬 분류가 사실과 어긋난다. 두 분류의 속성 집합은 동일하다.
+로컬 분류가 사실과 어긋난다. 두 분류의 속성 33개는 완전히 동일하며 계층상 형제다.
+
+**승격 전제:** Maximo 기본 구성은 `CI.FILESYSTEM`을 `SYS.LOCALFILESYSTEM`에만 매핑한다.
+`SYS.FILESYSTEM`으로 적재한 CI를 승격하려면 승격 범위에 매핑 행이 있어야 한다.
+2026-09-15 추가했다(`CITEMPLATE` 164번). 설정은 [CI 승격 범위](../../../knowledge/maximo/ci-promotion-scope.md).
 
 ## 2. 원천과 조회 조건
 
@@ -92,3 +96,4 @@ LIMIT %d OFFSET %d
 | `m.filesystem` | 93 / 133건 보유하나 대응 속성 없음. 추가 등록 필요. 이번 범위 제외 추천 |
 | `m.label` | 24 / 8건. `MODELOBJECT_LABEL` 채택 여부 미정 |
 | 관계 | `RELATION.CONTAINS`(Computer→Filesystem) 추천. `USEWITH`가 CI라 미검증. ISSUE-11 |
+| 승격 1:N 매핑 | `CI.FILESYSTEM`에 ACTCI 분류 둘이 걸린 유일한 경우. 동작 미검증. ISSUE-11 |
