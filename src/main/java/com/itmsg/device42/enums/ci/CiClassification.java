@@ -4,7 +4,8 @@ package com.itmsg.device42.enums.ci;
 public enum CiClassification {
     COMPUTER("SYS.COMPUTERSYSTEM"),
     VIRTUAL_COMPUTER("SYS.VIRTUALCOMPUTERSYSTEM"),
-    OPERATING_SYSTEM("SYS.OPERATINGSYSTEM");
+    OPERATING_SYSTEM("SYS.OPERATINGSYSTEM"),
+    DISK_DRIVE("DEV.DISKDRIVE");
 
     private final String classificationId;
 
