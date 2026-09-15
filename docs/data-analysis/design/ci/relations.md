@@ -76,7 +76,7 @@ VM→Host는 규칙의 저장 방향이며, 사용자 화면에 어떤 문장/�
 
 | 파일 | 역할 | 관계가 늘면 |
 | --- | --- | --- |
-| `enums/ci/CiRelationSource` | 상수 하나 = relationnum + 건수 SQL + 페이지 SQL | **상수 추가** |
+| `integration/ci/relation/CiRelationSource` | 상수 하나 = relationnum + 건수 SQL + 페이지 SQL | **상수 추가** |
 | `integration/ci/relation/CiRelationJob` | `values()` 순회 · 페이징 · 변환 · 집계 | 변경 없음 |
 | `integration/ci/relation/ActCiRelationWriter` | 공통 MERGE · 건별 오류 격리 | 변경 없음 |
 | `dto/maximo/ci/ActCiRelationUpsert` | sourceCiNum · targetCiNum · relationNum | 변경 없음 |
@@ -84,6 +84,10 @@ VM→Host는 규칙의 저장 방향이며, 사용자 화면에 어떤 문장/�
 enum 하나로 합친 이유는 관계 하나에 상수가 둘이 되는 것을 막기 위해서다.
 relationnum과 조회 SQL은 관계마다 1:1이라 `CiRelationRule`을 따로 둘 이유가 없다.
 허용 분류 집합은 넣지 않는다. MERGE가 실제 ACTCI 행과 RELATIONRULES로 검사한다.
+
+enum을 `enums/ci`가 아니라 관계 패키지에 두는 이유는 D42 SQL을 담기 때문이다.
+`enums/ci`는 Maximo 메타데이터만 두고, SQL은 기존 `*CiIntegrate`처럼 적재 코드 옆에 둔다.
+이를 위해 `CiSourceFilter`를 public으로 연다.
 
 `CiRelationJob`은 `CiDefinitionCache`를 받지 않는다. 관계 저장에 분류·속성 정의가
 필요 없으므로 `ci-relation` 단독 실행이 본체 기준정보 로딩에 의존하지 않는다.
