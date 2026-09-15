@@ -20,7 +20,7 @@ import static org.mockito.Mockito.*;
 
 class OsCiIntegrateTest {
     private static final List<String> ATTRIBUTES = List.of(
-            "OSNAME", "OSVERSION", "KERNELVERSION", "KERNELARCHITECTURE");
+            "OSNAME", "OSVERSION", "KERNELVERSION", "KERNELARCHITECTURE", "NAME");
 
     private JdbcTemplate jdbc;
     private OsCiIntegrate integration;
@@ -57,7 +57,7 @@ class OsCiIntegrateTest {
     }
 
     @Test
-    void mapsBodyAndFourSpecsUsingParentScanTime() {
+    void mapsBodyAndFiveSpecsUsingParentScanTime() {
         persist(source(7, 100, "IBM Red Hat Enterprise Linux 8.10"));
 
         assertThat(jdbc.queryForObject("SELECT ACTCINUM FROM MAXIMO.ACTCI", String.class)).isEqualTo("D42:DEVICEOS:7");
@@ -69,7 +69,8 @@ class OsCiIntegrateTest {
                         .atZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime());
         assertThat(jdbc.queryForList("SELECT ASSETATTRID FROM MAXIMO.ACTCISPEC ORDER BY ASSETATTRID", String.class))
                 .containsExactly("OPERATINGSYSTEM_KERNELARCHITECTURE", "OPERATINGSYSTEM_KERNELVERSION",
-                        "OPERATINGSYSTEM_OSNAME", "OPERATINGSYSTEM_OSVERSION");
+                        "OPERATINGSYSTEM_NAME", "OPERATINGSYSTEM_OSNAME", "OPERATINGSYSTEM_OSVERSION");
+        assertThat(text("OPERATINGSYSTEM_NAME")).isEqualTo("IBM Red Hat Enterprise Linux 8.10");
         assertThat(text("OPERATINGSYSTEM_OSNAME")).isEqualTo("IBM Red Hat Enterprise Linux 8.10");
         assertThat(text("OPERATINGSYSTEM_KERNELVERSION")).isEqualTo("4.18.0-513.5.1.el8_9.x86_64");
     }
@@ -79,8 +80,8 @@ class OsCiIntegrateTest {
         var row = new OsSource(8, 101, "Alpine Linux 3.21", null, null, null, "2026-09-15T00:00:00Z");
         persist(row);
 
-        assertThat(jdbc.queryForList("SELECT ASSETATTRID FROM MAXIMO.ACTCISPEC", String.class))
-                .containsExactly("OPERATINGSYSTEM_OSNAME");
+        assertThat(jdbc.queryForList("SELECT ASSETATTRID FROM MAXIMO.ACTCISPEC ORDER BY ASSETATTRID", String.class))
+                .containsExactly("OPERATINGSYSTEM_NAME", "OPERATINGSYSTEM_OSNAME");
     }
 
     @Test
