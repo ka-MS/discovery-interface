@@ -6,14 +6,10 @@ import com.itmsg.device42.enums.ci.ComputerSpec;
 import com.itmsg.device42.dto.device42.ci.ComputerSource;
 import com.itmsg.device42.dto.maximo.ci.ActCiSpecUpsert;
 import com.itmsg.device42.dto.maximo.ci.ActCiUpsert;
-import com.itmsg.device42.dto.maximo.ci.ComputerCiUpsert;
+import com.itmsg.device42.dto.maximo.ci.CiUpsert;
 import com.itmsg.device42.dto.maximo.ci.ClassificationDefinition;
-import com.itmsg.device42.dto.maximo.ci.SpecDefinition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.dao.DataAccessException;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -35,14 +31,17 @@ public class ComputerCiIntegrate implements CiIntegrationTask {
     private static final String LANG_CODE = "KO";
 
     private final Device42ConnectionFactory connectionFactory;
-    private final JdbcTemplate maximoJdbcTemplate;
+    private final ActCiWriter writer;
+    private final CiSpecMapper specMapper;
 
     public ComputerCiIntegrate(
             Device42ConnectionFactory connectionFactory,
-            @Qualifier("maximoJdbcTemplate") JdbcTemplate maximoJdbcTemplate
+            ActCiWriter writer,
+            CiSpecMapper specMapper
     ) {
         this.connectionFactory = connectionFactory;
-        this.maximoJdbcTemplate = maximoJdbcTemplate;
+        this.writer = writer;
+        this.specMapper = specMapper;
     }
 
     @Override
@@ -64,7 +63,7 @@ public class ComputerCiIntegrate implements CiIntegrationTask {
             log.info("Computer 배치를 조회합니다. offset={}, limit={}", offset, limit);
 
             List<ComputerSource> data = getData(offset, limit);
-            List<ComputerCiUpsert> mappedData = mapData(data, definitions);
+            List<CiUpsert> mappedData = mapData(data, definitions);
 
             readCount += data.size();
             mappedCount += mappedData.size();
@@ -109,10 +108,10 @@ public class ComputerCiIntegrate implements CiIntegrationTask {
         }
     }
 
-    List<ComputerCiUpsert> mapData(List<ComputerSource> data,
+    List<CiUpsert> mapData(List<ComputerSource> data,
                                   CiDefinitionCache definitions) {
         LocalDateTime applyDateTime = LocalDateTime.now();
-        List<ComputerCiUpsert> mappedData = new ArrayList<>(data.size());
+        List<CiUpsert> mappedData = new ArrayList<>(data.size());
 
         for (ComputerSource source : data) {
             try {
@@ -127,7 +126,7 @@ public class ComputerCiIntegrate implements CiIntegrationTask {
 
                 ActCiUpsert actCi = mapActCi(source, definition, applyDateTime);
                 List<ActCiSpecUpsert> specs = mapActCiSpecs(source, actCi, definitions, classification);
-                mappedData.add(new ComputerCiUpsert(actCi, specs));
+                mappedData.add(new CiUpsert(actCi, specs));
             } catch (RuntimeException e) {
                 log.error("Computer 매핑에 실패했습니다. devicePk={}", source.devicePk(), e);
             }
@@ -135,34 +134,8 @@ public class ComputerCiIntegrate implements CiIntegrationTask {
         return mappedData;
     }
 
-    /** @return ACTCI 적재에 성공한 건수. 실패·건너뛴 건은 각각 로그로 남는다. */
-    public int putData(List<ComputerCiUpsert> data) {
-        int loaded = 0;
-
-        for (ComputerCiUpsert computer : data) {
-            ActCiUpsert actCi = computer.actCi();
-            Long actCiId;
-            try {
-                actCiId = putActCi(actCi);
-            } catch (DataAccessException e) {
-                log.error("ACTCI 적재에 실패했습니다. actCiNum={}", actCi.actCiNum(), e);
-                continue;
-            }
-            if (actCiId == null) {
-                continue;
-            }
-            loaded++;
-
-            for (ActCiSpecUpsert spec : computer.specs()) {
-                try {
-                    putActCiSpec(spec, actCiId);
-                } catch (DataAccessException e) {
-                    log.error("ACTCISPEC 적재에 실패했습니다. actCiNum={}, attribute={}",
-                            spec.actCiNum(), spec.assetAttrId(), e);
-                }
-            }
-        }
-        return loaded;
+    public int putData(List<CiUpsert> data) {
+        return writer.write(data);
     }
 
     private static ComputerSource readComputer(ResultSet rs) throws SQLException {
@@ -226,39 +199,7 @@ public class ComputerCiIntegrate implements CiIntegrationTask {
 
     private void addSpec(List<ActCiSpecUpsert> specs, CiDefinitionCache definitions,
                          ActCiUpsert parent, ComputerSpec field, Object value, String unit) {
-        if (value == null || value instanceof String text && text.isBlank()) {
-            return;
-        }
-        SpecDefinition template = definitions.spec(parent.classStructureId(), field.attributeId(), null);
-        if (template == null && field.additionalDisplaySequence() != null) {
-            template = definitions.additionalSpec(parent.classStructureId(), field.attributeId(), null,
-                    field.additionalDisplaySequence(), field.additionalMandatory());
-        }
-        if (template == null) {
-            log.warn("스펙 정의가 없어 건너뜁니다. actCiNum={}, attribute={}", parent.actCiNum(), field.attributeId());
-            return;
-        }
-        if ((field == ComputerSpec.MEMORY_SIZE || field == ComputerSpec.CPU_SPEED) && unit == null) {
-            log.warn("단위 코드가 없어 스펙을 건너뜁니다. actCiNum={}, attribute={}", parent.actCiNum(), template.assetAttrId());
-            return;
-        }
-        String text = null;
-        BigDecimal number = null;
-        if ("ALN".equals(template.dataType()) && value instanceof String string) {
-            text = string;
-        } else if ("NUMERIC".equals(template.dataType()) && value instanceof BigDecimal decimal) {
-            number = decimal;
-        } else {
-            log.warn("자료형이 맞지 않아 스펙을 건너뜁니다. actCiNum={}, attribute={}",
-                    parent.actCiNum(), template.assetAttrId());
-            return;
-        }
-        specs.add(new ActCiSpecUpsert(
-                parent.actCiNum(), parent.classStructureId(), template.assetAttrId(),
-                template.classSpecId(), template.section(), template.displaySequence(), template.mandatory(),
-                unit == null ? template.measureUnitId() : unit,
-                template.linkedToAttribute(), template.linkedToSection(), text, number,
-                parent.changeBy(), parent.changeDate()));
+        specMapper.addSpec(specs, definitions, parent, field, value, unit);
     }
 
     private static Integer nullableInteger(ResultSet rs, String column) throws SQLException {
@@ -285,108 +226,6 @@ public class ComputerCiIntegrate implements CiIntegrationTask {
             default -> null;
         };
     }
-
-    private Long putActCi(ActCiUpsert ci) {
-        List<ExistingCi> existing = maximoJdbcTemplate.query(
-                FIND_ACTCI_QUERY,
-                (rs, row) -> new ExistingCi(rs.getLong(1), rs.getString(2)), ci.actCiNum());
-        if (!existing.isEmpty()) {
-            ExistingCi old = existing.getFirst();
-            if (!ci.classStructureId().equals(old.classStructureId())) {
-                log.warn("분류 변경 규칙이 없어 건너뜁니다. actCiNum={}", ci.actCiNum());
-                return null;
-            }
-            maximoJdbcTemplate.update(UPDATE_ACTCI_QUERY, ci.actCiName(), ci.description(), ci.lastScanDate(), ci.changeBy(),
-                    ci.changeDate(), ci.langCode(), old.id());
-            return old.id();
-        }
-        long id = maximoJdbcTemplate.queryForObject(NEXT_ACTCI_ID_QUERY, Long.class);
-        maximoJdbcTemplate.update(INSERT_ACTCI_QUERY, id, ci.actCiNum(), ci.actCiName(), ci.classStructureId(), ci.description(),
-                ci.lastScanDate(), ci.changeBy(), ci.changeDate(), ci.langCode());
-        return id;
-    }
-
-    private void putActCiSpec(ActCiSpecUpsert spec, long actCiId) {
-        maximoJdbcTemplate.update(MERGE_ACTCISPEC_QUERY,
-                spec.actCiNum(), spec.assetAttrId(), spec.section(), spec.classStructureId(),
-                spec.classSpecId(), actCiId, spec.displaySequence(), spec.mandatory() ? 1 : 0,
-                spec.measureUnitId(), spec.linkedToAttribute(), spec.linkedToSection(),
-                spec.alnValue(), spec.numValue(), spec.changeBy(), spec.changeDate());
-    }
-
-    private record ExistingCi(long id, String classStructureId) {
-    }
-
-    private static final String FIND_ACTCI_QUERY = "SELECT ACTCIID,CLASSSTRUCTUREID FROM MAXIMO.ACTCI WHERE ACTCINUM=?";
-
-    private static final String UPDATE_ACTCI_QUERY = """
-            UPDATE MAXIMO.ACTCI SET ACTCINAME=?,DESCRIPTION=?,LASTSCANDT=?,
-                CHANGEBY=?,CHANGEDATE=?,LANGCODE=?
-            WHERE ACTCIID=?
-            """;
-
-    private static final String INSERT_ACTCI_QUERY = """
-            INSERT INTO MAXIMO.ACTCI
-                (ACTCIID,ACTCINUM,ACTCINAME,CLASSSTRUCTUREID,DESCRIPTION,
-                 LASTSCANDT,CHANGEBY,CHANGEDATE,LANGCODE,HASLD)
-            VALUES (?,?,?,?,?,?,?,?,?,0)
-            """;
-
-    private static final String NEXT_ACTCI_ID_QUERY = "VALUES NEXT VALUE FOR MAXIMO.ACTCISEQ";
-
-    /**
-     * 파라미터 마커에 CAST가 필요하다. USING 절의 마커는 DB2가 타입을 추론하지 못해
-     * SQLCODE=-418로 거부한다. ACTCISPECID는 NOT MATCHED 분기에서만 채번한다.
-     * USING 절에서는 NEXT VALUE FOR가 금지된다(SQLCODE=-348).
-     */
-    private static final String MERGE_ACTCISPEC_QUERY = """
-            MERGE INTO MAXIMO.ACTCISPEC AS target
-            USING (VALUES (
-                CAST(? AS VARCHAR(150)), CAST(? AS VARCHAR(300)), CAST(? AS VARCHAR(10)),
-                CAST(? AS VARCHAR(25)), CAST(? AS BIGINT), CAST(? AS BIGINT),
-                CAST(? AS INTEGER), CAST(? AS INTEGER), CAST(? AS VARCHAR(16)),
-                CAST(? AS VARCHAR(300)), CAST(? AS VARCHAR(10)), CAST(? AS VARCHAR(254)),
-                CAST(? AS DECIMAL(30,10)), CAST(? AS VARCHAR(100)), CAST(? AS TIMESTAMP)
-            )) AS source (
-                ACTCINUM, ASSETATTRID, SECTION, CLASSSTRUCTUREID, CLASSSPECID,
-                REFOBJECTID, DISPLAYSEQUENCE, MANDATORY, MEASUREUNITID,
-                LINKEDTOATTRIBUTE, LINKEDTOSECTION, ALNVALUE, NUMVALUE, CHANGEBY, CHANGEDATE
-            )
-            ON target.ACTCINUM = source.ACTCINUM
-                AND target.ASSETATTRID = source.ASSETATTRID
-                AND (target.SECTION = source.SECTION
-                     OR (target.SECTION IS NULL AND source.SECTION IS NULL))
-            WHEN MATCHED THEN
-                UPDATE SET
-                    CLASSSTRUCTUREID = source.CLASSSTRUCTUREID,
-                    CLASSSPECID = source.CLASSSPECID,
-                    REFOBJECTID = source.REFOBJECTID,
-                    REFOBJECTNAME = 'ACTCI',
-                    DISPLAYSEQUENCE = source.DISPLAYSEQUENCE,
-                    MANDATORY = source.MANDATORY,
-                    MEASUREUNITID = source.MEASUREUNITID,
-                    LINKEDTOATTRIBUTE = source.LINKEDTOATTRIBUTE,
-                    LINKEDTOSECTION = source.LINKEDTOSECTION,
-                    ALNVALUE = source.ALNVALUE,
-                    NUMVALUE = source.NUMVALUE,
-                    TABLEVALUE = NULL,
-                    CHANGEBY = source.CHANGEBY,
-                    CHANGEDATE = source.CHANGEDATE
-            WHEN NOT MATCHED THEN
-                INSERT (
-                    ACTCISPECID, ACTCINUM, ASSETATTRID, CLASSSTRUCTUREID, CLASSSPECID,
-                    SECTION, REFOBJECTID, REFOBJECTNAME, DISPLAYSEQUENCE, MANDATORY,
-                    MEASUREUNITID, LINKEDTOATTRIBUTE, LINKEDTOSECTION, ALNVALUE,
-                    NUMVALUE, TABLEVALUE, CHANGEBY, CHANGEDATE
-                ) VALUES (
-                    NEXT VALUE FOR MAXIMO.ACTCISPECSEQ,
-                    source.ACTCINUM, source.ASSETATTRID, source.CLASSSTRUCTUREID,
-                    source.CLASSSPECID, source.SECTION, source.REFOBJECTID, 'ACTCI',
-                    source.DISPLAYSEQUENCE, source.MANDATORY, source.MEASUREUNITID,
-                    source.LINKEDTOATTRIBUTE, source.LINKEDTOSECTION, source.ALNVALUE,
-                    source.NUMVALUE, NULL, source.CHANGEBY, source.CHANGEDATE
-                )
-            """;
 
     private static final String COMPUTER_FILTER = """
             d.type IN ('physical', 'virtual')
