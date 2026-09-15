@@ -2,7 +2,7 @@
 
 > Target: MAXIMO.ACTCI · MAXIMO.ACTCISPEC
 > 원천·메타데이터 확인: 2026-09-15 · D42 .68 / .35 · Maximo BLUDB
-> 구현: 없음 · 상태: 매핑 작성 완료. 적재 구현·실제 Maximo 검증은 미착수.
+> 구현: FilesystemCiIntegrate · 상태: 본체·스펙 적재 구현 및 자동 테스트 완료. 관계 미적재. 실제 Maximo 적재·UI 검증은 미완료.
 > 분류 선택 이유·관계 추천안·선별 기준은 [Filesystem 수집 설계](../../../design/ci/filesystem.md)에 있다.
 
 공통 컬럼 정의는 [ACTCI](../actci.md), [ACTCISPEC](../actcispec.md)가 소유한다.
@@ -53,8 +53,7 @@ ORDER BY m.mountpoint_pk, c.device_pk
 LIMIT %d OFFSET %d
 ```
 
-2026-09-15 두 서버에서 실행해 통과를 확인했다.
-컨테이너·가상 파일시스템 제외 조건은 아직 넣지 않았다. 5절 참조.
+2026-09-15 두 서버에서 실행해 통과를 확인했다. 제외 적용 후 69 / 60건이다.
 
 ## 3. 본체 매핑
 
@@ -64,7 +63,7 @@ LIMIT %d OFFSET %d
 | ACTCINAME | 실제 CI 이름 | 직접 | `m.mountpoint` | 전건. 192자 초과 가능. 5절 |
 | CLASSSTRUCTUREID | 분류 | 변환 | 상수 분류명 | `SYS.FILESYSTEM` 조회값 |
 | DESCRIPTION | 설명 | 원천없음 | – | 원천에 메모 필드가 없다 |
-| LASTSCANDT | 최종 발견 시각 | 변환 | `c.last_discovered` | 부모 Computer 값. 마운트 원천에 없음 |
+| LASTSCANDT | 최종 발견 시각 | 변환 | `c.last_discovered` | **확정.** 부모 Computer 값. 마운트 원천에 없음 |
 | HASLD | 상세 설명 있음 | 상수 | – | 0 |
 | CHANGEBY | 변경자 | 상수 | – | `Device42` |
 | CHANGEDATE | 변경 날짜 | 변환 | 매핑 시각 | JVM 기본 시간대 |
@@ -85,9 +84,9 @@ LIMIT %d OFFSET %d
 
 | 항목 | 상태 |
 | --- | --- |
-| 컨테이너·가상 파일시스템 | `overlay` 38 / 62건, `devtmpfs` 9 / 10건, `squashfs` 0 / 8건. 경로에 컨테이너 ID가 들어가 재기동 시 바뀐다. 제외 추천이나 목록 미확정. ISSUE-8 |
+| 컨테이너·가상 파일시스템 | **확정.** `FilesystemCiIntegrate.EXCLUDED_TYPES` 상수로 `overlay`·`devtmpfs`·`squashfs`·`efivarfs`를 원천 조회에서 제외한다. 117 → 69건, 141 → 60건 |
 | 마운트 경로 길이 | 컨테이너 경로가 약 130자다. ACTCINAME 192자·ALNVALUE 254자 한계에 근접. 절단·생략 규칙 필요. ISSUE-11 |
-| 용량 단위 | 원천에 단위 컬럼 없음. 표본상 MB로 해석된다. `MEASUREUNITID='MBYTE'` 지정 추천. ISSUE-11 |
+| 용량 단위 | **확정.** `MEASUREUNITID='MBYTE'`를 지정한다 |
 | `m.filesystem` | 93 / 133건 보유하나 대응 속성 없음. 추가 등록 필요. 이번 범위 제외 추천 |
 | `m.label` | 24 / 8건. `MODELOBJECT_LABEL` 채택 여부 미정 |
 | 관계 | `RELATION.CONTAINS`(Computer→Filesystem) 추천. `USEWITH`가 CI라 미검증. ISSUE-11 |
