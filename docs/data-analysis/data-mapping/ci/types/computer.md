@@ -266,7 +266,10 @@ Target 컬럼과 저장 SQL 제안은 [ACTCIRELATION](../actcirelation.md)을 �
 2026-09-15 `./run.sh ci-relation`으로 운영 적재를 검증했다. COMPUTER_CONTAINS_DISK 19건,
 COMPUTER_CONTAINS_FILESYSTEM 60건 모두 조회=적재이고, 재실행에서 `ACTCIRELATIONID`가
 유지됐다(멱등성). Filesystem의 `device_fks` 배열 팬아웃(마운트포인트 하나에 복수 장비)은
-이번 적재분에서 0건 관측 — 원천에 다중 연결이 있는지는 확인 필요. 관계는 본체 task 안이 아니라
+이번 적재분에서 0건 관측됐고, 원천(D42 .35, 수집 필터 적용) 재조회로 원인을 확인했다 —
+`pair_cnt=mountpoint_cnt=60`으로 현재 원천에 마운트포인트당 Computer가 둘 이상 붙은 사례가
+없다. 적재 결함은 아니지만 `ANY(m.device_fks)`로 배열을 펼치는 경로 자체는 이 데이터로
+실행되지 않아 미검증이다. 관계는 본체 task 안이 아니라
 모든 CI 본체 적재가 끝난 뒤의 [관계 단계](../../../design/ci/relations.md#실행-위치--ci-본체-적재-이후-별도-단계)에서 저장한다.
 
 | 의미 | SOURCECI | TARGETCI | RELATIONNUM | 조회 정의 소유 |

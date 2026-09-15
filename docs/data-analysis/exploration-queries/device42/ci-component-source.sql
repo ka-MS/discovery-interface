@@ -145,6 +145,23 @@ WITH per AS (
 )
 SELECT n AS device_count, COUNT(*) AS mount_count FROM per GROUP BY n ORDER BY n;
 
+-- name: computer-mount-array-fanout
+-- 위 mount-device-attachment는 전체 view_mountpoint_v2 대상이다. 이 블록은
+-- 관계 적재 SQL과 같은 수집 범위 필터(computer.md 7절)와 fstype 제외 조건을 적용해
+-- pair_cnt(= 관계 적재 건수와 동일한 조인 결과)와 distinct mountpoint_cnt를 비교한다.
+-- 둘이 같으면 이번 수집 범위 안에서 마운트포인트당 Computer가 정확히 하나씩이라는 뜻이다.
+WITH computer AS (
+    SELECT d.device_pk FROM view_device_v2 d
+    WHERE d.type IN ('physical','virtual')
+      AND (d.network_device = false OR d.network_device IS NULL)
+      AND ((d.type='physical' AND d.physicalsubtype IN ('Generic','Rackable','Blade','WorkStation','ThinClient','Laptop'))
+        OR (d.type='virtual' AND d.virtualsubtype IN ('Internal VM','Amazon EC2 Instance','VMWare','Hyper-V')))
+)
+SELECT COUNT(*) AS pair_cnt, COUNT(DISTINCT m.mountpoint_pk) AS mountpoint_cnt
+FROM view_mountpoint_v2 m
+JOIN computer c ON c.device_pk = ANY(m.device_fks)
+WHERE (m.fstype_name IS NULL OR m.fstype_name NOT IN ('overlay','devtmpfs','squashfs','efivarfs'));
+
 -- name: scan-time-candidates
 WITH mnt AS (
     SELECT COUNT(*) AS n, COUNT(first_added) AS has_first, COUNT(last_updated) AS has_updated

@@ -10,7 +10,7 @@
 | 규칙 이름 제안 | 저장 방향 | 정확한 relationnum | 판정 |
 | --- | --- | --- | --- |
 | COMPUTER_CONTAINS_DISK | Computer → Disk | RELATION.CONTAINS | 2026-09-15 `./run.sh ci-relation` 자동 적재 19건, 재실행 `ACTCIRELATIONID` 동일 확인(멱등성) |
-| COMPUTER_CONTAINS_FILESYSTEM | Computer → Filesystem | RELATION.CONTAINS | 2026-09-15 자동 적재 60건, 재실행 ID 동일 확인. `filesystem-array-fanout` 조회는 0건 — 마운트포인트당 복수 장비 연결이 이번 적재분에 있는지는 원천 확인 필요 |
+| COMPUTER_CONTAINS_FILESYSTEM | Computer → Filesystem | RELATION.CONTAINS | 2026-09-15 자동 적재 60건, 재실행 ID 동일 확인. `filesystem-array-fanout` 0건 — 원천(D42 .35) 재조회로 원인 확인: `device_fks`가 Computer 둘 이상인 마운트포인트가 현재 없음(`pair_cnt=mountpoint_cnt=60`). 적재 결함 아님. 배열 펼침 경로 자체는 미검증 |
 | OS_INSTALLED_ON_COMPUTER | OS → Computer | RELATION.INSTALLEDON | 2026-09-15 자동 적재 63건(물리 5·가상 58 분류쌍 모두 관측), 기존 수동 샘플 `ACTCIRELATIONID=6001` 유지·재실행 ID 동일 확인(멱등성) |
 | VM_VIRTUALIZES_HOST | VM → Host Computer | RELATION.VIRTUALIZES | 후보. 1:1 설정·SWAPPED·표시 검증 전 보류 |
 | COMPUTER_CONTAINS_INTERFACE | Computer → Interface | RELATION.CONTAINS | Interface CI 미구현. 별도 유형 도입 후 |
