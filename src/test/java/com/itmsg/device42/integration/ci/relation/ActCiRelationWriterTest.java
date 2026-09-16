@@ -156,6 +156,35 @@ class ActCiRelationWriterTest {
     }
 
     @Test
+    void storesPhysicalAndVirtualHostsAsSourceOfVirtualizes() {
+        String virtualizes = "VIRTUALIZES";
+        jdbc.update("INSERT INTO MAXIMO.RELATION VALUES (?)", virtualizes);
+        actCi("D42:DEVICE:175", "VCS1");
+        actCi("D42:DEVICE:176", "VCS1");
+        actCi("D42:DEVICE:177", "VCS1");
+        rule(virtualizes, "CS1", "VCS1");
+        rule(virtualizes, "VCS1", "VCS1");
+
+        var physicalHostFirstVm = new ActCiRelationUpsert(
+                "D42:DEVICE:173", "D42:DEVICE:175", virtualizes);
+        var physicalHostSecondVm = new ActCiRelationUpsert(
+                "D42:DEVICE:173", "D42:DEVICE:176", virtualizes);
+        var virtualHost = new ActCiRelationUpsert(
+                "D42:DEVICE:174", "D42:DEVICE:177", virtualizes);
+
+        assertThat(writer.write(List.of(physicalHostFirstVm, physicalHostSecondVm, virtualHost))).isEqualTo(3);
+        assertThat(jdbc.queryForList(
+                "SELECT SOURCECI FROM MAXIMO.ACTCIRELATION ORDER BY SOURCECI", String.class))
+                .containsExactly("D42:DEVICE:173", "D42:DEVICE:173", "D42:DEVICE:174");
+        assertThat(jdbc.queryForList(
+                "SELECT TARGETCI FROM MAXIMO.ACTCIRELATION ORDER BY SOURCECI", String.class))
+                .containsExactlyInAnyOrder("D42:DEVICE:175", "D42:DEVICE:176", "D42:DEVICE:177");
+        assertThat(jdbc.queryForList(
+                "SELECT SWAPPED FROM MAXIMO.ACTCIRELATION", Integer.class))
+                .containsOnly(0);
+    }
+
+    @Test
     void skipsWhenRelationCodeIsNotRegistered() {
         jdbc.update("DELETE FROM MAXIMO.RELATION");
 

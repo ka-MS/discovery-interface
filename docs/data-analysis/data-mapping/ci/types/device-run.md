@@ -41,10 +41,10 @@ CiIntegrationJob
 - 기존 asset처럼 COUNT와 LIMIT·OFFSET으로 조회한다.
   실행 중 원천 행이 추가·삭제되면 페이지 사이에서 누락·중복될 수 있다.
 - mapData에서 같은 `DeviceSource`로 ACTCI·ACTCISPEC DTO를 만든다.
-- putData에서 본체를 저장해 ID를 확보한 뒤 스펙의 부모 참조로 전달한다.
-- ACTCINUM으로 기존 ACTCIID를 찾고, 신규만 `ACTCISEQ`의 NEXT VALUE를 사용한다.
-  스펙도 ACTCINUM·속성·섹션(NULL 포함)으로 기존 ID를 찾고 신규만 `ACTCISPECSEQ`를 사용한다.
-- 시퀀스 반환값만 사용하며 중간 ID를 임의로 발급하거나 MAXSEQUENCE·AUTOKEY를 수정하지 않는다.
+- putData에서 ACTCINUM 기준으로 본체를 MERGE한 뒤 스펙을 MERGE한다.
+- 스펙의 부모 참조는 ACTCISPEC MERGE 내부에서 ACTCINUM으로 ACTCIID를 조회한다.
+  본체와 스펙의 신규 ID는 각 MERGE의 INSERT 분기에서만 ACTCISEQ·ACTCISPECSEQ로 채번한다.
+- 중간 ID를 애플리케이션에서 임의로 발급하거나 MAXSEQUENCE·AUTOKEY를 수정하지 않는다.
 
 ## 오류·빈 값 처리
 

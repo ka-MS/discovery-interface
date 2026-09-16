@@ -16,6 +16,8 @@ Device42(원천)와 Maximo(타겟) 사이의 매핑 작업 문서다.
 Computer 초기 설계와 관계 구성안은 [Computer 수집 설계](design/ci/computer.md)에 보존한다.
 현재 Computer·VM·Switch 통합 구현과 Printer 후속안은 [Device 통합 수집 설계·대조표](design/ci/device.md)에 있다.
 MAS UI에 등록할 Switch 승격·물리 Printer 분류와 속성은 [Device CI 기준정보 설계](design/ci/device-reference-data.md)에 있다.
+DB Instance가 Application Component를 경유해 Device를 찾는 원천 경로와 분류·관계 추천은
+[DB Instance · Application Component · Device 설계](design/ci/database-application-device.md)에 있다.
 OS·Disk·Filesystem·IP는 [os](design/ci/os.md)·[disk](design/ci/disk.md)·[filesystem](design/ci/filesystem.md)·[ip](design/ci/ip.md)에 같은 구성으로 둔다.
 
 ## 조사 대상 서버

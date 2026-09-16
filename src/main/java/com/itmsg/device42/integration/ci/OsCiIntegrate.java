@@ -23,7 +23,7 @@ import java.util.List;
 @Component
 public class OsCiIntegrate implements CiIntegrationTask {
     private static final Logger log = LoggerFactory.getLogger(OsCiIntegrate.class);
-    private static final int DEFAULT_BATCH_SIZE = 1000;
+    static final int DEFAULT_BATCH_SIZE = 1000;
     private static final String CHANGE_BY = "Device42";
     private static final String LANG_CODE = "KO";
 

@@ -2,6 +2,7 @@ package com.itmsg.device42.integration.ci;
 
 import com.itmsg.device42.config.Device42ConnectionFactory;
 import com.itmsg.device42.dto.device42.ci.DiskSource;
+import com.itmsg.device42.enums.ci.CiClassification;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ClassPathResource;
@@ -28,12 +29,14 @@ class DiskCiIntegrateTest {
         new ResourceDatabasePopulator(new ClassPathResource("ci/schema.sql")).execute(dataSource);
         jdbc = new JdbcTemplate(dataSource);
         definitionLoader = new CiDefinitionLoader(jdbc);
-        integration = new DiskCiIntegrate(mock(Device42ConnectionFactory.class), new ActCiWriter(jdbc), new CiSpecMapper());
+        integration = new DiskCiIntegrate(mock(Device42ConnectionFactory.class), new ActCiWriter(jdbc),
+                new CiSpecMapper());
         seedDefinitions();
     }
 
     private void seedDefinitions() {
-        jdbc.update("INSERT INTO MAXIMO.CLASSSTRUCTURE VALUES ('DSK','DEV.DISKDRIVE')");
+        jdbc.update("INSERT INTO MAXIMO.CLASSSTRUCTURE VALUES ('DSK',?)",
+                CiClassification.DISK_DRIVE.classificationId());
         jdbc.update("INSERT INTO MAXIMO.CLASSUSEWITH VALUES ('DSK','ACTCI')");
         jdbc.update("INSERT INTO MAXIMO.MEASUREUNIT VALUES ('GBYTE'),('MBYTE')");
         seedSpec(600, "MEDIAACCESSDEVICE_MODEL", "ALN");

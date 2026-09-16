@@ -1,8 +1,11 @@
 # Computer CI 관계 정의
 
 > 관측: 2026-09-15 · Maximo BLUDB / MAXIMO. 정의 조회 및 OS–Computer 한 쌍의 적재·승격 검증.
+> 재검증: 2026-09-16 · MAS UI에서 신규 VIRTUALIZES와 Host→VM 두 규칙 등록,
+> 읽기 전용 재조회 및 실제 관계 연결 확인.
 > 재조회: [computer-ci-relations.sql](../../exploration-queries/maximo/computer-ci-relations.sql).
-> 로컬 결과: `local/db-access-kit/work/ci-relations-20260915/maximo/`.
+> 로컬 결과: `local/db-access-kit/work/ci-relations-20260915/maximo/`,
+> `local/db-access-kit/work/host-vm-20260916/maximo/`.
 > 현재 설치 환경의 설정이며 국제표준의 필수 분류·코드 목록이 아니다.
 
 ## 정확한 관계 코드와 분류 쌍
@@ -21,11 +24,15 @@ C는 SYS.COMPUTERSYSTEM 또는 SYS.VIRTUALCOMPUTERSYSTEM을 뜻한다.
 | NET.IPINTERFACE | RELATION.ROUTESVIA | NET.IPADDRESS | 1:1 | 0 | 1 | 0 |
 | SYS.VIRTUALCOMPUTERSYSTEM | RELATION.VIRTUALIZES | C | 1:1 | 1 | 1 | 1 |
 | SYS.COMPUTERSYSTEM | RELATION.VIRTUALIZES | SYS.COMPUTERSYSTEM | 1:1 | 1 | 1 | 1 |
+| SYS.COMPUTERSYSTEM | VIRTUALIZES | SYS.VIRTUALCOMPUTERSYSTEM | 1:N | 1 | 0 | 0 |
+| SYS.VIRTUALCOMPUTERSYSTEM | VIRTUALIZES | SYS.VIRTUALCOMPUTERSYSTEM | 1:N | 1 | 0 | 0 |
 | SYS.OPERATINGSYSTEM | RELATION.BOOTSFROM | SYS.FILESYSTEM | 1:1 | 0 | 0 | 0 |
 | C | RELATION.CONTAINS | SYS.CPU | 1:N | 1 | 0 | 0 |
 
 Computer와 IPADDRESS의 직접 규칙은 양방향 모두 없다.
-SYS.COMPUTERSYSTEM → SYS.VIRTUALCOMPUTERSYSTEM의 VIRTUALIZES 규칙도 없다.
+접두어를 포함한 기존 `RELATION.VIRTUALIZES`에는
+SYS.COMPUTERSYSTEM → SYS.VIRTUALCOMPUTERSYSTEM 규칙이 없다. 2026-09-16 별도 코드
+`VIRTUALIZES`에 해당 Host→VM 규칙을 새로 등록했다.
 Computer끼리의 MANAGES·CONNECTS·CONNECTEDTO는 대조한 분류 쌍에 없다.
 같은 장비에 속한다는 이유만으로 OS–Filesystem 또는 Disk–Filesystem 관계를 생성할 수 없다.
 Filesystem끼리는 REALIZES/VIRTUALIZES, IP끼리는 DEFINEDUSING 규칙이 있지만 현재 조회에서
@@ -38,6 +45,47 @@ ID는 환경별 조회값이며 코드 상수로 복사하지 않는다.
 `CONTAINS`와 `RELATION.CONTAINS`, `RUNSON`과 `RELATION.RUNSON`은 별개 RELATION 행이다.
 위 분류 쌍의 규칙은 접두어를 포함한 코드다. 조회한 RELATION.* 설명은 비어 있으며,
 표의 코드를 한국어 표시명으로 치환해 저장하지 않는다.
+
+## VIRTUALIZES MAS UI 등록 결과
+
+기존 `RELATION.VIRTUALIZES`에는 필요한 물리 Host→VM 분류쌍이 없고 카디널리티도 1:1이었다.
+따라서 기존 정의를 수정하지 않고 관계 애플리케이션에서 별도 코드 `VIRTUALIZES`를 신규 등록했다.
+아래 값은 MAS UI 입력 후 Maximo 읽기 전용 조회와 실제 Host→VM 관계 연결로 확인한 현재 환경의 기준정보다.
+
+### 관계 정의
+
+| 항목 | 등록값 |
+| --- | --- |
+| 관계 코드 | `VIRTUALIZES` |
+| 설명 | `VIRTUALIZES` |
+| 유형 | `UNIDIRECTIONAL` |
+| 사용 | `CI` |
+| 분류 | 지정하지 않음 |
+| 가져옴 | 해제 |
+
+`RELATIONNUM`은 접두어 없는 정확한 코드 `VIRTUALIZES`다. 코드에서는 기존
+`RELATION.VIRTUALIZES`를 대신 사용하지 않는다.
+
+### 관계 규칙
+
+| Source 분류 | Target 분류 | Cardinality | 변경 전파 | 포함 | 대상 상위 여부 | 가져옴 |
+| --- | --- | --- | :---: | :---: | :---: | :---: |
+| `SYS.COMPUTERSYSTEM` | `SYS.VIRTUALCOMPUTERSYSTEM` | `1:N` | 선택 | 선택 | 해제 | 해제 |
+| `SYS.VIRTUALCOMPUTERSYSTEM` | `SYS.VIRTUALCOMPUTERSYSTEM` | `1:N` | 선택 | 선택 | 해제 | 해제 |
+
+DB 재조회 값은 두 규칙 모두 `PROPAGATECHANGE=1`, `CONTAINMENT=1`,
+`REVRELATIONSHIP=0`, `SWAPPED=0`이다. 물리 Host와 가상 Host 모두 여러 VM을
+가상화할 수 있고, Target은 항상 `SYS.VIRTUALCOMPUTERSYSTEM`이다.
+
+저장·표시 방향은 다음과 같다.
+
+```text
+Host ACTCI -- VIRTUALIZES --> VM ACTCI
+```
+
+D42 원천 FK는 VM의 `virtual_host_device_fk`가 Host의 `device_pk`를 참조하지만,
+`ACTCIRELATION.SOURCECI`에는 Host, `TARGETCI`에는 VM을 저장한다. 사용자가 실제 관계 연결을
+확인했다. CI 승격과 호스트 변경 시 이전 관계 정리는 별도 후속 검증 대상이다.
 
 ## 참조·고유키
 
@@ -71,7 +119,8 @@ USEWITH='ACTCI'가 없다는 사실만으로 ACTCIRELATION 저장이 불가능�
 
 ## 카디널리티 확인 범위
 
-- VM–호스트: 원천은 한 VM당 한 호스트, 한 호스트당 여러 VM. 등록 규칙은 1:1.
+- Host–VM: 원천은 한 VM당 한 호스트, 한 호스트당 여러 VM. 신규 `VIRTUALIZES` 규칙은
+  물리·가상 Host → VM 두 분류쌍 모두 1:N이다. 2026-09-16 사용자가 실제 관계 연결을 검증했으며 CI 승격은 미검증이다.
 - Interface–IP: 원천의 한 포트에 여러 IP. 등록 규칙은 1:1.
 - IBM [CDM 가이드](https://www.redbooks.ibm.com/redpapers/pdfs/redp4389.pdf)의 표 3·7은
   각각 Interface–IP 1:m, 가상화 m:1 예시를 제시한다.

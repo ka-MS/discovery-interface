@@ -17,7 +17,10 @@ public enum CiRelationSource {
     COMPUTER_CONTAINS_DISK("RELATION.CONTAINS", Queries.DISK_COUNT, Queries.DISK_PAGE),
 
     /** Computer → Filesystem. 근거: mountpoint_pk·device_fks. 배열의 모든 연결을 보존한다. */
-    COMPUTER_CONTAINS_FILESYSTEM("RELATION.CONTAINS", Queries.FILESYSTEM_COUNT, Queries.FILESYSTEM_PAGE);
+    COMPUTER_CONTAINS_FILESYSTEM("RELATION.CONTAINS", Queries.FILESYSTEM_COUNT, Queries.FILESYSTEM_PAGE),
+
+    /** Virtual Host → VM. 근거: VM 행의 device_pk·virtual_host_device_fk. */
+    HOST_VIRTUALIZES_VM("VIRTUALIZES", Queries.HOST_VM_COUNT, Queries.HOST_VM_PAGE);
 
     private final String relationNum;
     private final String countQuery;
@@ -114,6 +117,37 @@ public enum CiRelationSource {
                 JOIN computer c ON c.device_pk = ANY(m.device_fks)
                 WHERE (m.fstype_name IS NULL OR m.fstype_name NOT IN (""" + FilesystemCiIntegrate.EXCLUDED_TYPES_SQL + """
                 ))
+                ORDER BY sourceci, targetci
+                LIMIT %d OFFSET %d
+                """;
+
+        static final String HOST_VM_COUNT = """
+                WITH computer AS (
+                    SELECT d.device_pk, d.type, d.virtual_host_device_fk
+                    FROM view_device_v2 d
+                    WHERE
+                """ + CiSourceFilter.COMPUTER + """
+                )
+                SELECT COUNT(*)
+                FROM computer vm
+                JOIN computer host ON host.device_pk = vm.virtual_host_device_fk
+                WHERE vm.type = 'virtual'
+                  AND host.device_pk <> vm.device_pk
+                """;
+
+        static final String HOST_VM_PAGE = """
+                WITH computer AS (
+                    SELECT d.device_pk, d.type, d.virtual_host_device_fk
+                    FROM view_device_v2 d
+                    WHERE
+                """ + CiSourceFilter.COMPUTER + """
+                )
+                SELECT 'D42:DEVICE:' || CAST(host.device_pk AS varchar) AS sourceci,
+                       'D42:DEVICE:' || CAST(vm.device_pk AS varchar) AS targetci
+                FROM computer vm
+                JOIN computer host ON host.device_pk = vm.virtual_host_device_fk
+                WHERE vm.type = 'virtual'
+                  AND host.device_pk <> vm.device_pk
                 ORDER BY sourceci, targetci
                 LIMIT %d OFFSET %d
                 """;

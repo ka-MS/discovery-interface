@@ -9,6 +9,8 @@
 > (OS_INSTALLED_ON_COMPUTER 63건·COMPUTER_CONTAINS_DISK 19건·COMPUTER_CONTAINS_FILESYSTEM 60건)를
 > 적재했고 재실행에서 `ACTCIRELATIONID` 유지를 확인했다. 검증 쿼리는
 > [관계 적재 검증](../../exploration-queries/maximo/ci-relation-load-check.sql). OS → 물리 Computer 한 쌍은 **별도 INSERT·CI 승격·UI 표시를 검증했다**. [샘플 결과](../../knowledge/maximo/computer-ci-relations.md#oscomputer-승격-샘플-검증).
+> Host→VM용 `VIRTUALIZES` 관계 정의와 1:N 분류쌍 두 건은 MAS UI 등록·재조회·실제 관계 연결을 완료했다.
+> 정확한 등록값은 [VIRTUALIZES MAS UI 등록 결과](../../knowledge/maximo/computer-ci-relations.md#virtualizes-mas-ui-등록-결과)를 따른다.
 
 호출 위치는 CI 본체 적재 이후의 관계 단계 하나다.
 본체 task는 이 Writer를 호출하지 않는다. [실행 구조](../../design/ci/relations.md#실행-위치--ci-본체-적재-이후-별도-단계).
@@ -122,10 +124,9 @@ Maximo의 모든 관계 적재 방식에 대한 제약이라고 주장하지 않
 - 가드는 현재 저장 상태를 확인한다. 외부 동시 삭제까지 물리 FK처럼 보장하지 않는다.
 - MERGE 키가 달라진 새 관계는 추가된다. 이전 호스트·장비 관계 삭제는 자동 수행하지 않는다.
 - 신규 NULL 필드들은 기존 행에서 덮어쓰지 않는다.
-- 가드는 RELATIONRULES 행의 존재만 확인하고 CARDINALITY는 읽지 않는다. 원천이 1:N인데 등록된 규칙이
-  1:1이어도 경고 없이 그대로 INSERT한다. VM→Host가 그 사례다(호스트 하나에 VM 최대 17개, 등록 규칙은 1:1).
-  enum 상수 하나를 추가하는 구조가 그 자체로 안전을 보장하지는 않는다. 카디널리티 대조는
-  [ISSUE-11](../../open-issues.md#issue-11-actual-ci-분류속성관계와-식별자-매핑)에서 추적한다.
+- 가드는 RELATIONRULES 행의 존재만 확인하고 CARDINALITY는 읽지 않는다. 원천과 다른 카디널리티가
+  등록돼도 Writer가 경고하지 않으므로 관계 도입 전 별도로 대조해야 한다. Host→VM은 2026-09-16
+  두 분류쌍의 신규 VIRTUALIZES 1:N 규칙을 읽기 전용 재조회한 뒤 enum 상수를 추가했다.
 
 ## 4. 검증 수준과 후속
 
@@ -140,5 +141,5 @@ D42의 논리키 관계 SELECT와 Maximo의 분류쌍·키·참조 메타데이�
 5. 관계 단계가 본체 적재 이후에 실행되어 뒤쪽 배치의 상대 CI를 놓치지 않는지. **실행 순서는 자동 테스트 확인, 실제 DB 시나리오는 미검증.** `CiIntegrationJobTest`에서 본체 task 종료 후 관계 호출 및 본체 실패 후 관계 진행을 확인했다. 실제 적재 검증은 `ci-relation` 단독 실행이므로 뒤쪽 본체 배치의 상대 CI를 연결하는 시나리오는 재현하지 않았다.
 6. 여러 장비 배열·여러 IP를 첫 번째 하나로 줄이지 않는지. **Writer의 다중 연결 저장·재실행은 자동 테스트 확인, 원천 추출부터 전달까지는 미검증.** `ActCiRelationWriterTest.keepsBothComputerLinksToOneFilesystemAndTheirIdsOnRerun`에서 Filesystem 하나와 물리·가상 Computer 둘의 관계 DTO를 직접 전달해 두 관계가 저장되고, 순서를 바꿔 재실행해도 각 관계 키·ID가 유지되는지 확인했다. `CiRelationJobTest`는 SQL 문자열의 `ANY(m.device_fks)` 사용과 `DISTINCT ON` 부재만 확인한다. 원천(D42 .35, 수집 필터 적용) 재조회는 `pair_cnt=60, mountpoint_cnt=60`으로 다중 장비 표본이 없었고, 적재 후 `filesystem-array-fanout`도 0건이었다. 실제 배열에서 SQL이 두 행을 추출하고 Job이 모두 전달하는 검증은 별도로 남아 있다. IP 관계는 아직 구현하지 않았다.
 
-VM·IP의 기준정보와 이동·삭제·동시 실행·표시 미결은
+Host→VM의 CI 승격·이동 정리와 IP 기준정보, 관계 삭제·동시 실행·표시 미결은
 [ISSUE-11](../../open-issues.md#issue-11-actual-ci-분류속성관계와-식별자-매핑)에서 추적한다.

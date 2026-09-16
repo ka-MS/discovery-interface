@@ -2,6 +2,7 @@ package com.itmsg.device42.integration.ci;
 
 import com.itmsg.device42.config.Device42ConnectionFactory;
 import com.itmsg.device42.dto.device42.ci.FilesystemSource;
+import com.itmsg.device42.enums.ci.CiClassification;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ClassPathResource;
@@ -28,12 +29,14 @@ class FilesystemCiIntegrateTest {
         new ResourceDatabasePopulator(new ClassPathResource("ci/schema.sql")).execute(dataSource);
         jdbc = new JdbcTemplate(dataSource);
         definitionLoader = new CiDefinitionLoader(jdbc);
-        integration = new FilesystemCiIntegrate(mock(Device42ConnectionFactory.class), new ActCiWriter(jdbc), new CiSpecMapper());
+        integration = new FilesystemCiIntegrate(mock(Device42ConnectionFactory.class), new ActCiWriter(jdbc),
+                new CiSpecMapper());
         seedDefinitions();
     }
 
     private void seedDefinitions() {
-        jdbc.update("INSERT INTO MAXIMO.CLASSSTRUCTURE VALUES ('FS','SYS.FILESYSTEM')");
+        jdbc.update("INSERT INTO MAXIMO.CLASSSTRUCTURE VALUES ('FS',?)",
+                CiClassification.FILE_SYSTEM.classificationId());
         jdbc.update("INSERT INTO MAXIMO.CLASSUSEWITH VALUES ('FS','ACTCI')");
         jdbc.update("INSERT INTO MAXIMO.MEASUREUNIT VALUES ('MBYTE')");
         seedSpec(700, "FILESYSTEM_MOUNTPOINT", "ALN");

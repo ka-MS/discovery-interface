@@ -106,3 +106,28 @@ SELECT DISTINCT 'D42:DEVICEOS:' || CAST(o.deviceos_pk AS varchar) AS sourceci,
 FROM view_deviceos_v1 o
 JOIN computer c ON c.device_pk=o.device_fk
 ORDER BY sourceci,targetci;
+
+-- name: mapped-host-vm-relations
+WITH computer AS (SELECT d.device_pk,d.type,d.virtual_host_device_fk FROM view_device_v2 d
+WHERE d.type IN ('physical','virtual')
+AND (d.network_device=false OR d.network_device IS NULL)
+AND ((d.type='physical' AND d.physicalsubtype IN ('Generic','Rackable','Blade','WorkStation','ThinClient','Laptop'))
+OR (d.type='virtual' AND d.virtualsubtype IN ('Internal VM','Amazon EC2 Instance','VMWare','Hyper-V'))))
+SELECT 'D42:DEVICE:' || CAST(host.device_pk AS varchar) AS sourceci,
+       'D42:DEVICE:' || CAST(vm.device_pk AS varchar) AS targetci,
+       'VIRTUALIZES' AS relationnum
+FROM computer vm
+JOIN computer host ON host.device_pk=vm.virtual_host_device_fk
+WHERE vm.type='virtual' AND host.device_pk<>vm.device_pk
+ORDER BY sourceci,targetci;
+
+-- name: mapped-host-vm-count
+WITH computer AS (SELECT d.device_pk,d.type,d.virtual_host_device_fk FROM view_device_v2 d
+WHERE d.type IN ('physical','virtual')
+AND (d.network_device=false OR d.network_device IS NULL)
+AND ((d.type='physical' AND d.physicalsubtype IN ('Generic','Rackable','Blade','WorkStation','ThinClient','Laptop'))
+OR (d.type='virtual' AND d.virtualsubtype IN ('Internal VM','Amazon EC2 Instance','VMWare','Hyper-V'))))
+SELECT COUNT(*)
+FROM computer vm
+JOIN computer host ON host.device_pk=vm.virtual_host_device_fk
+WHERE vm.type='virtual' AND host.device_pk<>vm.device_pk;

@@ -22,7 +22,7 @@ import java.util.List;
 @Component("ci-relation")
 public class CiRelationJob implements IntegrationJob {
     private static final Logger log = LoggerFactory.getLogger(CiRelationJob.class);
-    private static final int DEFAULT_BATCH_SIZE = 1000;
+    static final int DEFAULT_BATCH_SIZE = 1000;
 
     private final Device42ConnectionFactory connectionFactory;
     private final ActCiRelationWriter writer;

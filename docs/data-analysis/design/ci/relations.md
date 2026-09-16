@@ -1,7 +1,8 @@
 # Computer 중심 CI 관계 설계
 
 > 2026-09-15 조사 결과에 따른 설계다. OS→Computer·Computer→Disk·Computer→Filesystem 세 관계는
-> 구현해 운영 적재까지 검증했다(아래 표). Host→VM·Interface→IP는 여전히 설계 단계 제안이며 코드가 없다.
+> 구현해 운영 적재까지 검증했다(아래 표). Host→VM도 2026-09-16 구현·원천 조회·기준정보 조회 후
+> 사용자가 실제 Maximo 관계 연결을 검증했다. Interface→IP는 여전히 설계 단계 제안이며 코드가 없다.
 > 원천 근거: [D42 관계 원천](../../knowledge/device42/computer-ci-relations.md).
 > 타겟 근거: [Maximo 관계 정의](../../knowledge/maximo/computer-ci-relations.md).
 > 미결 정본: [ISSUE-11](../../open-issues.md#issue-11-actual-ci-분류속성관계와-식별자-매핑).
@@ -13,7 +14,7 @@
 | COMPUTER_CONTAINS_DISK | Computer → Disk | RELATION.CONTAINS | 2026-09-15 `./run.sh ci-relation` 자동 적재 19건, 재실행 `ACTCIRELATIONID` 동일 확인(멱등성) |
 | COMPUTER_CONTAINS_FILESYSTEM | Computer → Filesystem | RELATION.CONTAINS | 2026-09-15 자동 적재 60건, 재실행 ID 동일 확인. `filesystem-array-fanout` 0건 — 원천(D42 .35) 재조회로 원인 확인: `device_fks`가 Computer 둘 이상인 마운트포인트가 현재 없음(`pair_cnt=mountpoint_cnt=60`). 적재 결함 아님. 배열 펼침 경로 자체는 미검증 |
 | OS_INSTALLED_ON_COMPUTER | OS → Computer | RELATION.INSTALLEDON | 2026-09-15 자동 적재 63건(물리 5·가상 58 분류쌍 모두 관측), 기존 수동 샘플 `ACTCIRELATIONID=6001` 유지·재실행 ID 동일 확인(멱등성) |
-| HOST_VIRTUALIZES_VM | Host Computer → VM | RELATION.VIRTUALIZES | 의미 방향 확정. Maximo 저장 순서·1:1 설정·SWAPPED·표시 검증 전 보류 |
+| HOST_VIRTUALIZES_VM | Host Computer → VM | VIRTUALIZES | 코드·원천 검증 완료. `.68` 3건, `.35` 55건. 2026-09-16 실제 관계 연결 검증 완료 |
 | COMPUTER_CONTAINS_INTERFACE | Computer → Interface | RELATION.CONTAINS | Interface CI 미구현. 별도 유형 도입 후 |
 | INTERFACE_BINDS_IP | Interface → IP | RELATION.BINDSTO | Interface 도입·카디널리티·미연결 IP 처리 검토 후 |
 | COMPUTER_IP 직접 연결 | 미선정 | 미선정 | 명시 규칙 없음. 기존 코드의 이름만 빌려 연결하지 않음 |
@@ -30,7 +31,7 @@ flowchart TB
     direction TB
     H["COMPUTERSYSTEM<br/>(VIRTUAL HOST)"]
     V["COMPUTERSYSTEM"]
-    H -.->|"RELATION.VIRTUALIZES"| V
+    H -->|"VIRTUALIZES"| V
   end
 
   O["OS"] -->|"RELATION.INSTALLEDON"| C
@@ -46,9 +47,11 @@ Virtual Host와 VM은 모두 그 영역의 Device CI이며, Host→VM 가상화 
 Disk·Filesystem·OS·Interface 관계는 두 역할과 중복 노드를 따로 그리지 않고 ComputerSystem 영역에 연결한다.
 가상화 관계는 사람이 읽는 의미에 맞춰 `Virtual Host → VIRTUALIZES → VM`으로 표시한다.
 D42 원천 참조는 반대로 VM의 `virtual_host_device_fk`가 Host의 `device_pk`를 가리킨다.
-현재 Maximo 규칙은 `SYS.VIRTUALCOMPUTERSYSTEM → C`, `SWAPPED=1`, `1:1`이므로
-ACTCIRELATION의 실제 SOURCECI·TARGETCI 순서는 적재·UI 검증 후 확정한다. 토폴로지 화살표를
-원천 FK 방향이나 물리 저장 순서로 해석하지 않는다.
+새 Maximo 규칙은 Source Host가 `SYS.COMPUTERSYSTEM` 또는 `SYS.VIRTUALCOMPUTERSYSTEM`,
+Target VM이 `SYS.VIRTUALCOMPUTERSYSTEM`인 `1:N` 관계다. 두 규칙 모두
+`CONTAINMENT=1`, `REVRELATIONSHIP=0`, `SWAPPED=0`이며 코드도 같은 방향으로 저장한다.
+MAS UI에 등록한 관계 정의·규칙·체크박스 값은
+[VIRTUALIZES 등록 결과](../../knowledge/maximo/computer-ci-relations.md#virtualizes-mas-ui-등록-결과)를 정본으로 삼는다.
 
 ## 실행 위치 — CI 본체 적재 이후 별도 단계
 
@@ -128,7 +131,7 @@ relationnum    정확한 RELATION 코드. RELATION.CONTAINS와 CONTAINS를 구�
 | OS_INSTALLED_ON_COMPUTER | OS → Computer | `deviceos_pk` · `device_fk` | [os.md](../../data-mapping/ci/types/os.md#6-관계-매핑--2026-09-15) |
 | COMPUTER_CONTAINS_DISK | Computer → Disk | Hard Disk 조건의 `part_pk` · `device_fk` | [device.md](../../data-mapping/ci/types/device.md#7-관계-매핑--2026-09-15) |
 | COMPUTER_CONTAINS_FILESYSTEM | Computer → Filesystem | `mountpoint_pk` · `device_fks` | [device.md](../../data-mapping/ci/types/device.md#7-관계-매핑--2026-09-15) |
-| HOST_VIRTUALIZES_VM | Host → VM | VM의 `device_pk` · `virtual_host_device_fk`를 역방향 해석 | 보류. Maximo 저장 순서 검증 필요 |
+| HOST_VIRTUALIZES_VM | Host → VM | VM의 `device_pk` · `virtual_host_device_fk`를 역방향 해석 | [device.md](../../data-mapping/ci/types/device.md#7-관계-매핑--2026-09-15) |
 | INTERFACE_BINDS_IP | Interface → IP | `ipaddress_pk` · `netport_fk` | 보류 |
 
 상수 이름과 관계 열은 토폴로지 의미를 따른다. SQL은 연결 근거를 가진 원천에서 나오므로
@@ -194,7 +197,7 @@ OS_INSTALLED_ON_COMPUTER(63건)·COMPUTER_CONTAINS_DISK(19건)·COMPUTER_CONTAIN
 
 ## 보류 근거
 
-- VM–Host: 원천은 명확하나 복수 VM이 같은 호스트를 참조하는 데이터와 규칙 1:1을 검증해야 한다.
+- Host–VM: 코드·1:N 규칙·실제 관계 연결은 검증했다. CI 승격과 호스트 이동 시 이전 관계 정리는 남아 있다.
 - IP: 직접 규칙이 없다는 것이 물리 저장 불가를 뜻하지는 않는다. 새 규칙 추가 또는 Interface 도입은
   수집 모델 선택이며 이번에 임의 결정하지 않는다. Interface 경로만으로 공유 IP의 모든 장비 연결이 복구되지 않는다.
 - OS–Filesystem: BOOTSFROM 규칙은 있지만 같은 장비라는 정보만으로 부팅 파일시스템을 특정할 수 없다.

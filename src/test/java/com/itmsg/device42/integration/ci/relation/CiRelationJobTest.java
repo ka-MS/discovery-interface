@@ -24,9 +24,11 @@ class CiRelationJobTest {
         assertThat(CiRelationSource.values()).containsExactly(
                 CiRelationSource.OS_INSTALLED_ON_COMPUTER,
                 CiRelationSource.COMPUTER_CONTAINS_DISK,
-                CiRelationSource.COMPUTER_CONTAINS_FILESYSTEM);
+                CiRelationSource.COMPUTER_CONTAINS_FILESYSTEM,
+                CiRelationSource.HOST_VIRTUALIZES_VM);
         assertThat(CiRelationSource.COMPUTER_CONTAINS_DISK.relationNum()).isEqualTo("RELATION.CONTAINS");
         assertThat(CiRelationSource.COMPUTER_CONTAINS_FILESYSTEM.relationNum()).isEqualTo("RELATION.CONTAINS");
+        assertThat(CiRelationSource.HOST_VIRTUALIZES_VM.relationNum()).isEqualTo("VIRTUALIZES");
     }
 
     @Test
@@ -55,6 +57,22 @@ class CiRelationJobTest {
     }
 
     @Test
+    void hostVirtualizesVmUsesVirtualHostFkAndReturnsHostToVmDirection() {
+        String page = CiRelationSource.HOST_VIRTUALIZES_VM.pageQuery(0, 10);
+
+        assertThat(page)
+                .contains("host.device_pk = vm.virtual_host_device_fk")
+                .contains("CAST(host.device_pk AS varchar) AS sourceci")
+                .contains("CAST(vm.device_pk AS varchar) AS targetci")
+                .contains("vm.type = 'virtual'")
+                .doesNotContain("vm_manager_device_fk")
+                .doesNotContain("host_chassis_device_fk");
+        assertThat(CiRelationSource.HOST_VIRTUALIZES_VM.countQuery())
+                .contains("host.device_pk = vm.virtual_host_device_fk")
+                .contains("COUNT(*)");
+    }
+
+    @Test
     void everyPageQueryOrdersByRelationKeyAndPages() {
         for (CiRelationSource source : CiRelationSource.values()) {
             assertThat(source.pageQuery(20, 10))
@@ -64,7 +82,8 @@ class CiRelationJobTest {
                     .contains("ORDER BY sourceci, targetci")
                     .contains("LIMIT 10 OFFSET 20");
             assertThat(source.countQuery()).as("%s 건수 SQL", source).contains("COUNT(*)");
-            assertThat(source.relationNum()).as("%s 관계 코드", source).startsWith("RELATION.");
+            assertThat(source.relationNum()).as("%s 관계 코드", source)
+                    .isIn("RELATION.INSTALLEDON", "RELATION.CONTAINS", "VIRTUALIZES");
         }
     }
 
@@ -84,14 +103,9 @@ class CiRelationJobTest {
                         "D42:DEVICEOS:147", "D42:DEVICE:173", "RELATION.INSTALLEDON"));
     }
 
-    /**
-     * DEFAULT_BATCH_SIZE=1000이라 위 단일 페이지 테스트는 offset += 1000 루프나
-     * 마지막 페이지 clamp(limit = min(1000, total - offset))를 실행하지 않는다.
-     * 이 테스트는 건수 1500을 스텁해 실제로 두 페이지를 돌게 하고, 두 번째 페이지 SQL이
-     * LIMIT 500 OFFSET 1000을 담는지 실행된 SQL을 캡처해 확인한다.
-     */
     @Test
     void readsEveryPageWhenSourceSpansMultipleBatches() throws Exception {
+        int batchSize = CiRelationJob.DEFAULT_BATCH_SIZE;
         var factory = mock(Device42ConnectionFactory.class);
         var connection = mock(Connection.class);
         var statement = mock(Statement.class);
@@ -100,7 +114,7 @@ class CiRelationJobTest {
 
         var osCountRs = mock(ResultSet.class);
         when(osCountRs.next()).thenReturn(true, false);
-        when(osCountRs.getLong(1)).thenReturn(1500L);
+        when(osCountRs.getLong(1)).thenReturn(batchSize + 1L);
 
         var zeroCountRs = mock(ResultSet.class);
         when(zeroCountRs.next()).thenReturn(true, false);
@@ -121,7 +135,7 @@ class CiRelationJobTest {
             if (sql.contains("COUNT(*)")) {
                 return sql.contains("view_deviceos_v1") ? osCountRs : zeroCountRs;
             }
-            return sql.contains("OFFSET 1000") ? secondPageRs : firstPageRs;
+            return sql.contains("OFFSET " + batchSize) ? secondPageRs : firstPageRs;
         });
 
         var writer = mock(ActCiRelationWriter.class);
@@ -129,15 +143,15 @@ class CiRelationJobTest {
 
         new CiRelationJob(factory, writer).run();
 
-        // OS 소스만 1500건이라 offset 0(limit 1000)·1000(limit 500) 두 페이지가 돌고,
-        // Disk·Filesystem은 0건이라 write()를 부르지 않는다.
+        // OS 소스만 배치 크기보다 1건 많아 두 페이지가 돌고,
+        // Disk·Filesystem·Host→VM은 0건이라 write()를 부르지 않는다.
         verify(writer, times(2)).write(anyList());
 
         var executedQueries = ArgumentCaptor.forClass(String.class);
         verify(statement, atLeastOnce()).executeQuery(executedQueries.capture());
         assertThat(executedQueries.getAllValues())
-                .as("두 번째 페이지 SQL이 LIMIT 500 OFFSET 1000을 담는다")
-                .anyMatch(sql -> sql.contains("LIMIT 500 OFFSET 1000"));
+                .as("두 번째 페이지 SQL이 남은 건수만 조회한다")
+                .anyMatch(sql -> sql.contains("LIMIT 1 OFFSET " + batchSize));
     }
 
     @Test
@@ -195,11 +209,12 @@ class CiRelationJobTest {
         new CiRelationJob(factory, writer).run();
 
         /*
-         * openConnection() 4회: 소스1 실패(1) + 소스2 DISK 건수·페이지(2) + 소스3 FILESYSTEM 건수(1).
+         * openConnection() 5회: 소스1 실패(1) + 소스2 DISK 건수·페이지(2)
+         * + 소스3 FILESYSTEM 건수(1) + 소스4 HOST_VIRTUALIZES_VM 건수(1).
          * atLeast(values().length)이던 이전 단언은 "루프가 소스2 직후 멈춘 회귀"도
-         * 통과시켰다(그 경우도 3회는 채워진다). times(4)로 정확히 조인다.
+         * 통과시켰다(그 경우도 3회는 채워진다). times(5)로 정확히 조인다.
          */
-        verify(factory, times(4)).openConnection();
+        verify(factory, times(5)).openConnection();
         verify(writer, atLeastOnce()).write(anyList());
 
         /*
@@ -209,10 +224,13 @@ class CiRelationJobTest {
          * 직접 캡처해 FILESYSTEM 고유 테이블(view_mountpoint_v2)이 조회됐는지 확인한다.
          */
         var executedQueries = ArgumentCaptor.forClass(String.class);
-        verify(statement, times(3)).executeQuery(executedQueries.capture());
+        verify(statement, times(4)).executeQuery(executedQueries.capture());
         assertThat(executedQueries.getAllValues())
                 .as("세 번째 소스(FILESYSTEM)의 건수 쿼리가 실제로 실행됐다")
                 .anyMatch(sql -> sql.contains("view_mountpoint_v2"));
+        assertThat(executedQueries.getAllValues())
+                .as("네 번째 소스(HOST_VIRTUALIZES_VM)의 건수 쿼리가 실제로 실행됐다")
+                .anyMatch(sql -> sql.contains("virtual_host_device_fk"));
     }
 
     /**

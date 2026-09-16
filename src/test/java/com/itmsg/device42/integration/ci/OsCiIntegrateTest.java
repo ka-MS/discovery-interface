@@ -2,6 +2,7 @@ package com.itmsg.device42.integration.ci;
 
 import com.itmsg.device42.config.Device42ConnectionFactory;
 import com.itmsg.device42.dto.device42.ci.OsSource;
+import com.itmsg.device42.enums.ci.CiClassification;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ClassPathResource;
@@ -33,12 +34,14 @@ class OsCiIntegrateTest {
         new ResourceDatabasePopulator(new ClassPathResource("ci/schema.sql")).execute(dataSource);
         jdbc = new JdbcTemplate(dataSource);
         definitionLoader = new CiDefinitionLoader(jdbc);
-        integration = new OsCiIntegrate(mock(Device42ConnectionFactory.class), new ActCiWriter(jdbc), new CiSpecMapper());
+        integration = new OsCiIntegrate(mock(Device42ConnectionFactory.class), new ActCiWriter(jdbc),
+                new CiSpecMapper());
         seedDefinitions();
     }
 
     private void seedDefinitions() {
-        jdbc.update("INSERT INTO MAXIMO.CLASSSTRUCTURE VALUES ('OSC','SYS.OPERATINGSYSTEM')");
+        jdbc.update("INSERT INTO MAXIMO.CLASSSTRUCTURE VALUES ('OSC',?)",
+                CiClassification.OPERATING_SYSTEM.classificationId());
         jdbc.update("INSERT INTO MAXIMO.CLASSUSEWITH VALUES ('OSC','ACTCI')");
         long id = 500;
         for (String suffix : ATTRIBUTES) {
@@ -111,21 +114,23 @@ class OsCiIntegrateTest {
 
     @Test
     void readsEveryOffsetUntilTotalCount() {
+        int batchSize = OsCiIntegrate.DEFAULT_BATCH_SIZE;
         List<Long> offsets = new ArrayList<>();
-        var task = new OsCiIntegrate(mock(Device42ConnectionFactory.class), new ActCiWriter(jdbc), new CiSpecMapper()) {
+        var task = new OsCiIntegrate(mock(Device42ConnectionFactory.class), new ActCiWriter(jdbc),
+                new CiSpecMapper()) {
             @Override public long getTotalCount() {
-                return 2001;
+                return batchSize * 2L + 1;
             }
             @Override public List<OsSource> getData(long offset, int limit) {
                 offsets.add(offset);
-                assertThat(limit).isEqualTo(offset == 2000 ? 1 : 1000);
+                assertThat(limit).isEqualTo(offset == batchSize * 2L ? 1 : batchSize);
                 return List.of(source(offset + 1, 100 + offset, "RHEL"));
             }
         };
 
         task.integrate(definitionLoader.load());
 
-        assertThat(offsets).containsExactly(0L, 1000L, 2000L);
+        assertThat(offsets).containsExactly(0L, (long) batchSize, batchSize * 2L);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM MAXIMO.ACTCI", Integer.class)).isEqualTo(3);
     }
 

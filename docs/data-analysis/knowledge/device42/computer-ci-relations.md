@@ -1,8 +1,10 @@
 # Computer CI 관계 원천
 
 > 관측: 2026-09-15 · D42 192.168.2.68 / 192.168.1.35, 각각 독립 조회.
+> Host→VM 제품 매핑 재검증: 2026-09-16.
 > 재조회: [computer-ci-relations.sql](../../exploration-queries/device42/computer-ci-relations.sql).
-> 원문 결과: 로컬 `local/db-access-kit/work/ci-relations-20260915/d42-{68,35}/`.
+> 원문 결과: 로컬 `local/db-access-kit/work/ci-relations-20260915/d42-{68,35}/`,
+> `local/db-access-kit/work/host-vm-20260916/d42-{68,35}/`.
 > 구현 대조: `7a29d30`의 CiSourceFilter·각 CiIntegrate. 건수는 검증 표본이며 운영 상수로 사용하지 않는다.
 
 ## 범위와 식별자
@@ -50,6 +52,9 @@ virtual_host 연결의 호스트 수는 2 / 5, 호스트 하나의 VM은 최대 
 조회는 자기 연결 여부까지만 검사했으며 임의 깊이의 순환 검사는 수행하지 않았다.
 현재 모델은 호스트가 physical이라고 가정하면 virtual → virtual 연결을 누락한다.
 관리 장비 FK를 실행 호스트 FK 대신 쓰지 않는다.
+
+2026-09-16 제품과 같은 매핑 SELECT는 이 FK 방향을 뒤집어 Host를 SOURCECI, VM을 TARGETCI로
+반환했으며 `.68` 3건, `.35` 55건이다. 관계 코드는 신규 `VIRTUALIZES`다.
 
 ## Interface를 거치는 IP 경로
 

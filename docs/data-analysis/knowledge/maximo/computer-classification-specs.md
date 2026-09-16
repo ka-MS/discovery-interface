@@ -133,6 +133,8 @@ REVRELATIONSHIP·SWAPPED는 설정 원문이다. 실제 적재에서 출발·도
 | NET.IPINTERFACE → NET.L2INTERFACE | RELATION.BINDSTO | 1:1 | 0 | 0 | 0 |
 | NET.IPADDRESS → NET.IPNETWORK | RELATION.MEMBEROF | 1:1 | 0 | 0 | 0 |
 | SYS.VIRTUALCOMPUTERSYSTEM → SYS.COMPUTERSYSTEM | RELATION.VIRTUALIZES | 1:1 | 1 | 1 | 1 |
+| SYS.COMPUTERSYSTEM → SYS.VIRTUALCOMPUTERSYSTEM | VIRTUALIZES | 1:N | 1 | 0 | 0 |
+| SYS.VIRTUALCOMPUTERSYSTEM → SYS.VIRTUALCOMPUTERSYSTEM | VIRTUALIZES | 1:N | 1 | 0 | 0 |
 
 정확한 분류쌍으로 조회했을 때 다음 직접 규칙은 없다.
 
@@ -142,7 +144,8 @@ REVRELATIONSHIP·SWAPPED는 설정 원문이다. 실제 적재에서 출발·도
 - C → PHYS.PHYSPKG.CARD / SYSTEMBUSCARD의 CONTAINS. 다른 의미의 RUNSON·REALIZES 규칙은 존재한다.
 
 RELATION 코드가 다른 분류쌍에 있다는 이유로 위 직접 규칙이 존재한다고 해석하지 않는다.
-클래스 계층 상속·SWAPPED의 실제 UI 처리와 원천 다중 연결에 대한 적용은 이번 조회로 검증하지 않았다.
+신규 `VIRTUALIZES` 두 행은 2026-09-16 MAS UI 등록 후 DB에서 재조회했다.
+클래스 계층 상속과 실제 관계 적재·UI·승격은 아직 검증하지 않았다.
 
 ## 5. 조사 범위
 

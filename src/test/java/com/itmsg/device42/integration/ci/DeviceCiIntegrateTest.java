@@ -15,13 +15,21 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class DeviceCiIntegrateTest {
+    private static final String COMPUTER_CLASS_STRUCTURE_ID = "PHYS";
+    private static final String VIRTUAL_CLASS_STRUCTURE_ID =
+            CiClassification.COMPUTER.classificationId()
+                    .equals(CiClassification.VIRTUAL_COMPUTER.classificationId())
+                    ? COMPUTER_CLASS_STRUCTURE_ID : "VM";
+    private static final String SWITCH_CLASS_STRUCTURE_ID = "SWITCH";
     private JdbcTemplate jdbc;
     private DeviceCiIntegrate integration;
     private CiDefinitionLoader definitionLoader;
@@ -37,29 +45,35 @@ class DeviceCiIntegrateTest {
         new ResourceDatabasePopulator(new ClassPathResource("ci/schema.sql")).execute(dataSource);
         jdbc = spy(new JdbcTemplate(dataSource));
         definitionLoader = new CiDefinitionLoader(jdbc);
-        integration = new DeviceCiIntegrate(mock(Device42ConnectionFactory.class), new ActCiWriter(jdbc), new CiSpecMapper());
+        integration = new DeviceCiIntegrate(mock(Device42ConnectionFactory.class), new ActCiWriter(jdbc),
+                new CiSpecMapper());
         seedDefinitions();
     }
 
     private void seedDefinitions() {
-        jdbc.update("INSERT INTO MAXIMO.CLASSSTRUCTURE VALUES "
-                + "('PHYS','SYS.COMPUTERSYSTEM'),('VM','SYS.VIRTUALCOMPUTERSYSTEM'),"
-                + "('SWITCH','SYS.GENERICSWITCH')");
-        jdbc.update("INSERT INTO MAXIMO.CLASSUSEWITH VALUES "
-                + "('PHYS','ACTCI'),('VM','ACTCI'),('SWITCH','ACTCI')");
+        Map<String, String> classStructures = new LinkedHashMap<>();
+        classStructures.put(CiClassification.COMPUTER.classificationId(), COMPUTER_CLASS_STRUCTURE_ID);
+        classStructures.putIfAbsent(CiClassification.VIRTUAL_COMPUTER.classificationId(), VIRTUAL_CLASS_STRUCTURE_ID);
+        classStructures.putIfAbsent(CiClassification.GENERIC_SWITCH.classificationId(), SWITCH_CLASS_STRUCTURE_ID);
+        classStructures.forEach((classificationId, classStructureId) -> {
+            jdbc.update("INSERT INTO MAXIMO.CLASSSTRUCTURE VALUES (?,?)", classStructureId, classificationId);
+            jdbc.update("INSERT INTO MAXIMO.CLASSUSEWITH VALUES (?,'ACTCI')", classStructureId);
+        });
         jdbc.update("INSERT INTO MAXIMO.MEASUREUNIT VALUES ('GBYTE'),('MBYTE'),('GHZ'),('MHZ')");
         List<String> attributes = new ArrayList<>(TEXT);
         attributes.addAll(NUMBER);
         long templateId = 100;
-        for (String classId : List.of("PHYS", "VM", "SWITCH")) {
+        for (String suffix : attributes) {
+            String attribute = "COMPUTERSYSTEM_" + suffix;
+            long attributeId = 100 + attributes.indexOf(suffix);
+            jdbc.update("INSERT INTO MAXIMO.ASSETATTRIBUTE (ASSETATTRIBUTEID,ASSETATTRID,DATATYPE) VALUES (?,?,?)",
+                    attributeId, attribute, NUMBER.contains(suffix) ? "NUMERIC" : "ALN");
+        }
+        for (String classId : classStructures.values()) {
             for (String suffix : attributes) {
                 String attribute = "COMPUTERSYSTEM_" + suffix;
                 long id = templateId++;
                 long attributeId = 100 + attributes.indexOf(suffix);
-                if ("PHYS".equals(classId)) {
-                    jdbc.update("INSERT INTO MAXIMO.ASSETATTRIBUTE (ASSETATTRIBUTEID,ASSETATTRID,DATATYPE) VALUES (?,?,?)",
-                            attributeId, attribute, NUMBER.contains(suffix) ? "NUMERIC" : "ALN");
-                }
                 jdbc.update("INSERT INTO MAXIMO.CLASSSPEC (CLASSSTRUCTUREID,CLASSSPECID,ASSETATTRID,ASSETATTRIBUTEID) VALUES (?,?,?,?)",
                         classId, id, attribute, attributeId);
                 jdbc.update("""
@@ -76,13 +90,13 @@ class DeviceCiIntegrateTest {
         jdbc.update("""
                 INSERT INTO MAXIMO.CLASSSPEC
                     (CLASSSTRUCTUREID,CLASSSPECID,ASSETATTRID,ASSETATTRIBUTEID)
-                VALUES ('SWITCH',1900,'GENERICCOMPUTERSYSTEM_GENERICTYPE',1900)
-                """);
+                VALUES (?,1900,'GENERICCOMPUTERSYSTEM_GENERICTYPE',1900)
+                """, SWITCH_CLASS_STRUCTURE_ID);
         jdbc.update("""
                 INSERT INTO MAXIMO.CLASSSPECUSEWITH
                     (CLASSSPECID,OBJECTNAME,SEQUENCE,MANDATORY,USEINSPEC,CLASSSTRUCTUREID,ASSETATTRID)
-                VALUES (1900,'ACTCI',1900,0,1,'SWITCH','GENERICCOMPUTERSYSTEM_GENERICTYPE')
-                """);
+                VALUES (1900,'ACTCI',1900,0,1,?,'GENERICCOMPUTERSYSTEM_GENERICTYPE')
+                """, SWITCH_CLASS_STRUCTURE_ID);
     }
 
     private DeviceSource source(long id, String type, String name, BigDecimal ram) {
@@ -116,13 +130,13 @@ class DeviceCiIntegrateTest {
     }
 
     @Test
-    void mapsPhysicalAndVirtualUsingTheirOwnTemplatesAndPreservesUnits() {
+    void mapsPhysicalAndVirtualUsingConfiguredTemplatesAndPreservesUnits() {
         var definitions = definitionLoader.load();
         persist(source(7, "physical", "Physical", new BigDecimal("32.125")), definitions);
         persist(source(8, "virtual", "Virtual", new BigDecimal("16")), definitions);
 
         assertThat(jdbc.queryForList("SELECT CLASSSTRUCTUREID FROM MAXIMO.ACTCI ORDER BY ACTCINUM", String.class))
-                .containsExactly("PHYS", "VM");
+                .containsExactly(COMPUTER_CLASS_STRUCTURE_ID, VIRTUAL_CLASS_STRUCTURE_ID);
         assertThat(value("D42:DEVICE:7", "CPUCORESINSTALLED", "NUMVALUE"))
                 .isEqualByComparingTo("24");
         assertThat(value("D42:DEVICE:7", "MEMORYSIZE", "NUMVALUE")).isEqualByComparingTo("32.125");
@@ -155,7 +169,7 @@ class DeviceCiIntegrateTest {
 
         assertThat(jdbc.queryForObject(
                 "SELECT CLASSSTRUCTUREID FROM MAXIMO.ACTCI WHERE ACTCINUM='D42:DEVICE:9'",
-                String.class)).isEqualTo("SWITCH");
+                String.class)).isEqualTo(SWITCH_CLASS_STRUCTURE_ID);
         assertThat(jdbc.queryForObject("""
                 SELECT ALNVALUE FROM MAXIMO.ACTCISPEC
                 WHERE ACTCINUM='D42:DEVICE:9'
@@ -269,34 +283,36 @@ class DeviceCiIntegrateTest {
     }
 
     @Test
-    void missingPhysicalClassificationStillAllowsVirtualComputers() {
-        jdbc.update("DELETE FROM MAXIMO.CLASSUSEWITH WHERE CLASSSTRUCTUREID='PHYS'");
+    void missingComputerClassificationStillAllowsOtherClassifications() {
+        jdbc.update("DELETE FROM MAXIMO.CLASSUSEWITH WHERE CLASSSTRUCTUREID=?", COMPUTER_CLASS_STRUCTURE_ID);
         integration.putData(integration.mapData(List.of(
                 source(7, "physical", "Physical", BigDecimal.TEN),
-                source(8, "virtual", "Virtual", BigDecimal.ONE)), definitionLoader.load()));
+                switchSource(8, "Switch", 1, 1)), definitionLoader.load()));
         assertThat(jdbc.queryForList("SELECT ACTCINUM FROM MAXIMO.ACTCI", String.class))
                 .containsExactly("D42:DEVICE:8");
     }
 
     @Test
     void readsAllOffsetsEvenWhenAnEntirePageFailsMapping() {
+        int batchSize = DeviceCiIntegrate.DEFAULT_BATCH_SIZE;
         List<Long> offsets = new ArrayList<>();
-        var task = new DeviceCiIntegrate(mock(Device42ConnectionFactory.class), new ActCiWriter(jdbc), new CiSpecMapper()) {
+        var task = new DeviceCiIntegrate(mock(Device42ConnectionFactory.class), new ActCiWriter(jdbc),
+                new CiSpecMapper()) {
             @Override public long getTotalCount() {
-                return 2001;
+                return batchSize * 2L + 1;
             }
             @Override public List<DeviceSource> getData(long offset, int limit) {
                 offsets.add(offset);
-                assertThat(limit).isEqualTo(offset == 2000 ? 1 : 1000);
+                assertThat(limit).isEqualTo(offset == batchSize * 2L ? 1 : batchSize);
                 DeviceSource row = source(offset + 1, "physical", "Host", BigDecimal.ONE);
-                if (offset == 1000) {
+                if (offset == batchSize) {
                     row = withTimeAndUnits(row, "invalid-time", "GB", "GHz");
                 }
                 return List.of(row);
             }
         };
         task.integrate(definitionLoader.load());
-        assertThat(offsets).containsExactly(0L, 1000L, 2000L);
+        assertThat(offsets).containsExactly(0L, (long) batchSize, batchSize * 2L);
         assertThat(count("ACTCI")).isEqualTo(2);
     }
 
@@ -348,11 +364,13 @@ class DeviceCiIntegrateTest {
     }
 
     @Test
-    void refusesUnresolvedClassChangesWithoutChangingExistingRows() {
+    void usesCurrentClassificationWhenExistingDeviceTypeChanges() {
         var definitions = definitionLoader.load();
         persist(source(7, "physical", "Physical", BigDecimal.TEN), definitions);
         persist(source(7, "virtual", "Virtual", BigDecimal.ONE), definitions);
-        assertThat(jdbc.queryForObject("SELECT CLASSSTRUCTUREID FROM MAXIMO.ACTCI", String.class)).isEqualTo("PHYS");
+        assertThat(jdbc.queryForObject("SELECT CLASSSTRUCTUREID FROM MAXIMO.ACTCI", String.class))
+                .isEqualTo(VIRTUAL_CLASS_STRUCTURE_ID);
+        assertThat(jdbc.queryForObject("SELECT ACTCINAME FROM MAXIMO.ACTCI", String.class)).isEqualTo("Virtual");
     }
 
     @Test

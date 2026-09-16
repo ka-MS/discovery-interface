@@ -334,10 +334,13 @@ COMPUTER_CONTAINS_FILESYSTEM 60건 모두 조회=적재이고, 재실행에서 `
 | --- | --- | --- | --- | --- |
 | 디스크 포함 | D42:DEVICE:<device_fk> | D42:PART:<part_pk> | RELATION.CONTAINS | Disk 도메인 |
 | 파일시스템 포함 | D42:DEVICE:<각 device_fks 원소> | D42:MOUNTPOINT:<mountpoint_pk> | RELATION.CONTAINS | Filesystem 도메인 |
+| Host가 VM을 가상화 | D42:DEVICE:<virtual_host_device_fk> | D42:DEVICE:<VM device_pk> | VIRTUALIZES | Device 도메인 |
 
-출발 분류는 SYS.COMPUTERSYSTEM 또는 SYS.VIRTUALCOMPUTERSYSTEM,
+Disk·Filesystem 관계의 출발 분류는 SYS.COMPUTERSYSTEM 또는 SYS.VIRTUALCOMPUTERSYSTEM,
 도착 분류는 각각 DEV.DISKDRIVE, SYS.FILESYSTEM이다.
-두 분류 쌍 모두 CONTAINMENT=1, REVRELATIONSHIP=0, CARDINALITY=1:N이다.
+Host→VM은 출발이 SYS.COMPUTERSYSTEM 또는 SYS.VIRTUALCOMPUTERSYSTEM이고 도착은
+SYS.VIRTUALCOMPUTERSYSTEM이다. 세 관계 모두 CONTAINMENT=1, REVRELATIONSHIP=0,
+CARDINALITY=1:N이다.
 관계의 방향이 Computer 출발이어도 원천 연결 키를 아는 쪽, 즉 Disk·Filesystem 도메인의
 조회 정의가 소유한다. 이 문서는 매핑 정본이고 조회 책임은 코드 쪽 기준이다.
 
@@ -366,11 +369,29 @@ WHERE (m.fstype_name IS NULL OR m.fstype_name NOT IN ('overlay','devtmpfs','squa
 ORDER BY sourceci,targetci;
 ```
 
-VM–호스트는 virtual_host_device_fk로 양 끝이 확인된다.
-토폴로지 의미 방향은 Host → VM, 코드 후보는 RELATION.VIRTUALIZES다.
-원천 FK는 반대로 VM → Host를 가리킨다. 기존 Maximo 규칙도
-`SYS.VIRTUALCOMPUTERSYSTEM → C`, `SWAPPED=1`이므로 물리 저장 순서는 실제 적재·UI 검증 후 확정한다.
-실제 호스트는 physical과 virtual 모두 있다. 관계 단계가 본체 적재 이후에 실행되므로
-뒤쪽 배치의 호스트를 놓치는 문제는 발생하지 않는다.
-현재 1:1 규칙·SWAPPED·표시 검증은 남았으므로 위 우선 구현 표에 포함하지 않았다.
-host_chassis_device_fk, vm_manager_device_fk를 같은 관계로 대체하지 않는다.
+VM–호스트는 `virtual_host_device_fk`로 양 끝이 확인된다. 원천 FK는 VM → Host를 가리키지만
+ACTCIRELATION은 기준정보와 토폴로지 의미에 맞춰 Host → VM으로 저장한다.
+
+```sql
+WITH computer AS (SELECT d.device_pk,d.type,d.virtual_host_device_fk FROM view_device_v2 d
+WHERE d.type IN ('physical','virtual')
+AND (d.network_device=false OR d.network_device IS NULL)
+AND ((d.type='physical' AND d.physicalsubtype IN ('Generic','Rackable','Blade','WorkStation','ThinClient','Laptop'))
+OR (d.type='virtual' AND d.virtualsubtype IN ('Internal VM','Amazon EC2 Instance','VMWare','Hyper-V'))))
+SELECT 'D42:DEVICE:' || CAST(host.device_pk AS varchar) AS sourceci,
+       'D42:DEVICE:' || CAST(vm.device_pk AS varchar) AS targetci,
+       'VIRTUALIZES' AS relationnum
+FROM computer vm
+JOIN computer host ON host.device_pk=vm.virtual_host_device_fk
+WHERE vm.type='virtual' AND host.device_pk<>vm.device_pk
+ORDER BY sourceci,targetci;
+```
+
+2026-09-16 제품 SQL과 같은 조회를 실행해 `.68` 3건, `.35` 55건을 확인했다.
+실제 호스트는 physical과 virtual 모두 있다. Maximo의 새 `VIRTUALIZES` 규칙은
+`SYS.COMPUTERSYSTEM → SYS.VIRTUALCOMPUTERSYSTEM`과
+`SYS.VIRTUALCOMPUTERSYSTEM → SYS.VIRTUALCOMPUTERSYSTEM` 두 분류쌍 모두 `1:N`이며
+`CONTAINMENT=1`, `REVRELATIONSHIP=0`, `SWAPPED=0`이다.
+관계 단계가 본체 적재 이후에 실행되므로 뒤쪽 배치의 호스트를 놓치지 않는다.
+`host_chassis_device_fk`, `vm_manager_device_fk`를 같은 관계로 대체하지 않는다.
+실제 Maximo 적재·재실행·UI·승격 검증은 아직 수행하지 않았다.

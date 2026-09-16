@@ -299,12 +299,13 @@ OS → 물리 Computer 한 쌍은 SWAPPED=0으로 INSERT한 뒤 CI 승격·관�
 [검증 기록](knowledge/maximo/computer-ci-relations.md#oscomputer-승격-샘플-검증).
 공통 MERGE(ActCiRelationWriter)와 OS→Computer·Computer→Disk·Computer→Filesystem 세 관계는 구현했고
 2026-09-15 `./run.sh ci-relation` 운영 적재로 검증했다(ACTCIRELATION 143행, 고아·규칙 위반 0건, 재실행 멱등성 확인).
-신규 적재분의 CI 승격, 관계의 이동·삭제, Host→VM·Interface→IP, 배열 펼침 경로는 아직 미검증이다.
+신규 적재분의 CI 승격, 관계의 이동·삭제, Host→VM의 CI 승격,
+Interface→IP, 배열 펼침 경로는 아직 미검증이다. Host→VM 원천 조회·1:N 기준정보·코드는 완료했다.
 검증 수준과 남은 항목은 [공통 매핑 4절](data-mapping/ci/actcirelation.md#4-검증-수준과-후속)을 참조한다.
 실행 위치는 CI 본체 적재 이후의 별도 관계 단계로 정리했다.
 GUID 두 컬럼은 샘플 승격 결과에 따라 신규 NULL로 결정해 미결에서 내렸다.
 
-남은 결정은 VM–호스트/Interface–IP의 1:1 설정 대조, Interface CI 도입과 포트 미연결·공유 IP 경로,
+남은 결정은 Interface–IP의 1:1 설정 대조, Interface CI 도입과 포트 미연결·공유 IP 경로,
 다른 분류쌍의 ACTCIRELATION.SWAPPED·UI·승격 검증이다. 규칙 SWAPPED를 행에 그대로 복사하지 않는다.
 관계의 이동·삭제는 ISSUE-7과 함께 검토하며 이번 조사에서 정책을 확정하지 않는다.
 호스트 변경 시 MERGE는 새 관계를 추가할 뿐 이전 관계를 지우지 않으므로,
@@ -313,9 +314,8 @@ ETL 관리 범위와 원천 조회의 완전한 성공 여부를 전제로 한 �
 
 - Instance→장치 연결이 없는 표본은 보강 원천을 찾을지 관계 없이 둘지 결정한다.
   관계 규칙이 존재한다는 이유로 실제 관계를 만들지 않는다.
-- Virtual Host의 원천 1:N을 기존 VIRTUALIZES 규칙의 카디널리티·대상 상위·
-  SWAPPED 설정에 어떻게 대응시킬지 검증한다. 기존 CI의 관계 행도 정합성 기준으로
-  그대로 복사하지 않는다.
+- 신규 VIRTUALIZES의 Host→VM 1:N 방향·분류쌍과 실제 관계 연결은 검증했다.
+  CI 승격과 호스트 이동 시 이전 관계 정리 정책은 남아 있다. 기존 CI의 관계 행은 정합성 기준 없이 복사하지 않는다.
 - ACTCINUM·GUID·CCIDISGUID·숫자 PK·MERGE 키를 구분한다. 유형 간 숫자 PK 충돌을
   피할 식별 범위와 재수집 시 동일성 정책, 시퀀스 예약 공존 방식을 결정한다.
 - LASTSCANDT 누락을 제외·보강·대체 중 어떻게 처리할지 결정한다.

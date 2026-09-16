@@ -30,7 +30,7 @@ public class CiDefinitionLoader {
 
     public CiDefinitionCache load() {
         var names = Arrays.stream(CiClassification.values())
-                .map(CiClassification::classificationId).toList();
+                .map(CiClassification::classificationId).distinct().toList();
         Map<String, ClassificationDefinition> classifications = new HashMap<>();
         jdbc.query(CLASS_QUERY, Map.of("classifications", names), rs -> {
             String name = rs.getString("CLASSIFICATIONID");

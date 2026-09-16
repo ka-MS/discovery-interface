@@ -2,6 +2,7 @@ package com.itmsg.device42.integration.ci;
 
 import com.itmsg.device42.config.Device42ConnectionFactory;
 import com.itmsg.device42.dto.device42.ci.IpSource;
+import com.itmsg.device42.enums.ci.CiClassification;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ClassPathResource;
@@ -30,8 +31,10 @@ class IpCiIntegrateTest {
         new ResourceDatabasePopulator(new ClassPathResource("ci/schema.sql")).execute(dataSource);
         jdbc = new JdbcTemplate(dataSource);
         definitionLoader = new CiDefinitionLoader(jdbc);
-        integration = new IpCiIntegrate(mock(Device42ConnectionFactory.class), new ActCiWriter(jdbc), new CiSpecMapper());
-        jdbc.update("INSERT INTO MAXIMO.CLASSSTRUCTURE VALUES ('IPA','NET.IPADDRESS')");
+        integration = new IpCiIntegrate(mock(Device42ConnectionFactory.class), new ActCiWriter(jdbc),
+                new CiSpecMapper());
+        jdbc.update("INSERT INTO MAXIMO.CLASSSTRUCTURE VALUES ('IPA',?)",
+                CiClassification.IP_ADDRESS.classificationId());
         jdbc.update("INSERT INTO MAXIMO.CLASSUSEWITH VALUES ('IPA','ACTCI')");
         seedSpec(800, "IPADDRESS_DOTNOTATION");
         seedSpec(801, "IPADDRESS_STRINGNOTATION");

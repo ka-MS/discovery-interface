@@ -117,6 +117,7 @@ Device 통합 수집 조사(2026-09-15):
 | `device42/ci-db-mapping.sql` | DB·DB Instance 유형별 원천 투영, 관계 쌍, 조인·값 변환 검증 |
 | `device42/ci-db-source-analysis.sql` | DB·Instance 전체 컬럼, 숫자 변환, Resource 보강, 참조값 차이 조사 |
 | `device42/ci-db-resource-details.sql` | Instance Resource의 JSON 버전 문자열과 중복 값 조사 |
+| `device42/db-instance-appcomp-device.sql` | DB Instance→Application Component→Device 경로, Component 유형·제품·장치 다중성 조사 |
 | `device42/view-version-probe.sql` | 뷰 최고 버전 확인, 물리 서브타입·파트타입 마스터 |
 | `device42/subtype-census.sql` | type·물리/가상 서브타입·자산 타입 전수와 배치 플래그 서명, 서브타입별 장비·하드웨어 건수 |
 | `device42/computer-ci-mapping-audit.sql` | Computer 단위·BIOS·CPU 모델/아키텍처·기본 포트 원천 재대조 |
@@ -139,6 +140,7 @@ Device 통합 수집 조사(2026-09-15):
 | `maximo/ci-promotion-scope.sql` | CITEMPLATE의 승격 범위, 범위별 CI↔ACTCI 분류 매핑, 적재 분류의 등록 여부 |
 | `maximo/ci-db-target-mapping.sql` | 일반 DB·DB Server의 속성 설정과 분류쌍 관계 규칙 |
 | `maximo/ci-db-spec-analysis.sql` | 일반 DB·DB Server의 전체 속성명·타입·적용 설정 조사 |
+| `maximo/db-app-device-classifications.sql` | DB·Application·Device의 ACTCI/CI 분류, 승격 범위와 RUNSON/FEDERATES 규칙 대조 |
 | `maximo/ci-relation-rules.sql` | RELATION·RELATIONRULES 구조, 적용 범위와 기존 CI 규칙 일치 여부 |
 | `maximo/dpa-child-coverage.sql` | DPA 자식 테이블 노드 커버리지, ASSETCLASS 분포, Device42 부모 목록, NODEID 보유 자식 전수 |
 | `maximo/dpa-key-structure.sql` | DPA 기본키 구조와 Device42 자식 적재 건수 |
