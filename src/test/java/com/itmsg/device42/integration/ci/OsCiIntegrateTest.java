@@ -76,12 +76,16 @@ class OsCiIntegrateTest {
     }
 
     @Test
-    void missingValuesDoNotCreateSpecRows() {
+    void missingValuesCreateTemplateRowsWithNullValues() {
         var row = new OsSource(8, 101, "Alpine Linux 3.21", null, null, null, "2026-09-15T00:00:00Z");
         persist(row);
 
         assertThat(jdbc.queryForList("SELECT ASSETATTRID FROM MAXIMO.ACTCISPEC ORDER BY ASSETATTRID", String.class))
-                .containsExactly("OPERATINGSYSTEM_NAME", "OPERATINGSYSTEM_OSNAME");
+                .containsExactly("OPERATINGSYSTEM_KERNELARCHITECTURE", "OPERATINGSYSTEM_KERNELVERSION",
+                        "OPERATINGSYSTEM_NAME", "OPERATINGSYSTEM_OSNAME", "OPERATINGSYSTEM_OSVERSION");
+        assertThat(text("OPERATINGSYSTEM_OSVERSION")).isNull();
+        assertThat(text("OPERATINGSYSTEM_KERNELVERSION")).isNull();
+        assertThat(text("OPERATINGSYSTEM_KERNELARCHITECTURE")).isNull();
     }
 
     @Test

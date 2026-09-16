@@ -23,7 +23,7 @@ CI는 [문서 예외 규칙](../README.md#ci-매핑-문서-예외)에 따라 공
 
 CI는 [ci/README.md](ci/README.md)에서 시작한다. `ACTCI`, `ACTCISPEC`,
 `ACTCIRELATION`의 Target 구조와 분류·속성 템플릿 조사는 완료했다.
-Computer의 DPA와 독립된 수집·본체·스펙 매핑 및 SQL은 [Computer](ci/types/computer.md)에 있다. 저장 구현·자동 테스트는 완료했으며, 실행 설정·추가 속성 등록과 실제 적재 검증은 남아 있다.
+Computer·VM·Switch의 DPA와 독립된 수집·본체·스펙 매핑 및 SQL은 [Device](ci/types/device.md)에 있다. 저장 구현·D42 양 서버 검증과 [Switch·Printer 기준정보 설계](../design/ci/device-reference-data.md)는 완료했으며, MAS UI 적용과 실제 승격·UI 검증은 남아 있다.
 DB·DB Instance의 전체 원천 컬럼별 사용처와 실제 SQL은 `ci/types/`에 있다.
 일반 DB·DB Server 분류는 확정했으며, 추가 속성·관계·식별자·공통 적재 정책은 미결이다.
 

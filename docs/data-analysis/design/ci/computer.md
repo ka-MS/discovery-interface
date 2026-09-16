@@ -1,12 +1,14 @@
 # Computer CI 수집 설계
 
-> 상태: 일부 결정 · 갱신 2026-09-14. CI 기준 18개에 BIOS·CPU 코어 수 추가, 분류·복합 원천 키를 합의했다. 본체·스펙의 현재 매핑 정본은 [Computer 매핑](../../data-mapping/ci/types/computer.md)이다. 아래 초기 대조표는 후속 CI 구성 검토 자료다.
+후속 확장안(2026-09-15): [Device 통합 수집 설계](device.md). 기존 조인에서 네트워크·프린터까지 조회하고 분류별 스펙을 선택하는 안과 필드 대조표를 담았다.
+
+> 상태: Device 통합 전 Computer 설계 기록 · 갱신 2026-09-15. 현재 본체·스펙 매핑 정본은 [Device 매핑](../../data-mapping/ci/types/device.md)이다. 아래 초기 대조표는 후속 CI 구성 검토 자료다.
 
 **합의된 원칙:** Computer부터 카테고리별로 조사·검증 후 확장한다. CI 매핑은 D42 원천을
 기준으로 독립 정의하며 DPA 테이블·적재 결과·변환 규칙에 의존하지 않는다.
 원천 구조는 [Computer 연관 수집 원천](../../knowledge/device42/computer-inventory.md),
 실제 분류·스펙·관계 설정은 [분류 조사 결과](../../knowledge/maximo/computer-classification-specs.md),
-진행 상태는 [Computer](../../data-mapping/ci/types/computer.md)를 참조한다.
+진행 상태는 [Device](../../data-mapping/ci/types/device.md)를 참조한다.
 
 **아래는 조사에 근거한 수집 추천안이다.** 추천과 확정 매핑을 구분한다.
 분류가 존재하거나 현재 값이 비어 있다는 이유만으로 독립 CI 포함·제외를 결정하지 않는다.
@@ -116,7 +118,7 @@ CI.COMPUTERSYSTEM의 18개 ASSETATTRID를 기본 대조 범위로 사용하고 B
 | 서브넷·게이트웨이 | IP의 보강 정보로 조사 유지; 저장 위치는 별도 결정 | NET.IPNETWORK에 PREFIXLENGTH·NETMASK·SUBNETADDRESS 존재. NET.IPADDRESS에는 해당 전용 스펙 없음 | Subnet CI를 추가할지 IP 스펙을 확장할지 결정. gateway를 IPADDRESS_ADDRESSSPACE 등에 임의 대입하지 않음 |
 | 설치 SW | 설치 건별 독립 CI | APP.SOFTWAREINSTALLATION — SOFTWAREINSTALLATION_PRODUCTNAME / VERSIONSTRING / MANUFACTURERNAME / INSTALLEDLOCATION | 이름·버전·제조사·설치 경로에 대응. SOFTWAREIMAGE·SOFTWAREMODULE을 이름 유사성만으로 대체 사용하지 않음 |
 | GPU | 이번 기본안에서는 보류 | CARD·SYSTEMBUSCARD 범용 분류는 있으나 GPU 전용 대응·Computer 포함 관계 미확정 | 개별 GPU 관리 범위와 물리/가상 GPU 의미를 확인한 뒤 분류·관계 보완. CPU·메모리 총량 속성에 섞지 않음 |
-| VM→호스트 | 기존 Computer CI 사이 관계 | RELATION.VIRTUALIZES 후보 | 새 호스트 정보를 중복 CI로 만들지 않음. 원천 virtual_host_device_fk와 실제 규칙의 방향·카디널리티 검증 필요 |
+| Host→VM | 기존 Computer CI 사이 관계 | RELATION.VIRTUALIZES 후보 | 토폴로지 의미 방향. 원천은 VM의 virtual_host_device_fk가 Host를 참조하며 실제 저장 순서·카디널리티 검증 필요 |
 | 섀시·VM 관리 장비 | 원천 연결은 유지, 별도 확대 단계 | 분류·관계 미선정 | Computer 분류나 VIRTUALIZES로 일괄 연결하지 않음 |
 
 기본안의 독립 CI는 **Computer·CPU·Disk·Filesystem·OS·Interface**이며,
@@ -164,11 +166,11 @@ Computer의 메모리 총량·CPU 요약과 개별 CPU의 상세 스펙은 집�
 - OS→Computer는 설치 의미와 복수 OS를 표현하는 INSTALLEDON(N:1)을 우선 검토한다. SWAPPED=1·REVRELATIONSHIP=1의 실제 적재·표시는 검증한다.
 - SW Installation→OS의 INSTALLEDON(N:1)이 존재한다. 원천 SW는 device_fk로 장비에 연결되므로, 같은 장비에 OS가 하나인 경우의 연결 조건과 OS가 없거나 여럿인 경우를 구분해야 한다. OS에 무조건 곱조인하지 않는다. Computer 직접 설치 관계를 사용할 경우 새 분류쌍 규칙이 필요하다.
 - IP는 원천의 device_fks·netport_fk가 명시하는 연결을 보존한다. 기존 NET.IPINTERFACE 경유 BINDSTO 설정이 있다고 해서 존재하지 않는 중간 원천 개체를 자동 생성하지 않는다. 공유 IP에 맞는 카디널리티와 직접 연결 규칙 보완안을 검토한다.
-- VM→호스트의 VIRTUALIZES는 등록 규칙이 1:1·SWAPPED=1이므로 원천 다중 VM 연결과 저장 방향을 검증하기 전 확정하지 않는다.
+- Host→VM의 VIRTUALIZES를 토폴로지 의미 방향으로 사용한다. 등록 규칙이 1:1·SWAPPED=1이므로 원천 다중 VM 연결과 물리 저장 순서는 검증하기 전 확정하지 않는다.
 - 분류의 PARENT 값으로 ACTCIRELATION을 생성하지 않는다. D42 연결 근거와 관계 규칙을 모두 만족하는 쌍을 사용한다.
 
 ## 미결 추적
 
 관리 단위·포함 범위는 [ISSUE-8](../../open-issues.md#issue-8-actual-ci-대상-범위),
 속성 의미·단위·식별자·관계 적용은 [ISSUE-11](../../open-issues.md#issue-11-actual-ci-분류속성관계와-식별자-매핑)에서 추적한다.
-확정된 필드 매핑·변환·SQL은 [Computer 매핑](../../data-mapping/ci/types/computer.md)에 반영한다.
+확정된 필드 매핑·변환·SQL은 [Device 매핑](../../data-mapping/ci/types/device.md)에 반영한다.

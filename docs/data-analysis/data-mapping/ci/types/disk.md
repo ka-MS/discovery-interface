@@ -15,7 +15,7 @@
 | 분류 | `DEV.DISKDRIVE` 한 개 |
 | ACTCINUM | `D42:PART:<part_pk>` |
 | 스펙 참조 | ACTCINUM·CLASSSTRUCTUREID는 본체와 동일, REFOBJECTID=ACTCIID |
-| 관계 | [Computer 출발 관계 매핑](computer.md#7-관계-매핑--2026-09-15)에 원천·분류쌍 대조 완료. 저장 구현·UI 검증은 별도 |
+| 관계 | [Computer 출발 관계 매핑](device.md#7-관계-매핑--2026-09-15)에 원천·분류쌍·저장 구현 완료. `ci-relation` 운영 적재·멱등성 검증 완료; CI 승격·UI 검증은 별도 |
 
 `view_part_v1`에는 `type_name`이 없다. 파트 종류는 `view_partmodel_v1` 조인으로 판정한다.
 `p.pcount`는 두 서버 모두 전건 1이므로 수량으로 해석하지 않는다. 한 행이 디스크 한 개다.
@@ -73,7 +73,7 @@ LIMIT %d OFFSET %d
 적재 분류 `DEV.DISKDRIVE` · **대조 기준 없음**. `CIROOT` 계열에 디스크 대응 분류가 없어
 네 유형 중 유일하게 기준선 없이 ACTCI 쪽만 보고 골랐다.
 근거는 [Disk 수집 설계](../../../design/ci/disk.md) 3절.
-값이 없는 속성은 행을 만들지 않는다.
+해당 분류의 CLASSSPEC이 있는 속성은 값이 없어도 행을 만들어 값 컬럼을 NULL로 동기화한다.
 
 | ASSETATTRID | 한글 의미 | 값 컬럼 | 구분 | Source | 변환·조건 |
 | --- | --- | --- | --- | --- | --- |
@@ -94,4 +94,4 @@ LIMIT %d OFFSET %d
 | ACTCINAME 중복 | 같은 모델 디스크가 같은 이름을 갖는다. 슬롯·장비명 부가 검토. ISSUE-11 |
 | 원천 커버리지 | 표본 Computer 95 / 85대 중 18 / 19대만 디스크 보유. ISSUE-8 |
 | 승격 불가 | `DEV.DISKDRIVE`가 `CITEMPLATE`에 0행이다. CI로 승격할 수 없다. ISSUE-8 |
-| 관계 | [Computer 출발 관계 매핑](computer.md#7-관계-매핑--2026-09-15)에 RELATION.CONTAINS의 원천 SQL·방향 정의. 관계 저장·UI 검증 미완료. ISSUE-11 |
+| 관계 | [Computer 출발 관계 매핑](device.md#7-관계-매핑--2026-09-15)에 RELATION.CONTAINS의 원천 SQL·방향 정의. 관계 저장·운영 멱등성 검증 완료, CI 승격·UI 검증 미완료. ISSUE-11 |

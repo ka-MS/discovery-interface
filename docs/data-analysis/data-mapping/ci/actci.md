@@ -15,7 +15,7 @@
 
 ## 2. 테이블 매핑
 
-유형별 원천은 [Computer](types/computer.md), [DB](types/database.md), [DB Instance](types/database-instance.md)에 둔다.
+유형별 원천은 [Device](types/device.md), [DB](types/database.md), [DB Instance](types/database-instance.md)에 둔다.
 후보 범위와 중복 근거는 [ci-targets.md](ci-targets.md) 참조.
 본체를 먼저 식별·저장하고 저장된 ACTCIID·ACTCINUM을 속성과 관계에서 참조한다.
 원천 SQL의 반환 컬럼과 변환식은 각 유형 문서에 작성한다.

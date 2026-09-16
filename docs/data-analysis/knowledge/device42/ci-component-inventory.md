@@ -55,7 +55,7 @@ hwaddress, device_fk, type_name이다.
 
 ## 3. Computer 연결분과 전체
 
-Computer 판정은 `ComputerCiIntegrate`의 수집 필터와 같다.
+Computer 판정은 `CiSourceFilter.COMPUTER`의 수집 필터와 같다. Device 본체의 Switch 확장 조건은 포함하지 않는다.
 
 | 유형 | 전체 | Computer 연결 | 비율 |
 | --- | ---: | ---: | ---: |

@@ -83,6 +83,15 @@ Device42의 상세 제약은 `../knowledge/device42/doql-constraints.md` 에 있
 
 ## 목록
 
+Device 통합 수집 조사(2026-09-15):
+
+- [원천 컬럼·유형](device42/device-ci-source-shapes.sql): 기존 여섯 뷰 헤더와 Device 유형 분포.
+- [보강 투영·포트 범위](device42/device-ci-projection.sql): Computer·VM·네트워크·프린터 후보와 cluster 연결 종류·대표 MAC을 조회하고 Switch/미판별 분기를 확인.
+- [JSON 키](device42/device-ci-json-keys.sql): 발견 방식별 상세 키와 네트워크·프린터 판별 정보.
+- [분류 탐색](maximo/device-ci-classification-discovery.sql): Device 관련 분류·부모·적용 객체·속성 수.
+- [스펙·관계 대조](maximo/device-ci-specs.sql): 실제 속성 ID·타입·단위·적용 상태, 분류쌍 관계와 기존 ACTCI.
+- [속성·승격 공백](maximo/device-ci-target-gaps.sql): EOS 등 속성 후보, 신규 분류 승격 범위, SNMP 속성.
+
 | 쿼리 | 용도 |
 | --- | --- |
 | `device42/device-type-distribution.sql` | type/subtype 분포, virtualsubtype_id 대응 |

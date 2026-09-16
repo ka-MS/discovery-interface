@@ -14,7 +14,7 @@
 
 ## 2. 테이블 매핑
 
-유형별 문서가 ASSETATTRID와 값 원천을 정한다. [Computer](types/computer.md), [DB](types/database.md),
+유형별 문서가 ASSETATTRID와 값 원천을 정한다. [Device](types/device.md), [DB](types/database.md),
 [DB Instance](types/database-instance.md) 참조. 템플릿 구조는 [CI 분류 모델](../../knowledge/maximo/ci-classification.md)에 있다.
 
 공통 표의 별칭은 `b=저장된 부모 ACTCI`, `c=선택한 CLASSSPEC`,
@@ -22,11 +22,12 @@
 u는 `u.CLASSSPECID=c.CLASSSPECID AND u.OBJECTNAME='ACTCI'`로 찾는다.
 NULL 섹션끼리는 같게 비교한다. 참조가 0건 또는 여러 건이면 임의의 첫 행을 선택하지 않는다.
 DATATYPE에 맞는 ALNVALUE·NUMVALUE·TABLEVALUE 중 한 컬럼에 값을 넣고 나머지는 NULL로 둔다.
-속성 행 자체를 만들지 않는 조건은 ISSUE-11에서 별도로 결정한다.
+해당 분류의 정상 CLASSSPEC은 원천 값이 없어도 행을 만들어 값 컬럼을 NULL로 동기화한다.
+템플릿이 없는 명시적 추가 속성은 원천 값이 있을 때만 행을 만든다.
 
 Computer의 명시적 추가 속성은 예외다. 해당 분류 템플릿이 없을 때 전역 ASSETATTRIBUTE를
 확인하여 CLASSSPECID=NULL로 적재할 수 있다. 표시 순서·필수 여부·허용 대상은
-[Computer 매핑](types/computer.md)의 추가 속성 규칙을 따른다.
+[Device 매핑](types/device.md)의 추가 속성 규칙을 따른다.
 
 ## 3. 조회 조건
 

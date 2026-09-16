@@ -66,6 +66,7 @@ LIMIT %d OFFSET %d
 
 적재 분류 `NET.IPADDRESS` · **대조 기준 `CI.IPADDRESS`(CCI00011, 6개)**.
 선택 근거는 [IP 수집 설계](../../../design/ci/ip.md) 3절.
+해당 분류의 CLASSSPEC이 있는 속성은 값이 없어도 행을 만들어 값 컬럼을 NULL로 동기화한다.
 
 | ASSETATTRID | 한글 의미 | 값 컬럼 | 구분 | Source | 변환·조건 |
 | --- | --- | --- | --- | --- | --- |

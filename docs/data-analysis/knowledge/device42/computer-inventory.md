@@ -10,7 +10,7 @@
 
 D42 원천의 Computer와 연결된 정보 목록이다. DPA 테이블·적재 결과·변환 규칙에 의존하지 않는다.
 각 행은 수집 정보의 묶음이며 독립 CI 하나를 뜻하지 않는다.
-CI 진행 상태는 [Computer](../../data-mapping/ci/types/computer.md), 표현·범위 결정은 [ISSUE-8](../../open-issues.md#issue-8-actual-ci-대상-범위)에서 관리한다.
+CI 진행 상태는 [Device](../../data-mapping/ci/types/device.md), 표현·범위 결정은 [ISSUE-8](../../open-issues.md#issue-8-actual-ci-대상-범위)에서 관리한다.
 
 이번 조사 표본은 `view_device_v2`에 다음 조건을 적용했다. CI 운영 필터를 확정한 것은 아니다.
 
@@ -137,7 +137,7 @@ Maximo 분류·속성·관계 대응, 원천 값과 실제 장비의 일치, 재
 양쪽 서버의 데이터 사전(`/services/data/v1.0/dd/`)과
 [필드·CPU·기본 포트 조회](../../exploration-queries/device42/computer-ci-mapping-audit.sql)를 재확인했다.
 결과는 `local/db-access-kit/work/computer-ci-mapping-20260914-{68,35}/`에 있다.
-실제 매핑 SELECT는 [Computer 매핑](../../data-mapping/ci/types/computer.md#5-조회-sql)이 정본이다.
+실제 매핑 SELECT는 [Device 매핑](../../data-mapping/ci/types/device.md#5-조회-sql)이 정본이다.
 
 | 원천 | 확인된 의미·형태 |
 | --- | --- |

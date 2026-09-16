@@ -16,4 +16,15 @@ public final class CiSourceFilter {
                     ('Internal VM', 'Amazon EC2 Instance', 'VMWare', 'Hyper-V'))
             )
             """;
+
+    /** Device 본체 수집 후보. 미판별 네트워크 장비도 조회해 매핑 단계에서 진단한다. */
+    public static final String DEVICE = """
+            (
+            """ + COMPUTER + """
+            )
+            OR (
+                d.type = 'physical'
+                AND d.network_device = true
+            )
+            """;
 }

@@ -100,9 +100,26 @@ DB·DB Instance 매핑 문서에 더해 Computer 원천 수집 항목 조사를 
 
 남은 결정:
 
-- Computer 물리·가상 분류, CI 기준 스펙에 BIOS·코어 수 추가를 합의했다. 수집 조건·필드 대응은 [Computer 매핑](data-mapping/ci/types/computer.md)에 작성·재검증했다. 새 서브타입은 대상 정의를 보완한다.
+- Computer 물리·가상 분류, CI 기준 스펙에 BIOS·코어 수 추가를 합의했다. 수집 조건·필드 대응은 [Device 매핑](data-mapping/ci/types/device.md)에 작성·재검증했다. 새 서브타입은 대상 정의를 보완한다.
 - 개별 RAM·GPU의 포함 여부와 필요한 상세 관리 범위.
 - Subnet·설치 SW의 관리 단위와 관계 구성 선택. IP는 아래 절에서 다룬다.
+
+### Device 기준 통합 수집 — 2026-09-15
+
+**1차 구현 완료:** 현재 본체·스펙 구조를 유지하며 `DeviceCiIntegrate`에서 Computer·VM과
+판정 가능한 물리 Switch를 통합 조회·매핑한다. 관계는 본체 이후 별도 단계에서 재조회한다.
+필드 대조표와 구현 순서는 [Device 통합 설계](design/ci/device.md)에 있다.
+
+Switch는 `network_device=true`, `type='physical'`, `second_device_fk`로 연결된 cluster 1개,
+비어 있지 않은 `fw_device_type=Switch` 한 종류를 모두 만족할 때만 `SYS.GENERICSWITCH`로 적재한다.
+양 서버에서 각 2대를 확인했고 Router·NULL·복수 cluster·종류 충돌·Printer는 제외하고 로그를 남긴다.
+
+2차 추천안은 [Device CI 기준정보 설계](design/ci/device-reference-data.md)에 작성했다.
+Switch Authorized CI는 `CI.GENERICSWITCH`, 물리 Printer는 `SYS.PHYSICALPRINTER`·
+`CI.PHYSICALPRINTER`로 제안하며 아직 MAS UI에는 적용하지 않았다.
+
+남은 결정은 Router 실제 표본과 판정 규칙, 추천 분류 ID의 운영 승인, MAS UI 설정·승격 검증이다.
+cluster·컨테이너·unknown·PDU는 이번 후보 범위에 포함하지 않는다.
 
 ### OS·Disk·Filesystem·IP 관리 단위 — 2026-09-15
 
@@ -176,11 +193,19 @@ ASSETATTRIBUTE 등 연결 정보와 Maximo 애플리케이션 동작까지 검�
 
 ### 나머지 분류 선택 검토안
 
+Device 확장 조사(2026-09-15)의 [분류·필드 대조표](design/ci/device.md)와 [설정 관측](knowledge/maximo/device-ci-classifications.md)을 작성했다.
+Switch 판정·ACTCI 분류와 2차 기준정보 추천안은 확정했다. 남은 결정:
+
+- Router 실제 표본과 판정 규칙. 표본이 없어 `SYS.GENERICROUTER` 분기는 구현하지 않는다.
+- Switch의 `CI.GENERICSWITCH` 신규 분류·18개 속성·본체 1:1 승격 범위를 MAS UI에서 적용하고 검증한다.
+- Printer의 `SYS.PHYSICALPRINTER`·`CI.PHYSICALPRINTER`, 13개 속성, 본체 1:1 승격 범위를 MAS UI에서 적용하고 검증한다.
+- 추가 자산·위치·OS·EOL/EOS 등 필드의 대상 속성·단위와 Printer 대표 MAC·SysName 원천 대응.
+
 이 표는 확정 매핑이 아니다. 이름이 유사하다는 이유만으로 의미가 같다고 보지 않는다.
 
 | 원천 대상 | 검토할 분류 | 남은 판단 |
 | --- | --- | --- |
-| Device | SYS.COMPUTERSYSTEM / SYS.VIRTUALCOMPUTERSYSTEM | 네트워크 장비·컨테이너·unknown을 포함한 유형별 분기 |
+| Device | SYS.COMPUTERSYSTEM / SYS.VIRTUALCOMPUTERSYSTEM / SYS.GENERICSWITCH / SYS.PHYSICALPRINTER 제안 | Router·컨테이너·unknown의 후속 범위와 신규 기준정보 UI 적용 |
 | Application Component / Group | APP.APPLICATION 등 | 실행 구성요소와 논리 묶음의 구분 |
 | Business Service | PROCESS.BUSINESSSERVICE | 원천 개체와 분류 의미 대응 |
 | Service Instance | SERVICE.SERVICEINSTANCE | 발견된 서비스 프로세스와 분류 의미 대응; 누락 설정 보완 여부 |
@@ -216,7 +241,7 @@ ASSETATTRIBUTE 등 연결 정보와 Maximo 애플리케이션 동작까지 검�
 ### 속성 대응 검토안
 
 타입·단위 근거는 분류 문서, 값 보유율·길이는 원천 문서에 둔다.
-Computer 본체·스펙의 현재 대응은 [Computer 매핑](data-mapping/ci/types/computer.md), 연관 CI 후보는 [수집 설계 대조표](design/ci/computer.md#원천-필드별-스펙-대조보완)를 참조한다.
+Device 본체·스펙의 현재 대응은 [Device 매핑](data-mapping/ci/types/device.md), 연관 CI 후보는 [수집 설계 대조표](design/ci/computer.md#원천-필드별-스펙-대조보완)를 참조한다.
 
 | 원천 필드 | 검토할 ASSETATTRID | 남은 판단 |
 | --- | --- | --- |
@@ -228,16 +253,16 @@ Computer 본체·스펙의 현재 대응은 [Computer 매핑](data-mapping/ci/ty
 빈 속성 행 생성 여부, 섹션, 기본값·필수 여부·표시 순서의 적용 방식도 결정한다.
 compatibility_level의 일반 분류 속성 대응은 미정이며, DB 제품 버전으로 간주하지 않는다.
 
-### Computer 적재 전 확인 — 2026-09-14
+### Device 적재 전 확인 — 2026-09-15
 
-본체·스펙 대응 및 SQL은 [Computer 매핑](data-mapping/ci/types/computer.md), 관계 구성안은 [수집 설계](design/ci/computer.md)에 둔다.
+본체·스펙 대응 및 SQL은 [Device 매핑](data-mapping/ci/types/device.md), 관계 구성안은 [수집 설계](design/ci/computer.md)에 둔다.
 등록된 분류·스펙·관계는 [분류 조사 결과](knowledge/maximo/computer-classification-specs.md)에서 확인했다.
 
 - BIOS 출시일 원문용 COMPUTERSYSTEM_BIOSRELEASEDATE(ALN). **2026-09-15 사용자가 전역 ASSETATTRIBUTE와 CI.COMPUTERSYSTEM 템플릿을 수동 등록했다.** ACTCI 쪽 SYS.COMPUTERSYSTEM 템플릿은 아직 없어 적재는 계속 명시적 추가 속성 경로(CLASSSPECID=NULL, DISPLAYSEQUENCE=180)를 쓴다. ACTCI 템플릿 등록 시 기존 경로가 자동 우선한다. UI·승격 검증은 남아 있다.
 - 사용 분류 enum 기반 공통 캐시와 명시적 추가 속성 처리: [캐시 설계](design/ci/definition-cache.md). 실제 Maximo에서 새 캐시 SQL·추가 속성 경로의 동작 확인은 후속 검증.
 - sourceId=`D42:<원천 개체 종류>:<원천 PK>` 기반 본체·스펙 저장을 구현했다. 신규 숫자 ID는 각 Maximo 시퀀스 NEXT VALUE를 사용하며 기존 ID를 유지한다. 실제 Maximo 동시 채번·적재 검증은 남아 있다.
 - FQDN·SIGNATURE 대응과 MANAGEDSYSTEMNAME·SYSTEMBOARDUUID 원천 보강. 매핑 규칙에 따른 단위 표시·승격 후 전달 및 조건부 CPU·MAC 보강의 UI 확인.
-- CI 전용 설정을 제거하고 기존 asset의 getData → mapData → putData 형태로 통일했다. 현재 상수·시간대·건별 오류 처리와 롤백 보류는 [실행 준비](data-mapping/ci/types/computer-run.md)에 기록했다. 재시도·삭제·분류 변경 등 운영 정책 확장은 후속 결정이며 설치 SW의 경로 보강도 후속 유형에서 진행.
+- CI 전용 설정을 제거하고 기존 asset의 getData → mapData → putData 형태로 통일했다. 현재 상수·시간대·건별 오류 처리와 롤백 보류는 [실행 준비](data-mapping/ci/types/device-run.md)에 기록했다. 재시도·삭제·분류 변경 등 운영 정책 확장은 후속 결정이며 설치 SW의 경로 보강도 후속 유형에서 진행.
 - 관계의 방향·카디널리티·SWAPPED 적용과 IP 직접 연결·SW의 OS 연결 조건 검증.
 
 ### DB·Instance 원천별 남은 판단
@@ -274,7 +299,7 @@ OS → 물리 Computer 한 쌍은 SWAPPED=0으로 INSERT한 뒤 CI 승격·관�
 [검증 기록](knowledge/maximo/computer-ci-relations.md#oscomputer-승격-샘플-검증).
 공통 MERGE(ActCiRelationWriter)와 OS→Computer·Computer→Disk·Computer→Filesystem 세 관계는 구현했고
 2026-09-15 `./run.sh ci-relation` 운영 적재로 검증했다(ACTCIRELATION 143행, 고아·규칙 위반 0건, 재실행 멱등성 확인).
-신규 적재분의 CI 승격, 관계의 이동·삭제, VM→Host·Interface→IP, 배열 펼침 경로는 아직 미검증이다.
+신규 적재분의 CI 승격, 관계의 이동·삭제, Host→VM·Interface→IP, 배열 펼침 경로는 아직 미검증이다.
 검증 수준과 남은 항목은 [공통 매핑 4절](data-mapping/ci/actcirelation.md#4-검증-수준과-후속)을 참조한다.
 실행 위치는 CI 본체 적재 이후의 별도 관계 단계로 정리했다.
 GUID 두 컬럼은 샘플 승격 결과에 따라 신규 NULL로 결정해 미결에서 내렸다.

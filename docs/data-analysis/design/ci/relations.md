@@ -1,19 +1,19 @@
 # Computer 중심 CI 관계 설계
 
 > 2026-09-15 조사 결과에 따른 설계다. OS→Computer·Computer→Disk·Computer→Filesystem 세 관계는
-> 구현해 운영 적재까지 검증했다(아래 표). VM→Host·Interface→IP는 여전히 설계 단계 제안이며 코드가 없다.
+> 구현해 운영 적재까지 검증했다(아래 표). Host→VM·Interface→IP는 여전히 설계 단계 제안이며 코드가 없다.
 > 원천 근거: [D42 관계 원천](../../knowledge/device42/computer-ci-relations.md).
 > 타겟 근거: [Maximo 관계 정의](../../knowledge/maximo/computer-ci-relations.md).
 > 미결 정본: [ISSUE-11](../../open-issues.md#issue-11-actual-ci-분류속성관계와-식별자-매핑).
 
 ## 먼저 구현할 관계
 
-| 규칙 이름 제안 | 저장 방향 | 정확한 relationnum | 판정 |
+| 규칙 이름 제안 | 토폴로지 의미 방향 | 정확한 relationnum | 판정 |
 | --- | --- | --- | --- |
 | COMPUTER_CONTAINS_DISK | Computer → Disk | RELATION.CONTAINS | 2026-09-15 `./run.sh ci-relation` 자동 적재 19건, 재실행 `ACTCIRELATIONID` 동일 확인(멱등성) |
 | COMPUTER_CONTAINS_FILESYSTEM | Computer → Filesystem | RELATION.CONTAINS | 2026-09-15 자동 적재 60건, 재실행 ID 동일 확인. `filesystem-array-fanout` 0건 — 원천(D42 .35) 재조회로 원인 확인: `device_fks`가 Computer 둘 이상인 마운트포인트가 현재 없음(`pair_cnt=mountpoint_cnt=60`). 적재 결함 아님. 배열 펼침 경로 자체는 미검증 |
 | OS_INSTALLED_ON_COMPUTER | OS → Computer | RELATION.INSTALLEDON | 2026-09-15 자동 적재 63건(물리 5·가상 58 분류쌍 모두 관측), 기존 수동 샘플 `ACTCIRELATIONID=6001` 유지·재실행 ID 동일 확인(멱등성) |
-| VM_VIRTUALIZES_HOST | VM → Host Computer | RELATION.VIRTUALIZES | 후보. 1:1 설정·SWAPPED·표시 검증 전 보류 |
+| HOST_VIRTUALIZES_VM | Host Computer → VM | RELATION.VIRTUALIZES | 의미 방향 확정. Maximo 저장 순서·1:1 설정·SWAPPED·표시 검증 전 보류 |
 | COMPUTER_CONTAINS_INTERFACE | Computer → Interface | RELATION.CONTAINS | Interface CI 미구현. 별도 유형 도입 후 |
 | INTERFACE_BINDS_IP | Interface → IP | RELATION.BINDSTO | Interface 도입·카디널리티·미연결 IP 처리 검토 후 |
 | COMPUTER_IP 직접 연결 | 미선정 | 미선정 | 명시 규칙 없음. 기존 코드의 이름만 빌려 연결하지 않음 |
@@ -22,21 +22,33 @@ Computer는 물리·가상 두 분류를 허용한다.
 OS → 물리 Computer의 단건 결과는 [검증 기록](../../knowledge/maximo/computer-ci-relations.md#oscomputer-승격-샘플-검증)을 참조한다.
 OS는 설치 사실을 매핑한다. device 연결만으로 실행 상태까지 확인한 것으로 보고 RUNSON을 함께 만들지 않는다.
 
-## 관계도 — 화살표는 저장 방향
+## 관계도 — 화살표는 토폴로지 의미 방향
 
 ```mermaid
-flowchart LR
-  C["Computer: 물리 / VM"] -->|"RELATION.CONTAINS"| D["Disk"]
-  C -->|"RELATION.CONTAINS"| F["Filesystem"]
+flowchart TB
+  subgraph C["COMPUTERSYSTEM · 물리 / VM"]
+    direction TB
+    H["COMPUTERSYSTEM<br/>(VIRTUAL HOST)"]
+    V["COMPUTERSYSTEM"]
+    H -.->|"RELATION.VIRTUALIZES"| V
+  end
+
   O["OS"] -->|"RELATION.INSTALLEDON"| C
-  V["VM"] -.->|"RELATION.VIRTUALIZES · 검토"| H["Host: 물리 / VM"]
+  C -->|"RELATION.CONTAINS"| D["Disk"]
+  C -->|"RELATION.CONTAINS"| F["Filesystem"]
   C -.->|"RELATION.CONTAINS · Interface 도입 후"| N["Network Interface"]
   N -.->|"RELATION.BINDSTO · 검토"| I["IP"]
 ```
 
 실선은 우선 구현 매핑, 점선은 보류·확장 후보다.
-VM→Host는 규칙의 저장 방향이며, 사용자 화면에 어떤 문장/방향으로 보일지는 별도 검증한다.
-표시할 관계의 선택은 수집·저장 규칙과 분리하고 이번 조사에서 UI 설정은 바꾸지 않는다.
+`COMPUTERSYSTEM · 물리 / VM`은 별도 CI 하나가 아니라 Device 본체 분류 범위를 묶어 보여 주는 영역이다.
+Virtual Host와 VM은 모두 그 영역의 Device CI이며, Host→VM 가상화 관계를 영역 안에서 표현한다.
+Disk·Filesystem·OS·Interface 관계는 두 역할과 중복 노드를 따로 그리지 않고 ComputerSystem 영역에 연결한다.
+가상화 관계는 사람이 읽는 의미에 맞춰 `Virtual Host → VIRTUALIZES → VM`으로 표시한다.
+D42 원천 참조는 반대로 VM의 `virtual_host_device_fk`가 Host의 `device_pk`를 가리킨다.
+현재 Maximo 규칙은 `SYS.VIRTUALCOMPUTERSYSTEM → C`, `SWAPPED=1`, `1:1`이므로
+ACTCIRELATION의 실제 SOURCECI·TARGETCI 순서는 적재·UI 검증 후 확정한다. 토폴로지 화살표를
+원천 FK 방향이나 물리 저장 순서로 해석하지 않는다.
 
 ## 실행 위치 — CI 본체 적재 이후 별도 단계
 
@@ -60,7 +72,7 @@ VM→Host는 규칙의 저장 방향이며, 사용자 화면에 어떤 문장/�
 
 - 관계의 실행 위치·실패 처리·재실행 방식을 하나로 통일하고, 관계만 독립 재실행할 수 있다.
 - 상대 CI가 뒤쪽 배치에 있어 누락되는 경우를 구조적으로 없앤다. 본체 task 안에서 저장하면
-  Computer를 먼저 실행하도록 명시적 순서를 걸어야 하고, VM→Host처럼 같은 유형 안의
+  Computer를 먼저 실행하도록 명시적 순서를 걸어야 하고, Host–VM처럼 같은 유형 안의
   선후 관계는 그 순서로도 해결되지 않는다.
 - 본체용 중복 제거와 관계의 연결 보존을 분리한다. 본체가 이미 축약한 결과를 관계에
   재사용하는 실수를 만들지 않는다.
@@ -114,12 +126,13 @@ relationnum    정확한 RELATION 코드. RELATION.CONTAINS와 CONTAINS를 구�
 | 상수 | 관계 | 연결 근거 | 매핑 정본 |
 | --- | --- | --- | --- |
 | OS_INSTALLED_ON_COMPUTER | OS → Computer | `deviceos_pk` · `device_fk` | [os.md](../../data-mapping/ci/types/os.md#6-관계-매핑--2026-09-15) |
-| COMPUTER_CONTAINS_DISK | Computer → Disk | Hard Disk 조건의 `part_pk` · `device_fk` | [computer.md](../../data-mapping/ci/types/computer.md#7-관계-매핑--2026-09-15) |
-| COMPUTER_CONTAINS_FILESYSTEM | Computer → Filesystem | `mountpoint_pk` · `device_fks` | [computer.md](../../data-mapping/ci/types/computer.md#7-관계-매핑--2026-09-15) |
-| VM_VIRTUALIZES_HOST | VM → Host | `device_pk` · `virtual_host_device_fk` | 보류 |
+| COMPUTER_CONTAINS_DISK | Computer → Disk | Hard Disk 조건의 `part_pk` · `device_fk` | [device.md](../../data-mapping/ci/types/device.md#7-관계-매핑--2026-09-15) |
+| COMPUTER_CONTAINS_FILESYSTEM | Computer → Filesystem | `mountpoint_pk` · `device_fks` | [device.md](../../data-mapping/ci/types/device.md#7-관계-매핑--2026-09-15) |
+| HOST_VIRTUALIZES_VM | Host → VM | VM의 `device_pk` · `virtual_host_device_fk`를 역방향 해석 | 보류. Maximo 저장 순서 검증 필요 |
 | INTERFACE_BINDS_IP | Interface → IP | `ipaddress_pk` · `netport_fk` | 보류 |
 
-상수 이름은 관계의 의미를 따르고, SQL은 연결 근거를 가진 원천에서 나온다.
+상수 이름과 관계 열은 토폴로지 의미를 따른다. SQL은 연결 근거를 가진 원천에서 나오므로
+Host→VM 관계도 VM 행의 `virtual_host_device_fk`를 읽어서 만든다.
 문서 정본은 기존 규약대로 출발 유형 문서가 소유하므로 SQL을 양쪽에 복사하지 않는다.
 
 수집 범위 필터는 각 페이지 SQL의 `WITH computer AS (...)` 안에 둔다.

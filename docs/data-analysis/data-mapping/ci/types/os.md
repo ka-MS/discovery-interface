@@ -72,7 +72,7 @@ LIMIT %d OFFSET %d
 
 적재 분류 `SYS.OPERATINGSYSTEM` · **대조 기준 `CI.OS`(CCI00013, 7개)**.
 속성 선택은 CI 계열을 기준선으로 삼는다. 선택 근거는 [OS 수집 설계](../../../design/ci/os.md) 3절.
-값이 없는 속성은 행을 만들지 않는다.
+해당 분류의 CLASSSPEC이 있는 속성은 값이 없어도 행을 만들어 값 컬럼을 NULL로 동기화한다.
 
 | ASSETATTRID | 한글 의미 | 값 컬럼 | 구분 | Source | 변환·조건 |
 | --- | --- | --- | --- | --- | --- |

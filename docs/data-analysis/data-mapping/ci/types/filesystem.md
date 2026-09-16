@@ -15,7 +15,7 @@
 | 분류 | `SYS.FILESYSTEM` 한 개. 로컬·원격·컨테이너를 구분하지 않는다 |
 | ACTCINUM | `D42:MOUNTPOINT:<mountpoint_pk>` |
 | 스펙 참조 | ACTCINUM·CLASSSTRUCTUREID는 본체와 동일, REFOBJECTID=ACTCIID |
-| 관계 | [Computer 출발 관계 매핑](computer.md#7-관계-매핑--2026-09-15)에 원천·분류쌍 대조 완료. 저장 구현·UI 검증은 별도 |
+| 관계 | [Computer 출발 관계 매핑](device.md#7-관계-매핑--2026-09-15)에 원천·분류쌍·저장 구현 완료. `ci-relation` 운영 적재·멱등성 검증 완료; CI 승격·UI 검증은 별도 |
 
 `SYS.LOCALFILESYSTEM`을 쓰지 않는다. 원천에 nfs·nfs4·overlay·VMFS·squashfs가 섞여 있어
 로컬 분류가 사실과 어긋난다. 두 분류의 속성 33개는 완전히 동일하며 계층상 형제다.
@@ -77,7 +77,7 @@ LIMIT %d OFFSET %d
 
 적재 분류 `SYS.FILESYSTEM` · **대조 기준 `CI.FILESYSTEM`(CCI00026, 16개)**.
 CI 기준 네 개에 `MODELOBJECT_LABEL`을 더한 다섯 개다. 선택 근거는 [Filesystem 수집 설계](../../../design/ci/filesystem.md) 3절.
-값이 없는 속성은 행을 만들지 않는다.
+해당 분류의 CLASSSPEC이 있는 속성은 값이 없어도 행을 만들어 값 컬럼을 NULL로 동기화한다.
 
 | ASSETATTRID | 한글 의미 | 값 컬럼 | 구분 | Source | 변환·조건 |
 | --- | --- | --- | --- | --- | --- |
@@ -96,5 +96,5 @@ CI 기준 네 개에 `MODELOBJECT_LABEL`을 더한 다섯 개다. 선택 근거�
 | 용량 단위 | **확정.** `MEASUREUNITID='MBYTE'`를 지정한다 |
 | `m.filesystem` | 93 / 133건 보유하나 대응 속성 없음. 추가 등록 필요. 이번 범위 제외 추천 |
 | MODELOBJECT_LABEL 승격 전달 | CI 계열 분류에 `MODELOBJECT_` 속성이 0개다. 누락될 수 있다. 미검증. ISSUE-11 |
-| 관계 | [Computer 출발 관계 매핑](computer.md#7-관계-매핑--2026-09-15)에 RELATION.CONTAINS의 원천 SQL·방향 정의. 배열 연결 쌍 보존 필요. 관계 저장·UI 검증 미완료. ISSUE-11 |
+| 관계 | [Computer 출발 관계 매핑](device.md#7-관계-매핑--2026-09-15)에 RELATION.CONTAINS의 원천 SQL·방향 정의. 배열 연결 쌍 보존 필요. 관계 저장·운영 멱등성 검증 완료, CI 승격·UI 검증 미완료. ISSUE-11 |
 | 승격 1:N 매핑 | `CI.FILESYSTEM`에 ACTCI 분류 둘이 걸린 유일한 경우. 동작 미검증. ISSUE-11 |

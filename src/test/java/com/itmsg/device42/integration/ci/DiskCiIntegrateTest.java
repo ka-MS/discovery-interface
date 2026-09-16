@@ -82,11 +82,13 @@ class DiskCiIntegrateTest {
     }
 
     @Test
-    void blankSerialCreatesNoSerialSpec() {
+    void missingSerialCreatesTemplateRowWithNullValue() {
         persist(disk(12, new BigDecimal("500"), "GB", null));
 
         assertThat(jdbc.queryForList("SELECT ASSETATTRID FROM MAXIMO.ACTCISPEC ORDER BY ASSETATTRID", String.class))
-                .containsExactly("DISKDRIVE_DISKSIZE", "MEDIAACCESSDEVICE_MODEL");
+                .containsExactly("DISKDRIVE_DISKSIZE", "MEDIAACCESSDEVICE_MODEL",
+                        "MEDIAACCESSDEVICE_SERIALNUMBER");
+        assertThat(text("MEDIAACCESSDEVICE_SERIALNUMBER")).isNull();
     }
 
     @Test

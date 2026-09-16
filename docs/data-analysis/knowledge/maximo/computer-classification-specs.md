@@ -67,7 +67,7 @@ MANAGEDSYSTEMNAME·SIGNATURE·SYSTEMBOARDUUID·UUID가 없다. 승격 시 상속
 ### Computer 추가 스펙·단위 재대조 — 2026-09-14
 
 [BIOS 속성·단위 조회](../../exploration-queries/maximo/computer-ci-mapping-audit.sql)와
-[Computer 매핑](../../data-mapping/ci/types/computer.md#5-조회-sql)의 템플릿 SELECT를 실행했다.
+[Device 매핑](../../data-mapping/ci/types/device.md#5-조회-sql)의 템플릿 SELECT를 실행했다.
 결과: `local/db-access-kit/work/computer-ci-mapping-20260914-maximo/`.
 
 - 두 ACTCI 분류 모두 BIOSMANUFACTURER·ROMVERSION(ALN), CPUCORESINSTALLED(NUMERIC)가 있다. 접두어는 COMPUTERSYSTEM_다.

@@ -1,7 +1,7 @@
 # CI 공통 정의 캐시
 
 > 결정: 2026-09-14 · 사용 분류 목록에 따른 실행 단위 캐시와 명시적 추가 속성 경로.
-> Computer 필드·조회 SQL 정본: [Computer 매핑](../../data-mapping/ci/types/computer.md).
+> Device 필드·조회 SQL 정본: [Device 매핑](../../data-mapping/ci/types/device.md).
 
 ## 구성
 
@@ -12,7 +12,7 @@
 | CiDefinitionLoader | 선택한 ACTCI 분류·스펙과 전체 ASSETATTRIBUTE를 조회 |
 | CiDefinitionCache | 실행 동안 공유하는 읽기 전용 스냅샷. DB 접근 없음 |
 | CiIntegrationJob | 실행마다 캐시 한 번 생성, 같은 객체를 모든 작업에 전달 |
-| ComputerCiIntegrate | getData → mapData → putData. 정의는 전달받은 캐시 참조 |
+| DeviceCiIntegrate | getData → mapData → putData. 정의는 전달받은 캐시 참조 |
 
 분류는 분류명, 스펙은 (CLASSSTRUCTUREID, ASSETATTRID, SECTION), 속성은 숫자
 ASSETATTRIBUTEID로 조회한다. NULL 섹션을 빈 문자열로 바꾸지 않는다.

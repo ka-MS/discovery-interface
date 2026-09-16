@@ -1,7 +1,7 @@
 package com.itmsg.device42.integration.ci;
 
 import com.itmsg.device42.config.Device42ConnectionFactory;
-import com.itmsg.device42.dto.device42.ci.ComputerSource;
+import com.itmsg.device42.dto.device42.ci.DeviceSource;
 import com.itmsg.device42.enums.ci.CiClassification;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,9 +21,9 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-class ComputerCiIntegrateTest {
+class DeviceCiIntegrateTest {
     private JdbcTemplate jdbc;
-    private ComputerCiIntegrate integration;
+    private DeviceCiIntegrate integration;
     private CiDefinitionLoader definitionLoader;
     private static final List<String> TEXT = List.of(
             "NAME", "SERIALNUMBER", "UUID", "MANUFACTURER", "MODEL", "CPUTYPE", "ARCHITECTURE",
@@ -37,18 +37,21 @@ class ComputerCiIntegrateTest {
         new ResourceDatabasePopulator(new ClassPathResource("ci/schema.sql")).execute(dataSource);
         jdbc = spy(new JdbcTemplate(dataSource));
         definitionLoader = new CiDefinitionLoader(jdbc);
-        integration = new ComputerCiIntegrate(mock(Device42ConnectionFactory.class), new ActCiWriter(jdbc), new CiSpecMapper());
+        integration = new DeviceCiIntegrate(mock(Device42ConnectionFactory.class), new ActCiWriter(jdbc), new CiSpecMapper());
         seedDefinitions();
     }
 
     private void seedDefinitions() {
-        jdbc.update("INSERT INTO MAXIMO.CLASSSTRUCTURE VALUES ('PHYS','SYS.COMPUTERSYSTEM'),('VM','SYS.VIRTUALCOMPUTERSYSTEM')");
-        jdbc.update("INSERT INTO MAXIMO.CLASSUSEWITH VALUES ('PHYS','ACTCI'),('VM','ACTCI')");
+        jdbc.update("INSERT INTO MAXIMO.CLASSSTRUCTURE VALUES "
+                + "('PHYS','SYS.COMPUTERSYSTEM'),('VM','SYS.VIRTUALCOMPUTERSYSTEM'),"
+                + "('SWITCH','SYS.GENERICSWITCH')");
+        jdbc.update("INSERT INTO MAXIMO.CLASSUSEWITH VALUES "
+                + "('PHYS','ACTCI'),('VM','ACTCI'),('SWITCH','ACTCI')");
         jdbc.update("INSERT INTO MAXIMO.MEASUREUNIT VALUES ('GBYTE'),('MBYTE'),('GHZ'),('MHZ')");
         List<String> attributes = new ArrayList<>(TEXT);
         attributes.addAll(NUMBER);
         long templateId = 100;
-        for (String classId : List.of("PHYS", "VM")) {
+        for (String classId : List.of("PHYS", "VM", "SWITCH")) {
             for (String suffix : attributes) {
                 String attribute = "COMPUTERSYSTEM_" + suffix;
                 long id = templateId++;
@@ -66,13 +69,50 @@ class ComputerCiIntegrateTest {
                         """, id, id, classId, attribute);
             }
         }
+        jdbc.update("""
+                INSERT INTO MAXIMO.ASSETATTRIBUTE (ASSETATTRIBUTEID,ASSETATTRID,DATATYPE)
+                VALUES (1900,'GENERICCOMPUTERSYSTEM_GENERICTYPE','ALN')
+                """);
+        jdbc.update("""
+                INSERT INTO MAXIMO.CLASSSPEC
+                    (CLASSSTRUCTUREID,CLASSSPECID,ASSETATTRID,ASSETATTRIBUTEID)
+                VALUES ('SWITCH',1900,'GENERICCOMPUTERSYSTEM_GENERICTYPE',1900)
+                """);
+        jdbc.update("""
+                INSERT INTO MAXIMO.CLASSSPECUSEWITH
+                    (CLASSSPECID,OBJECTNAME,SEQUENCE,MANDATORY,USEINSPEC,CLASSSTRUCTUREID,ASSETATTRID)
+                VALUES (1900,'ACTCI',1900,0,1,'SWITCH','GENERICCOMPUTERSYSTEM_GENERICTYPE')
+                """);
     }
 
-    private ComputerSource source(long id, String type, String name, BigDecimal ram) {
-        return new ComputerSource(id, type, name, "description", "serial", "uuid",
+    private DeviceSource source(long id, String type, String name, BigDecimal ram) {
+        return new DeviceSource(id, type, "physical".equals(type) ? "Generic" : null, false,
+                null, null, null, null, name, "description", "serial", "uuid",
                 "2026-09-14 00:00:00.123456+00", "model", "manufacturer", ram, "GB",
                 2, 12, new BigDecimal("2.40"), "GHz", "Xeon", "x86_64",
                 "001122334455", "vm-internal-id", "BIOS vendor", "1.2", "11/12/2021");
+    }
+
+    private DeviceSource switchSource(long id, String networkKind, Integer kindCount,
+                                      Integer clusterCount) {
+        DeviceSource source = source(id, "physical", "Switch", null);
+        return new DeviceSource(source.devicePk(), source.type(), "Rackable", true,
+                11L, networkKind, kindCount, clusterCount, source.name(), source.notes(),
+                source.serialNo(), source.uuid(), source.lastDiscovered(), source.model(),
+                source.manufacturer(), source.ram(), source.ramUnit(), source.totalCpus(),
+                source.corePerCpu(), source.cpuSpeed(), source.cpuSpeedUnit(), source.cpuType(),
+                source.architecture(), "aabbccddeeff", source.vmId(), source.biosManufacturer(),
+                source.biosVersion(), source.biosReleaseDate());
+    }
+
+    private DeviceSource withPhysicalSubtype(DeviceSource source, String physicalSubtype) {
+        return new DeviceSource(source.devicePk(), source.type(), physicalSubtype,
+                source.networkDevice(), source.clusterPk(), source.networkKind(), source.networkKindCount(),
+                source.clusterCount(), source.name(), source.notes(), source.serialNo(), source.uuid(),
+                source.lastDiscovered(), source.model(), source.manufacturer(), source.ram(), source.ramUnit(),
+                source.totalCpus(), source.corePerCpu(), source.cpuSpeed(), source.cpuSpeedUnit(),
+                source.cpuType(), source.architecture(), source.primaryMac(), source.vmId(),
+                source.biosManufacturer(), source.biosVersion(), source.biosReleaseDate());
     }
 
     @Test
@@ -106,6 +146,39 @@ class ComputerCiIntegrateTest {
                 SELECT COUNT(*) FROM MAXIMO.ACTCISPEC WHERE
                     (ALNVALUE IS NOT NULL AND NUMVALUE IS NOT NULL) OR TABLEVALUE IS NOT NULL
                 """, Integer.class)).isZero();
+    }
+
+    @Test
+    void mapsOnlyUnambiguousSwitchesToTheGenericSwitchClassification() {
+        var definitions = definitionLoader.load();
+        persist(switchSource(9, "Switch", 1, 1), definitions);
+
+        assertThat(jdbc.queryForObject(
+                "SELECT CLASSSTRUCTUREID FROM MAXIMO.ACTCI WHERE ACTCINUM='D42:DEVICE:9'",
+                String.class)).isEqualTo("SWITCH");
+        assertThat(jdbc.queryForObject("""
+                SELECT ALNVALUE FROM MAXIMO.ACTCISPEC
+                WHERE ACTCINUM='D42:DEVICE:9'
+                  AND ASSETATTRID='GENERICCOMPUTERSYSTEM_GENERICTYPE'
+                """, String.class)).isEqualTo("Switch");
+        assertThat(text("D42:DEVICE:9", "PRIMARYMACADDRESS", "ALNVALUE"))
+                .isEqualTo("aabbccddeeff");
+        assertThat(jdbc.queryForObject("""
+                SELECT COUNT(*) FROM MAXIMO.ACTCISPEC
+                WHERE ACTCINUM='D42:DEVICE:9' AND ASSETATTRID='COMPUTERSYSTEM_VMID'
+                """, Integer.class)).isZero();
+    }
+
+    @Test
+    void skipsRoutersMissingKindsConflictsAndPrinters() {
+        var printer = withPhysicalSubtype(switchSource(13, "Printer", 1, 1), "Network Printer");
+        var mapped = integration.mapData(List.of(
+                switchSource(10, "Router", 1, 1),
+                switchSource(11, null, 0, 1),
+                switchSource(12, "Switch", 1, 2),
+                printer), definitionLoader.load());
+
+        assertThat(mapped).isEmpty();
     }
 
     @Test
@@ -208,14 +281,14 @@ class ComputerCiIntegrateTest {
     @Test
     void readsAllOffsetsEvenWhenAnEntirePageFailsMapping() {
         List<Long> offsets = new ArrayList<>();
-        var task = new ComputerCiIntegrate(mock(Device42ConnectionFactory.class), new ActCiWriter(jdbc), new CiSpecMapper()) {
+        var task = new DeviceCiIntegrate(mock(Device42ConnectionFactory.class), new ActCiWriter(jdbc), new CiSpecMapper()) {
             @Override public long getTotalCount() {
                 return 2001;
             }
-            @Override public List<ComputerSource> getData(long offset, int limit) {
+            @Override public List<DeviceSource> getData(long offset, int limit) {
                 offsets.add(offset);
                 assertThat(limit).isEqualTo(offset == 2000 ? 1 : 1000);
-                ComputerSource row = source(offset + 1, "physical", "Host", BigDecimal.ONE);
+                DeviceSource row = source(offset + 1, "physical", "Host", BigDecimal.ONE);
                 if (offset == 1000) {
                     row = withTimeAndUnits(row, "invalid-time", "GB", "GHz");
                 }
@@ -252,7 +325,7 @@ class ComputerCiIntegrateTest {
         when(rs.getLong("device_pk")).thenReturn(7L, 7L, 8L, 8L);
         when(rs.getBigDecimal("total_cpus")).thenReturn(new BigDecimal("1.5"), BigDecimal.ONE);
 
-        var task = new ComputerCiIntegrate(factory, new ActCiWriter(jdbc), new CiSpecMapper());
+        var task = new DeviceCiIntegrate(factory, new ActCiWriter(jdbc), new CiSpecMapper());
         var rows = task.getData(100, 100);
 
         assertThat(rows).hasSize(1);
@@ -261,16 +334,17 @@ class ComputerCiIntegrateTest {
     }
 
     @Test
-    void missingSpecValueDoesNotInventZeroOrClearExistingValue() {
+    void missingSpecValueCreatesOrUpdatesTemplateRowWithNullValue() {
         var definitions = definitionLoader.load();
         persist(source(7, "physical", "Host", BigDecimal.TEN), definitions);
         persist(source(7, "physical", "Host", null), definitions);
-        assertThat(value("D42:DEVICE:7", "MEMORYSIZE", "NUMVALUE")).isEqualByComparingTo("10");
+        assertThat(value("D42:DEVICE:7", "MEMORYSIZE", "NUMVALUE")).isNull();
         persist(source(8, "virtual", "Empty", null), definitions);
         assertThat(jdbc.queryForObject("""
                 SELECT COUNT(*) FROM MAXIMO.ACTCISPEC WHERE ACTCINUM='D42:DEVICE:8'
                   AND ASSETATTRID='COMPUTERSYSTEM_MEMORYSIZE'
-                """, Integer.class)).isZero();
+                """, Integer.class)).isEqualTo(1);
+        assertThat(value("D42:DEVICE:8", "MEMORYSIZE", "NUMVALUE")).isNull();
     }
 
     @Test
@@ -424,17 +498,19 @@ class ComputerCiIntegrateTest {
         assertThat(text("D42:DEVICE:7", "SERIALNUMBER", "ALNVALUE")).isEqualTo("serial");
     }
 
-    private void persist(ComputerSource source, CiDefinitionCache definitions) {
+    private void persist(DeviceSource source, CiDefinitionCache definitions) {
         integration.putData(integration.mapData(List.of(source), definitions));
     }
 
-    private ComputerSource withTimeAndUnits(ComputerSource source, String lastDiscovered,
-                                             String ramUnit, String speedUnit) {
-        return new ComputerSource(source.devicePk(), source.type(), source.name(), source.notes(),
-                source.serialNo(), source.uuid(), lastDiscovered, source.model(), source.manufacturer(),
-                source.ram(), ramUnit, source.totalCpus(), source.corePerCpu(), source.cpuSpeed(), speedUnit,
-                source.cpuType(), source.architecture(), source.primaryMac(), source.vmId(),
-                source.biosManufacturer(), source.biosVersion(), source.biosReleaseDate());
+    private DeviceSource withTimeAndUnits(DeviceSource source, String lastDiscovered,
+                                          String ramUnit, String speedUnit) {
+        return new DeviceSource(source.devicePk(), source.type(), source.physicalSubtype(),
+                source.networkDevice(), source.clusterPk(), source.networkKind(), source.networkKindCount(),
+                source.clusterCount(), source.name(), source.notes(), source.serialNo(), source.uuid(),
+                lastDiscovered, source.model(), source.manufacturer(), source.ram(), ramUnit,
+                source.totalCpus(), source.corePerCpu(), source.cpuSpeed(), speedUnit, source.cpuType(),
+                source.architecture(), source.primaryMac(), source.vmId(), source.biosManufacturer(),
+                source.biosVersion(), source.biosReleaseDate());
     }
 
     private void rejectBiosVersion() {

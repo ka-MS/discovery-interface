@@ -125,13 +125,14 @@ class IpCiIntegrateTest {
     }
 
     @Test
-    void missingLabelCreatesNoLabelSpec() {
+    void missingLabelCreatesTemplateRowWithNullValue() {
         integration.putData(integration.mapData(
                 List.of(ip(4, "10.0.0.1", "db-01", null)), definitionLoader.load()));
 
         assertThat(jdbc.queryForList("SELECT ASSETATTRID FROM MAXIMO.ACTCISPEC ORDER BY ASSETATTRID", String.class))
                 .containsExactly("IPADDRESS_DOTNOTATION", "IPADDRESS_MANAGEDSYSTEMNAME",
-                        "IPADDRESS_STRINGNOTATION");
+                        "IPADDRESS_STRINGNOTATION", "MODELOBJECT_LABEL");
+        assertThat(text("MODELOBJECT_LABEL")).isNull();
     }
 
     private static IpSource ip(long pk, String address, String deviceName, String label) {

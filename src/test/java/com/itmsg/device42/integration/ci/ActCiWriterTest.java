@@ -62,15 +62,22 @@ class ActCiWriterTest {
     }
 
     @Test
-    void skipsClassificationChangeWithoutTouchingExistingRow() {
+    void updatesClassificationAndSpecsWithoutChangingGeneratedIds() {
         writer.write(List.of(ci("D42:OS:1", "RHEL", "OSCLASS", spec("D42:OS:1", "OSCLASS", "OS_NAME", "RHEL"))));
+        long parentId = jdbc.queryForObject("SELECT ACTCIID FROM MAXIMO.ACTCI", Long.class);
+        long specId = jdbc.queryForObject("SELECT ACTCISPECID FROM MAXIMO.ACTCISPEC", Long.class);
 
-        int loaded = writer.write(List.of(ci("D42:OS:1", "Windows", "OTHERCLASS", spec("D42:OS:1", "OTHERCLASS", "OS_NAME", "Windows"))));
+        int loaded = writer.write(List.of(ci("D42:OS:1", "Windows", "OTHERCLASS",
+                spec("D42:OS:1", "OTHERCLASS", "OS_NAME", 200L, "Windows"))));
 
-        assertThat(loaded).isZero();
-        assertThat(jdbc.queryForObject("SELECT CLASSSTRUCTUREID FROM MAXIMO.ACTCI", String.class)).isEqualTo("OSCLASS");
-        assertThat(jdbc.queryForObject("SELECT ACTCINAME FROM MAXIMO.ACTCI", String.class)).isEqualTo("RHEL");
-        assertThat(jdbc.queryForObject("SELECT ALNVALUE FROM MAXIMO.ACTCISPEC", String.class)).isEqualTo("RHEL");
+        assertThat(loaded).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT ACTCIID FROM MAXIMO.ACTCI", Long.class)).isEqualTo(parentId);
+        assertThat(jdbc.queryForObject("SELECT CLASSSTRUCTUREID FROM MAXIMO.ACTCI", String.class)).isEqualTo("OTHERCLASS");
+        assertThat(jdbc.queryForObject("SELECT ACTCINAME FROM MAXIMO.ACTCI", String.class)).isEqualTo("Windows");
+        assertThat(jdbc.queryForObject("SELECT ACTCISPECID FROM MAXIMO.ACTCISPEC", Long.class)).isEqualTo(specId);
+        assertThat(jdbc.queryForObject("SELECT CLASSSTRUCTUREID FROM MAXIMO.ACTCISPEC", String.class)).isEqualTo("OTHERCLASS");
+        assertThat(jdbc.queryForObject("SELECT CLASSSPECID FROM MAXIMO.ACTCISPEC", Long.class)).isEqualTo(200L);
+        assertThat(jdbc.queryForObject("SELECT ALNVALUE FROM MAXIMO.ACTCISPEC", String.class)).isEqualTo("Windows");
     }
 
     @Test
@@ -107,7 +114,12 @@ class ActCiWriterTest {
     }
 
     private static ActCiSpecUpsert spec(String actCiNum, String classId, String attributeId, String value) {
-        return new ActCiSpecUpsert(actCiNum, classId, attributeId, 100L, null, 10, false,
+        return spec(actCiNum, classId, attributeId, 100L, value);
+    }
+
+    private static ActCiSpecUpsert spec(String actCiNum, String classId, String attributeId,
+                                        long classSpecId, String value) {
+        return new ActCiSpecUpsert(actCiNum, classId, attributeId, classSpecId, null, 10, false,
                 null, null, null, value, (BigDecimal) null, "Device42", CHANGED);
     }
 }

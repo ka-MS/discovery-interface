@@ -71,11 +71,15 @@ class FilesystemCiIntegrateTest {
     }
 
     @Test
-    void missingCapacityCreatesNoCapacitySpec() {
+    void missingValuesCreateTemplateRowsWithNullValues() {
         persist(new FilesystemSource(5, 100, "/boot", "ext4", null, null, null, "2026-09-15T00:00:00Z"));
 
         assertThat(jdbc.queryForList("SELECT ASSETATTRID FROM MAXIMO.ACTCISPEC ORDER BY ASSETATTRID", String.class))
-                .containsExactly("FILESYSTEM_MOUNTPOINT", "FILESYSTEM_TYPE");
+                .containsExactly("FILESYSTEM_AVAILABLESPACE", "FILESYSTEM_CAPACITY",
+                        "FILESYSTEM_MOUNTPOINT", "FILESYSTEM_TYPE", "MODELOBJECT_LABEL");
+        assertThat(number("FILESYSTEM_CAPACITY")).isNull();
+        assertThat(number("FILESYSTEM_AVAILABLESPACE")).isNull();
+        assertThat(text("MODELOBJECT_LABEL")).isNull();
     }
 
     @Test

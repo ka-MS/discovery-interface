@@ -22,7 +22,7 @@
 - 양 끝의 실제 CLASSSTRUCTUREID와 관계 코드로 RELATIONRULES를 대조한다.
 - 물리 FK가 없으므로 DB가 양 끝 존재를 자동 보장하지 않는다.
 
-Computer→Disk·Filesystem은 [Computer](types/computer.md#7-관계-매핑--2026-09-15),
+Computer→Disk·Filesystem은 [Device](types/device.md#7-관계-매핑--2026-09-15),
 OS→Computer는 [OS](types/os.md#6-관계-매핑--2026-09-15)를 참조한다.
 DB Instance→DB의 기존 별도 검토는 [DB Instance](types/database-instance.md)를 유지하며,
 Computer 관계 조사 결과를 DB 관계의 승인으로 해석하지 않는다.
