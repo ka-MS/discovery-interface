@@ -27,7 +27,15 @@ public enum CiRelationSource {
      * 경유하는 Application Component는 관계 노드로 만들지 않는다.
      * 엔진별 네 분류가 모두 같은 규칙을 가지므로 출발 분류로 분기하지 않는다.
      */
-    DB_INSTANCE_RUNS_ON_DEVICE("RELATION.RUNSON", Queries.DB_INSTANCE_COUNT, Queries.DB_INSTANCE_PAGE);
+    DB_INSTANCE_RUNS_ON_DEVICE("RELATION.RUNSON", Queries.DB_INSTANCE_COUNT, Queries.DB_INSTANCE_PAGE),
+
+    /**
+     * Computer → IP. 근거: view_ipaddress_device_v2 의 device_fk·ipaddress_fk.
+     * 접두어 없는 USES 는 CDM 표준 밖의 로컬 확장이다. 표준 경로는 IPINTERFACE 를 경유하지만
+     * 원천에 그 계층이 없고 netport_fk 가 없는 IP 가 10~16% 라 연결이 줄어든다.
+     * 사유와 대조는 design/ci/relations.md 의 IP 절에 있다.
+     */
+    COMPUTER_USES_IP("USES", Queries.COMPUTER_IP_COUNT, Queries.COMPUTER_IP_PAGE);
 
     private final String relationNum;
     private final String countQuery;
@@ -179,6 +187,29 @@ public enum CiRelationSource {
                 FROM view_databaseinstance_v2 i
                 JOIN view_appcomp_v1 a ON a.appcomp_pk = i.appcomp_fk
                 JOIN computer c ON c.device_pk = a.device_fk
+                ORDER BY sourceci, targetci
+                LIMIT %d OFFSET %d
+                """;
+
+        /** 장비-IP 연결은 배열 전개 대신 전용 연결 뷰를 쓴다. 같은 쌍 수를 돌려준다. */
+        static final String COMPUTER_IP_COUNT = """
+                SELECT COUNT(*)
+                FROM view_ipaddress_device_v2 x
+                JOIN view_device_v2 d ON d.device_pk = x.device_fk
+                WHERE
+                """ + CiSourceFilter.COMPUTER;
+
+        static final String COMPUTER_IP_PAGE = """
+                WITH computer AS (
+                    SELECT d.device_pk
+                    FROM view_device_v2 d
+                    WHERE
+                """ + CiSourceFilter.COMPUTER + """
+                )
+                SELECT 'D42:DEVICE:' || CAST(c.device_pk AS varchar) AS sourceci,
+                       'D42:IPADDRESS:' || CAST(x.ipaddress_fk AS varchar) AS targetci
+                FROM view_ipaddress_device_v2 x
+                JOIN computer c ON c.device_pk = x.device_fk
                 ORDER BY sourceci, targetci
                 LIMIT %d OFFSET %d
                 """;

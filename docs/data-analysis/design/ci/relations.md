@@ -20,7 +20,7 @@
 | OS_INSTALLED_ON_COMPUTER | OS → Computer | RELATION.INSTALLEDON | 2026-09-15 자동 적재 63건(물리 5·가상 58 분류쌍 모두 관측), 기존 수동 샘플 `ACTCIRELATIONID=6001` 유지·재실행 ID 동일 확인(멱등성) |
 | HOST_VIRTUALIZES_VM | Host Computer → VM | VIRTUALIZES | 코드·원천 검증 완료. `.68` 3건, `.35` 55건. 2026-09-16 실제 관계 연결 검증 완료 |
 | DB_INSTANCE_RUNS_ON_DEVICE | DB Instance → Device(Computer) | RELATION.RUNSON | 2026-09-16 구현 완료. 분류쌍 규칙·원천 경로 확인. `.68` 0건(미해결 1), `.35` 3건. 실제 적재 검증 전 |
-| COMPUTER_USES_IP | Computer/VM → IP | USES | 2026-09-17 신규 관계와 `N:N` 규칙 2개 등록·DB 재조회 완료. `view_ipaddress_device_v2` 직접 쌍 사용. 코드·실적재 검증 전 |
+| COMPUTER_USES_IP | Computer/VM → IP | USES | 2026-09-17 신규 관계와 `N:N` 규칙 2개 등록. `view_ipaddress_device_v2` 직접 쌍 사용. 같은 날 `./run.sh ci-relation` 자동 적재 118건 (가상 112·물리 6 분류쌍 모두 관측), 조회=적재 |
 
 Computer는 물리·가상 두 분류를 허용한다.
 OS → 물리 Computer의 단건 결과는 [검증 기록](../../knowledge/maximo/computer-ci-relations.md#oscomputer-승격-샘플-검증)을 참조한다.
@@ -156,7 +156,7 @@ relationnum    정확한 RELATION 코드. RELATION.CONTAINS와 CONTAINS를 구�
 | COMPUTER_CONTAINS_FILESYSTEM | Computer → Filesystem | `mountpoint_pk` · `device_fks` | [device.md](../../data-mapping/ci/types/device.md#7-관계-매핑--2026-09-15) |
 | HOST_VIRTUALIZES_VM | Host → VM | VM의 `device_pk` · `virtual_host_device_fk`를 역방향 해석 | [device.md](../../data-mapping/ci/types/device.md#7-관계-매핑--2026-09-15) |
 | DB_INSTANCE_RUNS_ON_DEVICE | DB Instance → Device | `databaseinstance.appcomp_fk` → `appcomp.device_fk` | [database-instance.md](../../data-mapping/ci/types/database-instance.md#5-관계) |
-| COMPUTER_USES_IP | Computer/VM → IP | `view_ipaddress_device_v2.device_fk` · `ipaddress_fk` | IP 매핑 문서 후속 갱신 |
+| COMPUTER_USES_IP | Computer/VM → IP | `view_ipaddress_device_v2.device_fk` · `ipaddress_fk` | [device.md](../../data-mapping/ci/types/device.md#computer--ip--2026-09-17) |
 
 상수 이름과 관계 열은 토폴로지 의미를 따른다. SQL은 연결 근거를 가진 원천에서 나오므로
 Host→VM 관계도 VM 행의 `virtual_host_device_fk`를 읽어서 만든다.

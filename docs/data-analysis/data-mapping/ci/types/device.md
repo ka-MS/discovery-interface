@@ -335,6 +335,7 @@ COMPUTER_CONTAINS_FILESYSTEM 60건 모두 조회=적재이고, 재실행에서 `
 | 디스크 포함 | D42:DEVICE:<device_fk> | D42:PART:<part_pk> | RELATION.CONTAINS | Disk 도메인 |
 | 파일시스템 포함 | D42:DEVICE:<각 device_fks 원소> | D42:MOUNTPOINT:<mountpoint_pk> | RELATION.CONTAINS | Filesystem 도메인 |
 | Host가 VM을 가상화 | D42:DEVICE:<virtual_host_device_fk> | D42:DEVICE:<VM device_pk> | VIRTUALIZES | Device 도메인 |
+| IP 사용 | D42:DEVICE:<device_fk> | D42:IPADDRESS:<ipaddress_fk> | USES | Device 도메인 |
 
 Disk·Filesystem 관계의 출발 분류는 SYS.COMPUTERSYSTEM 또는 SYS.VIRTUALCOMPUTERSYSTEM,
 도착 분류는 각각 DEV.DISKDRIVE, SYS.FILESYSTEM이다.
@@ -365,7 +366,7 @@ SELECT DISTINCT 'D42:DEVICE:' || CAST(c.device_pk AS varchar),
        'RELATION.CONTAINS'
 FROM view_mountpoint_v2 m
 JOIN computer c ON c.device_pk=ANY(m.device_fks)
-WHERE (m.fstype_name IS NULL OR m.fstype_name NOT IN ('overlay','devtmpfs','squashfs','efivarfs'))
+WHERE (m.fstype_name IS NULL OR m.fstype_name NOT IN ('overlay','squashfs','efivarfs'))
 ORDER BY sourceci,targetci;
 ```
 
@@ -395,3 +396,43 @@ ORDER BY sourceci,targetci;
 관계 단계가 본체 적재 이후에 실행되므로 뒤쪽 배치의 호스트를 놓치지 않는다.
 `host_chassis_device_fk`, `vm_manager_device_fk`를 같은 관계로 대체하지 않는다.
 실제 Maximo 적재·재실행·UI·승격 검증은 아직 수행하지 않았다.
+
+### Computer → IP — 2026-09-17
+
+출발 분류는 `SYS.COMPUTERSYSTEM` 또는 `SYS.VIRTUALCOMPUTERSYSTEM`, 도착은 `NET.IPADDRESS`다.
+관계 코드는 **접두어 없는 `USES`** 이며 `RELATION.USES`가 아니다. 두 분류쌍 모두 `N:N`,
+`CONTAINMENT=0`, `REVRELATIONSHIP=0`, `SWAPPED=0`이다. 공유 IP가 여러 장비에 걸리는 경우를
+`N:N`이 그대로 표현한다.
+
+원천은 장비-IP 연결 전용 뷰를 쓴다. `view_ipaddress_v2.device_fks` 배열을 펼쳐도 같은 쌍이
+나오지만(양쪽 서버에서 건수 일치 확인) 연결 뷰가 의도를 직접 드러낸다.
+
+```sql
+WITH computer AS (SELECT d.device_pk FROM view_device_v2 d
+WHERE d.type IN ('physical','virtual')
+AND (d.network_device=false OR d.network_device IS NULL)
+AND ((d.type='physical' AND d.physicalsubtype IN ('Generic','Rackable','Blade','WorkStation','ThinClient','Laptop'))
+OR (d.type='virtual' AND d.virtualsubtype IN ('Internal VM','Amazon EC2 Instance','VMWare','Hyper-V'))))
+SELECT 'D42:DEVICE:' || CAST(c.device_pk AS varchar) AS sourceci,
+       'D42:IPADDRESS:' || CAST(x.ipaddress_fk AS varchar) AS targetci,
+       'USES' AS relationnum
+FROM view_ipaddress_device_v2 x
+JOIN computer c ON c.device_pk=x.device_fk
+ORDER BY sourceci,targetci;
+```
+
+2026-09-17 실행 결과는 `.68` 51쌍(IP 50 · Computer 33), `.35` 118쌍(IP 97 · Computer 64)이다.
+쌍이 IP 수보다 많은 것은 공유 IP 때문이며 `.35`에서 21건이 그렇다.
+
+같은 날 `./run.sh ci-relation`으로 `.35` 기준 118건을 적재했다. 조회=적재이고 분류쌍은
+`SYS.VIRTUALCOMPUTERSYSTEM → NET.IPADDRESS` 112건, `SYS.COMPUTERSYSTEM → NET.IPADDRESS` 6건으로
+등록한 두 규칙 모두 관측됐다. 같은 실행에서 `RELATION.CONTAINS`가 89건이 됐다 —
+`devtmpfs`를 수집 대상으로 되돌려 Filesystem 관계가 60 → 70건이 된 결과다(Disk 19 + Filesystem 70).
+
+관계 쌍에 본체 전용 `DISTINCT ON`을 적용하지 않는다. IP 본체는 원천 PK마다 하나지만
+관계는 (장비, IP)마다 하나다.
+
+`USES`는 CDM 표준 밖의 로컬 확장이다. 표준 경로는 `NET.IPINTERFACE`를 경유하며, 그 경로를
+택하지 않은 이유는 [관계 설계](../../../design/ci/relations.md)와
+[네트워크 CI 모델](../../../knowledge/maximo/network-ci-model.md)에 있다.
+`netport_fk`가 없는 IP는 본체만 남기고 Computer와 연결하지 않는다.
