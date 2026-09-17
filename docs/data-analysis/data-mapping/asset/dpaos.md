@@ -2,7 +2,7 @@
 
 배치된 자산 컴퓨터 운영 체제
 
-> Target: MAXIMO.DPAOS · ASSETCLASS: COMPUTER · 구현: DpaOsIntegrate.java
+> Target: MAXIMO.DPAOS · ASSETCLASS: COMPUTER · 구현: [OsImport](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/asset/os/OsImport.java) · [OsQuery](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/asset/os/OsQuery.java) · [OsMapper](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/asset/os/OsMapper.java) · [DpaOsWriter](../../../../src/main/java/com/itmsg/device42/maximo/asset/DpaOsWriter.java)
 > 관측 2026-08-27 · Device42 192.168.1.35 · 192.168.2.68 / Maximo BLUDB
 
 ## 1. 관계

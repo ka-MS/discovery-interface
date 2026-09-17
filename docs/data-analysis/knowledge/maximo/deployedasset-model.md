@@ -120,5 +120,5 @@ Device42 적재는 아래 표처럼 원천 PK를 Maximo ID로 직접 사용한�
 
 - `NODEID` 는 Device42 `view_device_v2.device_pk` 다.
 - 현행 적재의 MERGE 키는 `NODEID` 다.
-  근거: `DeployedAssetIntegrate.java` `MERGE_DEPLOYED_ASSET_QUERY`
+  근거: `DeployedAssetWriter.java` `MERGE_DEPLOYED_ASSET_QUERY`
 - `SOURCEID` 에는 Device42 `device_pk` 가 들어간다.

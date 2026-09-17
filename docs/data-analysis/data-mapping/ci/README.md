@@ -38,16 +38,18 @@ OS·Disk·Filesystem·IP의 원천 관측은 [OS·Disk·Filesystem·IP 원천 �
 | --- | --- | --- |
 | Device | [device.md](types/device.md) | Computer·VM·Switch ACTCI 구현·D42 양 서버 검증 완료. [기준정보 설계](../../design/ci/device-reference-data.md) 완료, MAS UI 적용·실제 승격 필요; Printer 코드·Router 미지원 |
 | Database | [database.md](types/database.md) | 원천 10컬럼 사용처·SQL 작성; 본체 이름·메모·분류, 이름 속성 대응. 추가 속성·적용 설정·필수값 미결 |
-| Database Instance | [database-instance.md](types/database-instance.md) | 원천 9컬럼·Resource 보강·SQL 작성; 본체 이름·메모·분류, 이름·제품명·버전 문자열 속성 대응. 추가 속성·관계·필수값 미결 |
+| Database Instance | [database-instance.md](types/database-instance.md) | 엔진별 본체·스펙과 Device 관계 구현. 실제 검증 범위는 유형 문서 참조 |
 | OS | [os.md](types/os.md) | 본체·스펙 적재 구현 및 자동 테스트 완료. 분류 SYS.OPERATINGSYSTEM, 속성 5개(대조 기준 CI.OS). 관계 미적재. EOL·EOS 대응 속성 없음 |
 | Disk | [disk.md](types/disk.md) | 본체·스펙 적재 구현 및 자동 테스트 완료. 분류 DEV.DISKDRIVE, 속성 3개(CI 대조 기준 없음). 관계 미적재. 제조사·펌웨어는 원천 전건 비어 있음 |
 | Filesystem | [filesystem.md](types/filesystem.md) | 본체·스펙 적재 구현 및 자동 테스트 완료. 분류 SYS.FILESYSTEM, 속성 5개(대조 기준 CI.FILESYSTEM). 관계 미적재. 컨테이너·가상 마운트는 제외 |
-| IP | [ip.md](types/ip.md) | 본체·스펙 적재 구현 및 자동 테스트 완료. 분류 NET.IPADDRESS, 속성 4개(대조 기준 CI.IPADDRESS). 장비 연결 IP 전체 수집. **관계 규칙이 없어 미적재. 경로 결정 필요** |
+| IP | [ip.md](types/ip.md) | 본체·스펙 적재 구현 및 자동 테스트 완료. 분류 NET.IPADDRESS, 속성 4개(대조 기준 CI.IPADDRESS). 장비 연결 IP 전체 수집. Device→IP USES 관계 구현 |
 
 기준정보 보완과 나머지 정책은 [ISSUE-8·11](../../open-issues.md)에 둔다.
-Device·OS·Disk·Filesystem·IP 다섯 유형의 본체·속성을 구현했다. 공통 쓰기는 ActCiWriter,
-공통 스펙 매핑은 CiSpecMapper가 담당한다. OS→Computer·Computer→Disk·Computer→Filesystem
-관계는 별도 `ci-relation` 작업으로 구현·운영 검증했고, IP 관계는 경로 미정으로 제외한다.
+Device·OS·Disk·Filesystem·IP·DB Instance 여섯 유형의 본체·속성을 구현했다.
+`integration/d42maximo/ci`의 기능별 Query·Mapper·Import가 수집을,
+`maximo/ci/ActCiWriter`가 공통 저장을 담당한다. 공통 스펙 매핑은 `ci/mapping/CiSpecMapper`다.
+일곱 관계 정의는 `ci/relation/CiRelationSource`에 있으며 `ci` 본체 뒤 또는 `ci-relation` 단독으로 실행한다.
+실제 관계별 운영 검증 이력은 [ACTCIRELATION](actcirelation.md)을 따른다. 이번 구조 리팩토링에서는 DB 적재를 실행하지 않았다.
 실제 Maximo Device 적재·Switch CI 승격·UI 검증은 미완료다.
 
 ## Target

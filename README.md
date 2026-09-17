@@ -95,15 +95,34 @@ java -jar build/libs/discovery-interface-0.0.1-SNAPSHOT.jar \
 | `conversion` | 제조사, 프로세서, OS, 어댑터 등의 변환 기준정보 연계 |
 | `asset` | 컴퓨터, CPU, 디스크, OS, 네트워크 등의 자산정보 연계 |
 | `software` | 설치 소프트웨어 및 라이선스 대상 소프트웨어 연계 |
-| `ci` | Computer 본체(ACTCI)·스펙(ACTCISPEC) 연계 |
+| `ci` | Device·OS·Disk·Filesystem·IP·DB Instance 본체/스펙, 이후 CI 관계 연계 |
+| `ci-relation` | 기존 CI 사이의 관계만 연계 (본체 정의 로딩 없음) |
 
-CI 실행 전 설정과 BIOS 날짜 속성 등록은 [Computer CI 실행 준비](docs/data-analysis/data-mapping/ci/types/computer-run.md)를 따른다.
+CI 실행 전 설정과 BIOS 날짜 속성 등록은 [Device CI 실행 준비](docs/data-analysis/data-mapping/ci/types/device-run.md)를 따른다.
+명령은 받은 순서대로 실행하며 중복 명령도 다시 실행한다. `ci` 뒤에 `ci-relation`을 주면 관계 단계도 두 번 실행한다.
+인자가 없으면 Job을 실행하지 않으며 알 수 없는 이름은 무시한다 (`run.sh`는 별도로 인자를 검사한다).
+
+## 프로젝트 구조
+
+루트 패키지는 `com.itmsg.device42`, Gradle 모듈은 하나다.
+
+- `runtime`: 순차 작업 실행과 COUNT 기반 페이지 범위
+- `device42`: 접속과 DOQL/JDBC 자원 관리
+- `maximo/{asset,ci,conversion,software}`: 타겟 DTO·Writer·저장 SQL, CI 정의 로딩/스냅샷
+- `integration/d42maximo`: 기능별 조회 SQL·원천 모델·매핑·실행 조립
+- `cli`: 기존 인자를 Job에 연결
+
+책임·의존 방향·이전 대응·확장 방법은 [구조 설계](docs/refactoring/integration-structure-design.md),
+검증 결과와 제약은 [진행 기록](docs/refactoring/integration-structure-progress.md)에 있다.
 
 ## 🧪 테스트 및 빌드
 
 ```bash
 # 테스트
 ./gradlew test
+
+# 구조 리팩토링 기준선 대조 (Git 이력과 Python 3.12 이상 필요, DB 접근 없음)
+python3 scripts/refactoring/check_baseline.py
 
 # 실행 가능한 JAR 빌드
 ./gradlew bootJar

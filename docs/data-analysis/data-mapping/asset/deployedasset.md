@@ -2,7 +2,7 @@
 
 배치된 자산
 
-> Target: MAXIMO.DEPLOYEDASSET · ASSETCLASS: COMPUTER, NETDEVICE, NETPRINTER · 구현: DeployedAssetIntegrate.java
+> Target: MAXIMO.DEPLOYEDASSET · ASSETCLASS: COMPUTER, NETDEVICE, NETPRINTER · 구현: [DeployedAssetImport](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/asset/device/DeployedAssetImport.java) · [DeployedAssetQuery](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/asset/device/DeployedAssetQuery.java) · [DeployedAssetMapper](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/asset/device/DeployedAssetMapper.java) · [DeployedAssetWriter](../../../../src/main/java/com/itmsg/device42/maximo/asset/DeployedAssetWriter.java)
 
 > 관측 2026-08-27 · Device42 **양쪽 서버** 192.168.2.68 / 192.168.1.35 · Maximo BLUDB
 > 원천 건수는 서버별로 병기한다. 표기는 `.68 / .35` 순이다.
@@ -31,7 +31,7 @@ MERGE 키는 `NODEID` 다. `NODEID = device_pk` 이므로 재실행해도 멱등
 | 컨테이너 제외 | `d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15` | Docker Container 는 자산으로 관리하지 않는다 |
 | PDU 제외 | `d.physicalsubtype IS NULL OR d.physicalsubtype <> 'PDU'` | 대응 ASSETCLASS 와 DPA 테이블이 없다 |
 
-근거: `DeployedAssetIntegrate.java` `DEVICE_FILTER`.
+근거: `DeployedAssetQuery.java` `DEVICE_FILTER`.
 
 ## 4. 컬럼 매핑
 

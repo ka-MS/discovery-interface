@@ -1,5 +1,5 @@
 -- DPAOS / DPATCPIP / DPANETPRINTER 의 COMPUTER·NETPRINTER 대상 원천과 값 분포를
--- 확인한다. 대상 판정 조건은 DeployedAssetIntegrate 의 DEVICE_FILTER 와
+-- 확인한다. 대상 판정 조건은 DeployedAssetQuery 의 DEVICE_FILTER 와
 -- 자식 ASSETCLASS 조건을 그대로 쓴다.
 --
 -- 라이센스 키 계열 컬럼은 비밀값이 될 수 있어 값을 뽑지 않고 충전 건수만 센다.

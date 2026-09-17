@@ -2,7 +2,7 @@
 
 어댑터 변환 대상
 
-> Target: MAXIMO.DPAMADAPTER · 구현: DpamAdapterIntegrate.java
+> Target: MAXIMO.DPAMADAPTER · 구현: [DpamAdapterImport](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/conversion/adapter/DpamAdapterImport.java) · [DpamAdapterQuery](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/conversion/adapter/DpamAdapterQuery.java) · [DpamAdapterWriter](../../../../src/main/java/com/itmsg/device42/maximo/conversion/DpamAdapterWriter.java)
 > 관측 2026-08-28 · Device42 192.168.1.35 · 192.168.2.68 / Maximo BLUDB
 > 재조회 `../../exploration-queries/maximo/dpa-view-conversion-requirements.sql`
 
@@ -10,7 +10,7 @@
 
 - 부모: 없음. 노드와 무관한 전역 사전이다
 - 카디널리티: 이름 1건 = 행 1건
-- 선행: 없음. Device42 를 직접 조회한다. `conversion` 잡 `@Order(7)`
+- 선행: 없음. Device42 를 직접 조회한다. `ConversionIntegrationJob`의 명시적 순서 7번.
 - MERGE 키: `ADAPTERNAME` (유일 인덱스)
 
 정규명 목록이다. 뷰가 직접 조인하는 것은 짝이 되는 `DPAMADPTVARIANT` 이며
@@ -49,7 +49,7 @@ where dpanetadapter.manufacturer = dpammanuvariant.manufacturervar
 | 조건 | 식 | 사유 |
 | --- | --- | --- |
 | GPU 파트만 | `pm.type_name = 'GPU'` | `view_part_v1` 은 여러 파트 종류를 한 테이블에 담는다 |
-| COMPUTER 대상 | `DpaMediaAdapterIntegrate` 와 동일한 `DEVICE_FILTER` | 자식이 기록할 값만 등록한다 |
+| COMPUTER 대상 | `MediaAdapterQuery` 와 동일한 `DEVICE_FILTER` | 자식이 기록할 값만 등록한다 |
 | 상수 추가 | `UNION SELECT 'UNKNOWN'` | `DPANETADAPTER` 가 기록하는 값 |
 | 빈 값 제외 | `name IS NOT NULL AND name <> ''` | 이름 컬럼이 NOT NULL 이다 |
 

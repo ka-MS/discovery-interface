@@ -34,7 +34,7 @@ Filesystem은 현재 코드와 같이 overlay·devtmpfs·squashfs·efivarfs를 �
 | IP–Computer | 50 / 97 | 51 / 118 | 본체 하나에 복수 장비가 실제 존재 |
 
 IP의 다중 장비 연결은 1 / 16개 주소에서 확인됐고, 한 주소의 범위 내 장비 수는 최대 2 / 7이다.
-현재 IpCiIntegrate의 `DISTINCT ON(ipaddress_pk)`는 본체를 한 번 적재하기 위한 조건이다.
+관측 당시 IpCiIntegrate(현재 IpCiQuery)의 `DISTINCT ON(ipaddress_pk)`는 본체를 한 번 적재하기 위한 조건이다.
 그 결과의 단일 `device_fk`만 관계에 사용하면 1 / 21개 연결 쌍을 잃는다.
 본체의 DISTINCT ON은 유지할 수 있지만 관계는 모든 실제 연결 쌍을 보존해야 한다.
 Filesystem도 이후 다중 배열이 들어올 수 있으므로 같은 원칙을 적용한다.

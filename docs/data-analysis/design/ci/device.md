@@ -60,17 +60,16 @@ Rackable/Generic과 모델명은 스위치·라우터 구별에 쓰지 않는다
 
 ```text
 CiIntegrationJob
-  ├─ DeviceCiIntegrate          기존 ComputerCiIntegrate 확장·이름 변경
-  │    ├─ DeviceSource          공통 조회 결과
-  │    ├─ 종류·분류 선택
-  │    ├─ 공통 ACTCI 본체 매핑
-  │    └─ 분류에 맞는 스펙 선택 → 기존 CiSpecMapper / ActCiWriter
+  ├─ DeviceCiImport
+  │    ├─ DeviceCiQuery → DeviceSource
+  │    ├─ DeviceCiMapper → 종류·분류·본체·스펙 선택 (CiSpecMapper 사용)
+  │    └─ maximo.ci.ActCiWriter → 본체·스펙 저장
   ├─ 나머지 CI 수집기
   └─ CiRelationJob              기존 위치, 관계 키 별도 재조회
 ```
 
-- `DeviceCiIntegrate`와 `DeviceSource`로 기존 두 클래스를 확장하는 정도면 된다. 종류마다 수집기·Writer·Mapper 클래스를 만들 필요가 없다.
-- 처음에는 같은 수집기 안의 분류 선택 메서드와 스펙 메서드로 구성한다. 별도 전략 프레임워크를 도입할 이유는 없다.
+- 2026-09-18 구조 정리 후 조회·매핑·저장 책임을 위처럼 분리했다. Device 내부 종류마다 수집기·Writer·Mapper를 만들지는 않는다.
+- 종류별 분류 선택과 스펙 메서드는 DeviceCiMapper 안에 둔다. 별도 전략 프레임워크는 도입하지 않는다.
 - `ComputerSpec`의 공통 하드웨어 속성은 재사용할 수 있다. 새 분류 전용 속성이 실제로 확정되면 필요한 enum 항목만 추가한다.
 - `CiClassification`에는 확정된 분류만 추가한다. 정의 캐시의 템플릿·자료형·단위 검증과 누락 스펙 처리 방식을 유지한다.
 - **`CiSourceFilter.COMPUTER`를 전역 확대하지 않는다.** OS·Disk·Filesystem·기존 관계가 참조하므로 Device 전용 후보 조건을 별도로 둔다. 자식 CI 수집 범위 확대는 개별 매핑에서 판단한다.
@@ -212,7 +211,7 @@ Device 간 연결·Interface·IP는 관계 원천을 재조회하여 별도 설�
 
 - 두 D42의 기존 조인 범위 투영·유형 분포·키 유일성·포트 소속·JSON 키 조사.
 - Maximo 후보 분류·실제 스펙·적용 설정·관계·승격 범위 조회와 대조표 작성.
-- `DeviceCiIntegrate`·`DeviceSource` 구조 전환과 `SYS.GENERICSWITCH` ACTCI 분기 구현.
+- `DeviceCiImport`·`DeviceSource` 구조 전환과 `SYS.GENERICSWITCH` ACTCI 분기 구현.
 - 양 서버에서 36 / 72행, Switch 각 2대, 장비 PK 중복 0, cluster·종류 단일성과 대표 MAC 확인.
 - H2 Db2 모드 자동 테스트로 기존 Computer·VM과 Switch·제외 분기를 검증.
 - Switch CI 18개와 Printer ACTCI·CI 13개 속성, 본체 1:1 승격 범위, MAS UI 등록·검증·롤백 기준 설계.

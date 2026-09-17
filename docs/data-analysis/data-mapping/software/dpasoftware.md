@@ -2,7 +2,7 @@
 
 배치된 자산 컴퓨터 애플리케이션
 
-> Target: MAXIMO.DPASOFTWARE · ASSETCLASS: COMPUTER · 구현: DpaSoftwareIntegrate.java
+> Target: MAXIMO.DPASOFTWARE · ASSETCLASS: COMPUTER · 구현: [DpaSoftwareImport](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/software/installed/DpaSoftwareImport.java) · [DpaSoftwareQuery](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/software/installed/DpaSoftwareQuery.java) · [DpaSoftwareMapper](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/software/installed/DpaSoftwareMapper.java) · [DpaSoftwareWriter](../../../../src/main/java/com/itmsg/device42/maximo/software/DpaSoftwareWriter.java)
 > 관측 2026-08-27 · Device42 192.168.1.35 · 192.168.2.68 / Maximo BLUDB
 
 ## 1. 관계
@@ -12,8 +12,8 @@
 - 선행: DEPLOYEDASSET, TLOAMSOFTWARE
 - MERGE ID: `SOFTWAREID = view_softwareinuse_v1.softwareinuse_pk`
 
-`software` 잡에서 `TloamSoftwareIntegrate`가 카탈로그를 먼저 만들고
-`DpaSoftwareIntegrate`가 설치 행을 적재한다. 상세는 `tloamsoftware.md` 참조.
+`software` 잡에서 `TloamSoftwareImport`가 카탈로그를 먼저 만들고
+`DpaSoftwareImport`가 설치 행을 적재한다. 상세는 `tloamsoftware.md` 참조.
 
 ## 2. 테이블 매핑
 

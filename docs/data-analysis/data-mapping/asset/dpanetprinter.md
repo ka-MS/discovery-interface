@@ -2,7 +2,7 @@
 
 배치된 자산 네트워크 프린터
 
-> Target: MAXIMO.DPANETPRINTER · ASSETCLASS: NETPRINTER · 구현: DpaNetPrinterIntegrate.java
+> Target: MAXIMO.DPANETPRINTER · ASSETCLASS: NETPRINTER · 구현: [NetPrinterImport](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/asset/netprinter/NetPrinterImport.java) · [NetPrinterQuery](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/asset/netprinter/NetPrinterQuery.java) · [NetPrinterMapper](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/asset/netprinter/NetPrinterMapper.java) · [DpaNetPrinterWriter](../../../../src/main/java/com/itmsg/device42/maximo/asset/DpaNetPrinterWriter.java)
 > 관측 2026-08-27 · Device42 192.168.1.35 · 192.168.2.68 / Maximo BLUDB
 
 ## 1. 관계

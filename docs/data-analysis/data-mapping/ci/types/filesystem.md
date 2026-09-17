@@ -2,7 +2,7 @@
 
 > Target: MAXIMO.ACTCI · MAXIMO.ACTCISPEC
 > 원천·메타데이터 확인: 2026-09-15 · D42 .68 / .35 · Maximo BLUDB
-> 구현: FilesystemCiIntegrate · 상태: 본체·스펙 적재 구현 및 자동 테스트 완료. 관계 미적재. 실제 Maximo 적재·UI 검증은 미완료.
+> 구현: [FilesystemCiImport](../../../../../src/main/java/com/itmsg/device42/integration/d42maximo/ci/filesystem/FilesystemCiImport.java) · [FilesystemCiQuery](../../../../../src/main/java/com/itmsg/device42/integration/d42maximo/ci/filesystem/FilesystemCiQuery.java) · [FilesystemCiMapper](../../../../../src/main/java/com/itmsg/device42/integration/d42maximo/ci/filesystem/FilesystemCiMapper.java) · [ActCiWriter](../../../../../src/main/java/com/itmsg/device42/maximo/ci/ActCiWriter.java) · 상태: 본체·스펙 적재 구현 및 자동 테스트 완료. 관계 미적재. 실제 Maximo 적재·UI 검증은 미완료.
 > 분류 선택 이유·관계 추천안·선별 기준은 [Filesystem 수집 설계](../../../design/ci/filesystem.md)에 있다.
 
 공통 컬럼 정의는 [ACTCI](../actci.md), [ACTCISPEC](../actcispec.md)가 소유한다.
@@ -91,7 +91,7 @@ CI 기준 네 개에 `MODELOBJECT_LABEL`을 더한 다섯 개다. 선택 근거�
 
 | 항목 | 상태 |
 | --- | --- |
-| 컨테이너·가상 파일시스템 | **확정.** `FilesystemCiIntegrate.EXCLUDED_TYPES` 상수로 `overlay`·`squashfs`·`efivarfs`를 원천 조회에서 제외한다. `.68` 78건, `.35` 70건(2026-09-17). `devtmpfs`는 2026-09-17 수집 대상으로 되돌렸다 — 경로가 `/dev`로 고정돼 재기동 시 원천 PK가 바뀌는 문제가 없다 |
+| 컨테이너·가상 파일시스템 | **확정.** `FilesystemSelection.EXCLUDED_TYPES` 상수로 `overlay`·`squashfs`·`efivarfs`를 원천 조회에서 제외한다. `.68` 78건, `.35` 70건(2026-09-17). `devtmpfs`는 2026-09-17 수집 대상으로 되돌렸다 — 경로가 `/dev`로 고정돼 재기동 시 원천 PK가 바뀌는 문제가 없다 |
 | 마운트 경로 길이 | 컨테이너 경로가 약 130자다. ACTCINAME 192자·ALNVALUE 254자 한계에 근접. 절단·생략 규칙 필요. ISSUE-11 |
 | 용량 단위 | **확정.** `MEASUREUNITID='MBYTE'`를 지정한다 |
 | `m.filesystem` | 93 / 133건 보유하나 대응 속성 없음. 추가 등록 필요. 이번 범위 제외 추천 |

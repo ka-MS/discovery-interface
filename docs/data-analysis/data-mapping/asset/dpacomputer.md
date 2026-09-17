@@ -2,7 +2,7 @@
 
 배치된 자산 컴퓨터
 
-> Target: MAXIMO.DPACOMPUTER · ASSETCLASS: COMPUTER · 구현: DpaComputerIntegrate.java
+> Target: MAXIMO.DPACOMPUTER · ASSETCLASS: COMPUTER · 구현: [ComputerImport](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/asset/computer/ComputerImport.java) · [ComputerQuery](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/asset/computer/ComputerQuery.java) · [ComputerMapper](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/asset/computer/ComputerMapper.java) · [DpaComputerWriter](../../../../src/main/java/com/itmsg/device42/maximo/asset/DpaComputerWriter.java)
 
 > 관측 2026-08-27 · Device42 **양쪽 서버** 192.168.2.68 / 192.168.1.35 · Maximo BLUDB
 > 원천 건수는 서버별로 병기한다. 표기는 `.68 / .35` 순이다.
@@ -31,7 +31,7 @@
 | 네트워크 장비 제외 | `d.network_device = false OR d.network_device IS NULL` | NETDEVICE 는 DPANETDEVICE 로 간다 |
 | 프린터·PDU 제외 | `d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer','PDU')` | 프린터는 DPANETPRINTER 로 가고 PDU 는 수집하지 않는다 |
 
-근거: `DpaComputerIntegrate.java` `DEVICE_FILTER`.
+근거: `ComputerQuery.java` `DEVICE_FILTER`.
 
 ## 4. 컬럼 매핑
 

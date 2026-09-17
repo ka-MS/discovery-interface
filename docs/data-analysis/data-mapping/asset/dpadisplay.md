@@ -2,7 +2,7 @@
 
 배치된 자산 컴퓨터 디스플레이
 
-> Target: MAXIMO.DPADISPLAY · ASSETCLASS: COMPUTER · 구현: DpaDisplayIntegrate.java
+> Target: MAXIMO.DPADISPLAY · ASSETCLASS: COMPUTER · 구현: 없음 (원천 없음)
 > 관측 2026-08-27 · Device42 192.168.1.35, 192.168.2.68 / Maximo BLUDB
 
 ## 1. 관계

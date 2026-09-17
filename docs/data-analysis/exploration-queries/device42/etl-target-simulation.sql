@@ -1,6 +1,6 @@
--- DeployedAssetIntegrate 의 현행 필터와 ASSETCLASS 판정을 SQL 로 재현한다.
+-- DeployedAssetQuery/DeployedAssetMapper 의 현행 필터와 ASSETCLASS 판정을 SQL 로 재현한다.
 -- 코드 변경 시 이 쿼리도 함께 고친다.
--- 근거: DeployedAssetIntegrate.java DEVICE_FILTER, mapData()
+-- 근거: DeployedAssetQuery.java DEVICE_FILTER, DeployedAssetMapper.java mapData()
 
 -- name: etl-target
 SELECT CASE

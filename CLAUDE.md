@@ -14,7 +14,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - `knowledge/` — 관측 사실. 수치는 스냅샷이며 상단에 관측 시점과 재조회 쿼리를 명시한다.
 - `design/` — 수집 구성안·대조표·선택 이유. 검토안과 결정된 내용을 구분하며, CI 유형별 설계는 `design/ci/<유형>.md`에 둔다.
-- `data-mapping/` — 테이블 단위 매핑 정본. 문서 한 장이 구현 클래스 하나에 대응한다.
+- `data-mapping/` — 테이블 단위 매핑 정본. 문서 한 장이 해당 연계의 Query·매핑과 타겟 Writer에 대응한다.
+  조회·원천 모델·복잡한 Mapper·Import는 `integration/d42maximo`의 기능 패키지에,
+  저장 SQL·타겟 DTO는 `maximo`에 둔다. 단순 변환은 Import 메서드로 유지한다.
   CI는 예외로 Target별 공통 규약과 CI 유형별 원천 매핑을 분리한다. 형식은 데이터 분석 README를 따른다.
 - `exploration-queries/` — 조사·검색용 재사용 쿼리. 실제 매핑 SQL은 매핑 문서 본문에 둔다.
 
@@ -25,6 +27,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Device42 는 두 대다.** `192.168.2.68` 은 소프트웨어·파트·마운트가, `192.168.1.35` 는 네트워크·OS 가 넓다. 데모서버는 두대지만 실제로 ETL에 사용되는 서버는 한대이기 때문에 두 서버의 데이터 합쳐짐으로써의 중복 데이터 문제는 무시한다. 같은 뷰라도 건수가 크게 다르므로 한 대만 보고 결론을 내지 않는다. 조사 결과를 문서에 옮길 때 어느 서버 관측인지 함께 적는다. 전환은 `DB_ACCESS_ENV` 로 서버별 접속 파일을 지정한다. `connections.env` 는 편집하지 않는다. 상세는 `docs/data-analysis/knowledge/device42/servers.md` 에 있다.
 
 ## 에이전트 규칙
+
+구조와 의존 규칙은 [연계 구조 설계](docs/refactoring/integration-structure-design.md)를 따른다.
+`runtime`은 도메인을 모르고, `device42`와 `maximo`는 연계 구현을 역참조하지 않는다.
+CLI 명령과 실제 Job 조립은 분리하며 새 수집 흐름을 추가해도 공통 실행 코어를 수정하지 않는다.
 
 1. 코딩 전에 생각하기
 

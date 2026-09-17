@@ -2,7 +2,7 @@
 
 제조업체 변환 대상
 
-> Target: MAXIMO.DPAMMANUFACTURER · 구현: DpamManufacturerIntegrate.java
+> Target: MAXIMO.DPAMMANUFACTURER · 구현: [DpamManufacturerImport](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/conversion/manufacturer/DpamManufacturerImport.java) · [DpamManufacturerQuery](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/conversion/manufacturer/DpamManufacturerQuery.java) · [DpamManufacturerWriter](../../../../src/main/java/com/itmsg/device42/maximo/conversion/DpamManufacturerWriter.java)
 > 관측 2026-08-28 · Device42 192.168.1.35 · 192.168.2.68 / Maximo BLUDB
 > 재조회 `../../exploration-queries/maximo/dpa-view-conversion-requirements.sql`
 
@@ -10,7 +10,7 @@
 
 - 부모: 없음. 노드와 무관한 전역 사전이다
 - 카디널리티: 이름 1건 = 행 1건
-- 선행: 없음. Device42 를 직접 조회한다. `conversion` 잡 `@Order(1)`
+- 선행: 없음. Device42 를 직접 조회한다. `ConversionIntegrationJob`의 명시적 순서 1번.
 - MERGE 키: `MANUFACTURERNAME` (유일 인덱스)
 
 정규명 목록이다. 뷰가 직접 조인하는 것은 짝이 되는 `DPAMMANUVARIANT` 이며

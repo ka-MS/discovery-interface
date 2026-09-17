@@ -2,7 +2,7 @@
 
 프로세서 변환 변형
 
-> Target: MAXIMO.DPAMPROCVARIANT · 구현: DpamProcVariantIntegrate.java
+> Target: MAXIMO.DPAMPROCVARIANT · 구현: [DpamProcVariantImport](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/conversion/processor/DpamProcVariantImport.java) · [DpamProcVariantQuery](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/conversion/processor/DpamProcVariantQuery.java) · [DpamProcVariantWriter](../../../../src/main/java/com/itmsg/device42/maximo/conversion/DpamProcVariantWriter.java)
 > 관측 2026-08-28 · Device42 192.168.1.35 · 192.168.2.68 / Maximo BLUDB
 > 재조회 `../../exploration-queries/maximo/dpa-view-conversion-requirements.sql`
 
@@ -30,7 +30,7 @@ where dpacpu.manufacturer = dpammanuvariant.manufacturervar
 | --- | --- | --- |
 | `view_partmodel_v1.name` (`type_name = 'CPU'`) | MAXIMO.DPAMPROCVARIANT | N:1 |
 
-`DpaCpuIntegrate` 와 같은 원천·같은 필터를 쓴다. 자식이
+`CpuQuery` 와 같은 원천·같은 필터를 쓴다. 자식이
 `defaultUnknown(model_name)` 으로 기록하므로 상수 `UNKNOWN` 도 함께 넣는다.
 
 기존 13행은 Device42 가 수집하는 모델명과 겹치는 값이 없다.
@@ -40,7 +40,7 @@ where dpacpu.manufacturer = dpammanuvariant.manufacturervar
 | 조건 | 식 | 사유 |
 | --- | --- | --- |
 | CPU 파트만 | `pm.type_name = 'CPU'` | `view_part_v1` 은 여러 파트 종류를 한 테이블에 담는다 |
-| COMPUTER 대상 | `DpaCpuIntegrate` 와 동일한 `DEVICE_FILTER` | 자식이 기록할 값만 등록한다 |
+| COMPUTER 대상 | `CpuQuery` 와 동일한 `DEVICE_FILTER` | 자식이 기록할 값만 등록한다 |
 | 빈 값 제외 | `name IS NOT NULL AND name <> ''` | 이름 컬럼이 NOT NULL 이다 |
 
 ## 4. 컬럼 매핑

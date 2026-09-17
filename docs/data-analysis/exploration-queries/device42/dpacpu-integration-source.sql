@@ -1,4 +1,4 @@
--- DpaCpuIntegrate가 사용하는 원천 조건과 반환 컬럼을 검증한다.
+-- CpuQuery가 사용하는 원천 조건과 반환 컬럼을 검증한다.
 
 -- name: cpu-source-count
 SELECT COUNT(*) AS row_count

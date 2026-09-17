@@ -1,5 +1,5 @@
 -- DPASOFTWARE 의 COMPUTER 대상 원천과 값 분포를 확인한다. 대상 판정 조건은
--- DeployedAssetIntegrate 의 DEVICE_FILTER 와 자식 ASSETCLASS 조건을 그대로 쓴다.
+-- DeployedAssetQuery 의 DEVICE_FILTER 와 자식 ASSETCLASS 조건을 그대로 쓴다.
 --
 -- 설명은 이 헤더에만 둔다. 실행기가 블록 본문을 한 줄로 이어 붙여서, 첫
 -- `-- name:` 뒤의 주석은 앞 블록 SQL 을 깨뜨린다.

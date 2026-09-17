@@ -49,11 +49,11 @@ Maximo 시퀀스와 별도 교차키 없이 대상 ID를 MERGE 키로 사용한�
 `knowledge/device42/views.md` 버전 규칙 절.
 
 `view_hardware_v2` 는 조인 키가 같아 이름만 바꿨다.
-`DeployedAssetIntegrate`, `DpamManufacturerIntegrate`, `DpamManuVariantIntegrate`.
+현재 조회 구현: `DeployedAssetQuery`, `DpamManufacturerQuery`, `DpamManuVariantQuery`.
 
 `view_ipaddress_v2` 와 `view_mountpoint_v2` 는 `device_fk` 가 `device_fks`
-배열로 바뀌어 `= ANY(...)` 로 조인한다. `DpaTcpIpIntegrate`,
-`DpaNetDeviceIntegrate`, `DpaNetPrinterIntegrate`, `DpaLogicalDriveIntegrate`.
+배열로 바뀌어 `= ANY(...)` 로 조인한다. 현재 조회 구현: `TcpIpQuery`,
+`NetDeviceQuery`, `NetPrinterQuery`, `LogicalDriveQuery`.
 
 ### 배열 조인이 만든 ID 중복
 
@@ -68,7 +68,7 @@ Maximo 시퀀스와 별도 교차키 없이 대상 ID를 MERGE 키로 사용한�
 `DESKTOP-P7KJHB7` 에 함께 걸려 있어 45행이 44행이 됐다. 현재 구현은 대표 장비를
 선택하지 않으므로 이 문제 자체가 없다.
 
-`DpaNetDeviceIntegrate` 와 `DpaNetPrinterIntegrate` 는 스칼라 서브쿼리라
+`NetDeviceQuery` 와 `NetPrinterQuery` 는 스칼라 서브쿼리라
 행이 늘지 않는다.
 
 ### 적재 결과 변화

@@ -2,7 +2,7 @@
 
 프로세서 변환 대상
 
-> Target: MAXIMO.DPAMPROCESSOR · 구현: DpamProcessorIntegrate.java
+> Target: MAXIMO.DPAMPROCESSOR · 구현: [DpamProcessorImport](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/conversion/processor/DpamProcessorImport.java) · [DpamProcessorQuery](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/conversion/processor/DpamProcessorQuery.java) · [DpamProcessorWriter](../../../../src/main/java/com/itmsg/device42/maximo/conversion/DpamProcessorWriter.java)
 > 관측 2026-08-28 · Device42 192.168.1.35 · 192.168.2.68 / Maximo BLUDB
 > 재조회 `../../exploration-queries/maximo/dpa-view-conversion-requirements.sql`
 
@@ -10,7 +10,7 @@
 
 - 부모: 없음. 노드와 무관한 전역 사전이다
 - 카디널리티: 이름 1건 = 행 1건
-- 선행: 없음. Device42 를 직접 조회한다. `conversion` 잡 `@Order(5)`
+- 선행: 없음. Device42 를 직접 조회한다. `ConversionIntegrationJob`의 명시적 순서 5번.
 - MERGE 키: `PROCESSORNAME` (유일 인덱스)
 
 정규명 목록이다. 뷰가 직접 조인하는 것은 짝이 되는 `DPAMPROCVARIANT` 이며
@@ -30,7 +30,7 @@ where dpacpu.manufacturer = dpammanuvariant.manufacturervar
 | --- | --- | --- |
 | `view_partmodel_v1.name` (`type_name = 'CPU'`) | MAXIMO.DPAMPROCESSOR | N:1 (같은 이름이 여러 곳에 나타난다) |
 
-`DpaCpuIntegrate` 와 같은 원천·같은 필터를 쓴다. 자식이
+`CpuQuery` 와 같은 원천·같은 필터를 쓴다. 자식이
 `defaultUnknown(model_name)` 으로 기록하므로 상수 `UNKNOWN` 도 함께 넣는다.
 
 기존 13행은 Device42 가 수집하는 모델명과 겹치는 값이 없다.
@@ -40,7 +40,7 @@ where dpacpu.manufacturer = dpammanuvariant.manufacturervar
 | 조건 | 식 | 사유 |
 | --- | --- | --- |
 | CPU 파트만 | `pm.type_name = 'CPU'` | `view_part_v1` 은 여러 파트 종류를 한 테이블에 담는다 |
-| COMPUTER 대상 | `DpaCpuIntegrate` 와 동일한 `DEVICE_FILTER` | 자식이 기록할 값만 등록한다 |
+| COMPUTER 대상 | `CpuQuery` 와 동일한 `DEVICE_FILTER` | 자식이 기록할 값만 등록한다 |
 | 빈 값 제외 | `name IS NOT NULL AND name <> ''` | 이름 컬럼이 NOT NULL 이다 |
 
 ## 4. 컬럼 매핑

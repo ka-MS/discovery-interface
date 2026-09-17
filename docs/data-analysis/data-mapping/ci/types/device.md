@@ -2,7 +2,7 @@
 
 > Target: MAXIMO.ACTCI · MAXIMO.ACTCISPEC
 > 원천·메타데이터 확인: 2026-09-15 · D42 .68 / .35 · Maximo BLUDB
-> 구현: DeviceCiIntegrate · 상태: Computer·VM·Switch·Network Cluster 수집과 ACTCI·ACTCISPEC 저장 및 자동 테스트 완료. 실제 Maximo Cluster 적재·관계·CI 승격·UI 검증은 미완료.
+> 구현: [DeviceCiImport](../../../../../src/main/java/com/itmsg/device42/integration/d42maximo/ci/device/DeviceCiImport.java) · [DeviceCiQuery](../../../../../src/main/java/com/itmsg/device42/integration/d42maximo/ci/device/DeviceCiQuery.java) · [DeviceCiMapper](../../../../../src/main/java/com/itmsg/device42/integration/d42maximo/ci/device/DeviceCiMapper.java) · [ActCiWriter](../../../../../src/main/java/com/itmsg/device42/maximo/ci/ActCiWriter.java) · 상태: Computer·VM·Switch·Network Cluster 수집과 ACTCI·ACTCISPEC 저장 및 자동 테스트 완료. 실제 Maximo Cluster 적재·관계·CI 승격·UI 검증은 미완료.
 > 실행 방법·추가 속성 등록·현재 처리 동작은 [실행 준비](device-run.md)를 따른다. 미대응 항목은 아래 표에 구분한다.
 
 ## 1. 대상과 식별자
@@ -285,7 +285,7 @@ LIMIT ? OFFSET ?;
 ### Maximo 공통 캐시 조회
 
 CiDefinitionLoader가 CI 실행 시작 시 아래 정의를 조회한다. 실제 코드의 분류명 IN 목록은
-CiClassification.values()에서 생성하고, 스펙은 앞에서 조회한 분류 ID 목록을 바인딩한다.
+연계 측 CiClassification.ids()에서 생성해 로더에 전달하고, 스펙은 앞에서 조회한 분류 ID 목록을 바인딩한다.
 아래 SQL은 현재 Device 본체 enum의 네 분류로 재조회할 수 있는 형태다.
 
 ```sql
@@ -329,9 +329,10 @@ WHERE c.CLASSSTRUCTUREID IN (SELECT s.CLASSSTRUCTUREID FROM MAXIMO.CLASSSTRUCTUR
 
 ACTCISPEC의 부모·템플릿 참조는 [공통 매핑](../actcispec.md)을 적용한다.
 MEMORYSIZE·CPUSPEED의 MEASUREUNITID는 4절의 명시적 단위 매핑을 우선한다.
-구현은 ACTCINUM 및 속성 키로 기존 ID를 조회한 뒤 UPDATE 또는 INSERT한다.
-mapData에서 본체·스펙 DTO를 만들고 putData에서 본체 ID를 확보한 뒤 스펙을 저장한다.
-명시적 트랜잭션·롤백은 적용하지 않으며 실제 저장 SQL은 DeviceCiIntegrate와 공통 Writer의 상수로 분리한다.
+구현은 ACTCINUM 및 속성 키를 MERGE 자연키로 사용한다. 기존 ID는 유지하고 신규 행만 시퀀스로 채번한다.
+DeviceCiMapper.mapData에서 본체·스펙 DTO를 만들고 ActCiWriter.write에서 본체를 저장한 뒤
+ACTCINUM으로 본체 ID를 참조하는 스펙 MERGE를 실행한다.
+명시적 트랜잭션·롤백은 적용하지 않으며 조회 SQL은 DeviceCiQuery, 저장 SQL은 maximo.ci.ActCiWriter가 소유한다.
 
 ## 6. 검증과 남은 작업
 

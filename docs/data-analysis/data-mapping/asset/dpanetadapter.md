@@ -2,7 +2,7 @@
 
 배치된 자산 컴퓨터 네트워크 어댑터
 
-> Target: MAXIMO.DPANETADAPTER · ASSETCLASS: COMPUTER · 구현: DpaNetAdapterIntegrate.java
+> Target: MAXIMO.DPANETADAPTER · ASSETCLASS: COMPUTER · 구현: [NetAdapterImport](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/asset/netadapter/NetAdapterImport.java) · [NetAdapterQuery](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/asset/netadapter/NetAdapterQuery.java) · [NetAdapterMapper](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/asset/netadapter/NetAdapterMapper.java) · [DpaNetAdapterWriter](../../../../src/main/java/com/itmsg/device42/maximo/asset/DpaNetAdapterWriter.java)
 > 관측 2026-08-27 · Device42 192.168.1.35, 192.168.2.68 / Maximo BLUDB
 
 ## 1. 관계

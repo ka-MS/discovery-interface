@@ -106,7 +106,7 @@ DB·DB Instance 매핑 문서에 더해 Computer 원천 수집 항목 조사를 
 
 ### Device 기준 통합 수집 — 2026-09-15
 
-**1차 구현 완료:** 현재 본체·스펙 구조를 유지하며 `DeviceCiIntegrate`에서 Computer·VM과
+**1차 구현 완료:** 현재 본체·스펙 구조를 유지하며 `DeviceCiImport`에서 Computer·VM과
 판정 가능한 물리 Switch를 통합 조회·매핑한다. 관계는 본체 이후 별도 단계에서 재조회한다.
 필드 대조표와 구현 순서는 [Device 통합 설계](design/ci/device.md)에 있다.
 

@@ -2,10 +2,14 @@
 
 > Target: MAXIMO.ACTCI · MAXIMO.ACTCISPEC
 > 원천·메타데이터 확인: 2026-09-15 · D42 .68 / .35 · Maximo BLUDB
-> 구현: IpCiIntegrate · 상태: 본체·스펙 적재 구현 및 자동 테스트 완료. **관계는 규칙이 없어 적재하지 않는다.**
+> 구현: [IpCiImport](../../../../../src/main/java/com/itmsg/device42/integration/d42maximo/ci/ip/IpCiImport.java) · [IpCiQuery](../../../../../src/main/java/com/itmsg/device42/integration/d42maximo/ci/ip/IpCiQuery.java) · [IpCiMapper](../../../../../src/main/java/com/itmsg/device42/integration/d42maximo/ci/ip/IpCiMapper.java) · [ActCiWriter](../../../../../src/main/java/com/itmsg/device42/maximo/ci/ActCiWriter.java) · 상태: 본체·스펙 적재 구현 및 자동 테스트 완료. 현재 Device→IP `USES` 관계는 별도 관계 단계에서 적재한다.
 > 분류 선택 이유·관계 선택지는 [IP 수집 설계](../../../design/ci/ip.md)에 있다.
 
 공통 컬럼 정의는 [ACTCI](../actci.md), [ACTCISPEC](../actcispec.md)가 소유한다.
+
+2026-09-18 구조 대조: 아래의 「직접 규칙 없음·경로 결정 필요」는 2026-09-15 관측이다.
+후속 확정된 `USES` 경로와 전체 장비–IP 쌍 조회·검증 상태의 정본은 [ACTCIRELATION](../actcirelation.md)이다.
+IP 본체의 대표 장비 한 건을 관계 입력으로 사용하지 않는다.
 
 ## 1. 대상과 식별자
 
@@ -44,7 +48,7 @@ LIMIT %d OFFSET %d
 ```
 
 2026-09-15 두 서버에서 실행해 통과를 확인했다.
-`netport_fk`와 `mask_bits`는 관계·서브넷 조사용이다. 현재 IpCiIntegrate의 원천 SQL·DTO에는 포함하지 않는다.
+`netport_fk`와 `mask_bits`는 관계·서브넷 조사용이다. 현재 IpCiImport의 원천 SQL·DTO에는 포함하지 않는다.
 관계 구현 시 netport_fk 및 전체 device_fks 보존이 필요하다.
 2026-09-15의 실제 경로·다중 연결 대조는 [관계 원천](../../../knowledge/device42/computer-ci-relations.md)을 참조한다.
 

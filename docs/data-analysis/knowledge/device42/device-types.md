@@ -111,7 +111,7 @@ WorkStation·ThinClient·Network Printer·Laptop 이 공유한다. 플래그만�
 ## ASSETCLASS 판정
 
 현행 코드는 타입이 아니라 플래그로 판정한다.
-근거: `DeployedAssetIntegrate.java` `mapData()`
+근거: `DeployedAssetMapper.java` `mapData()`
 
 | 순서 | 조건 | ASSETCLASS |
 | --- | --- | --- |

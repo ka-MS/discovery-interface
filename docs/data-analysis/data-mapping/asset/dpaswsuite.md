@@ -2,7 +2,7 @@
 
 배치된 자산 컴퓨터 스위트
 
-> Target: MAXIMO.DPASWSUITE · ASSETCLASS: COMPUTER · 구현: DpaSwSuiteIntegrate.java
+> Target: MAXIMO.DPASWSUITE · ASSETCLASS: COMPUTER · 구현: 없음 (원천 없음)
 > 관측 2026-08-27 · Device42 192.168.1.35 · 192.168.2.68 / Maximo BLUDB
 
 ## 1. 관계

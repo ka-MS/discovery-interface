@@ -89,7 +89,8 @@ python3 docs/data-analysis/tools/gen-mapping-skeleton.py
 
 ## CI 매핑 문서 예외
 
-CI는 여러 원천 유형이 같은 Target 테이블에 들어오므로 문서와 구현 클래스를 1:1로 묶지 않는다.
+매핑 문서는 클래스가 아니라 연계 규칙의 정본이다. 일반 테이블은 기능별 Query·매핑·타겟 Writer를
+한 문서에서 참조한다. CI는 여러 원천 유형이 같은 Target 테이블에 들어오므로 아래처럼 나눈다.
 
 - `data-mapping/ci/actci.md`, `actcispec.md`, `actcirelation.md`: Target별 공통 규약.
   전체 컬럼·타입·Null은 기존 7열 표에 한 번만 둔다. Source에는 Maximo 참조와 유형 문서도 쓸 수 있다.

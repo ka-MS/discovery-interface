@@ -2,7 +2,7 @@
 
 > Target: MAXIMO.ACTCI · MAXIMO.ACTCISPEC
 > 원천·메타데이터 확인: 2026-09-15 · D42 .68 / .35 · Maximo BLUDB
-> 구현: OsCiIntegrate · 상태: 본체·스펙 적재 구현 및 자동 테스트 완료. 관계 자동 적재 2026-09-15 운영 검증 완료(63건, 물리·가상 분류쌍 모두 확인, 재실행 멱등성 확인). OS → 물리 Computer 단건 INSERT·CI 승격·관련 CI 표시 확인. 속성별 검증은 별도.
+> 구현: [OsCiImport](../../../../../src/main/java/com/itmsg/device42/integration/d42maximo/ci/os/OsCiImport.java) · [OsCiQuery](../../../../../src/main/java/com/itmsg/device42/integration/d42maximo/ci/os/OsCiQuery.java) · [OsCiMapper](../../../../../src/main/java/com/itmsg/device42/integration/d42maximo/ci/os/OsCiMapper.java) · [ActCiWriter](../../../../../src/main/java/com/itmsg/device42/maximo/ci/ActCiWriter.java) · 상태: 본체·스펙 적재 구현 및 자동 테스트 완료. 관계 자동 적재 2026-09-15 운영 검증 완료(63건, 물리·가상 분류쌍 모두 확인, 재실행 멱등성 확인). OS → 물리 Computer 단건 INSERT·CI 승격·관련 CI 표시 확인. 속성별 검증은 별도.
 > 분류 선택 이유·관계 추천안·미결 근거는 [OS 수집 설계](../../../design/ci/os.md)에 있다.
 
 공통 컬럼 정의는 [ACTCI](../actci.md), [ACTCISPEC](../actcispec.md)가 소유한다.
@@ -100,7 +100,7 @@ LIMIT %d OFFSET %d
 2026-09-15 `./run.sh ci-relation`으로 운영 적재를 검증했다. 63건 조회·63건 적재, 도착 분류는
 물리 Computer(SYS.COMPUTERSYSTEM) 5건·가상 Computer(SYS.VIRTUALCOMPUTERSYSTEM) 58건 모두
 관측됐고, 재실행에서 `ACTCIRELATIONID`가 유지됐다(멱등성). CI 승격까지는 이번에 재검증하지
-않았다. OsCiIntegrate 안이 아니라 모든 CI 본체 적재가 끝난 뒤의
+않았다. OsCiImport 안이 아니라 모든 CI 본체 적재가 끝난 뒤의
 [관계 단계](../../../design/ci/relations.md#실행-위치--ci-본체-적재-이후-별도-단계)에서 저장하며,
 조회 정의는 연결 키를 가진 OS 도메인이 소유한다.
 

@@ -143,7 +143,7 @@ java -jar ... conversion asset ci software
 
 `TLOAMSOFTWARE` 는 예외다. 카탈로그 행을 만들고 발번된 ID 를
 `DPASOFTWARE.TLOAMSOFTWAREID` 에 되돌려 써야 하므로 `software` 잡 안에서
-`DpaSoftwareIntegrate` 앞에 둔다. 상세는 `../software/tloamsoftware.md` 참조.
+`DpaSoftwareImport` 앞에 둔다. 상세는 `../software/tloamsoftware.md` 참조.
 
 ## MERGE 규칙
 
@@ -188,16 +188,16 @@ OS 19종, 프로세서 4종, 어댑터 2종이다.
 테이블 한 장에 문서 한 장, 태스크 하나다. 도메인마다 대상과 변형 둘이므로
 문서도 둘이다.
 
-| 문서 | Target | 태스크 | `@Order` |
+| 문서 | Target | 태스크 | Job의 명시적 순서 |
 | --- | --- | --- | --- |
-| `dpammanufacturer.md` | `DPAMMANUFACTURER` | `DpamManufacturerIntegrate` | 1 |
-| `dpammanuvariant.md` | `DPAMMANUVARIANT` | `DpamManuVariantIntegrate` | 2 |
-| `dpamos.md` | `DPAMOS` | `DpamOsIntegrate` | 3 |
-| `dpamosvariant.md` | `DPAMOSVARIANT` | `DpamOsVariantIntegrate` | 4 |
-| `dpamprocessor.md` | `DPAMPROCESSOR` | `DpamProcessorIntegrate` | 5 |
-| `dpamprocvariant.md` | `DPAMPROCVARIANT` | `DpamProcVariantIntegrate` | 6 |
-| `dpamadapter.md` | `DPAMADAPTER` | `DpamAdapterIntegrate` | 7 |
-| `dpamadptvariant.md` | `DPAMADPTVARIANT` | `DpamAdptVariantIntegrate` | 8 |
+| `dpammanufacturer.md` | `DPAMMANUFACTURER` | `DpamManufacturerImport` | 1 |
+| `dpammanuvariant.md` | `DPAMMANUVARIANT` | `DpamManuVariantImport` | 2 |
+| `dpamos.md` | `DPAMOS` | `DpamOsImport` | 3 |
+| `dpamosvariant.md` | `DPAMOSVARIANT` | `DpamOsVariantImport` | 4 |
+| `dpamprocessor.md` | `DPAMPROCESSOR` | `DpamProcessorImport` | 5 |
+| `dpamprocvariant.md` | `DPAMPROCVARIANT` | `DpamProcVariantImport` | 6 |
+| `dpamadapter.md` | `DPAMADAPTER` | `DpamAdapterImport` | 7 |
+| `dpamadptvariant.md` | `DPAMADPTVARIANT` | `DpamAdptVariantImport` | 8 |
 
 대상을 먼저, 변형을 나중에 적재한다. 변형의 이름 컬럼이 대상을 가리키기
 때문이다. FK 제약은 없으나 기존 데이터가 전 도메인 1:1로 이 관계를 지키고 있다.
@@ -230,7 +230,7 @@ TLOAMSOFTWARE.MANUFACTURER   →  DPAMMANUVARIANT.MANUFACTURERVAR
 
 다른 변환 대상과 달리 이름만 넣는 것으로 끝나지 않는다. 카탈로그 행을 만들고
 발번된 ID를 자식에 되돌려 써야 하므로 `software` 잡에서
-`DpaSoftwareIntegrate`보다 먼저 실행한다. `../software/tloamsoftware.md` 참조.
+`DpaSoftwareImport`보다 먼저 실행한다. `../software/tloamsoftware.md` 참조.
 
 ## 공통 구조
 

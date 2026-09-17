@@ -20,22 +20,22 @@ from pathlib import Path
 WORK = Path("local/db-access-kit/work/maximo")
 OUT = Path("docs/data-analysis/data-mapping")
 
-# 테이블 -> (패키지, 구현 클래스, ASSETCLASS)
+# 테이블 -> (문서 영역, maximo 영역별 Writer, ASSETCLASS)
 TABLES = {
-    "DEPLOYEDASSET":   ("asset", "DeployedAssetIntegrate", "COMPUTER, NETDEVICE, NETPRINTER"),
-    "DPACOMPUTER":     ("asset", "DpaComputerIntegrate", "COMPUTER"),
-    "DPAOS":           ("asset", "DpaOsIntegrate", "COMPUTER"),
-    "DPACPU":          ("asset", "DpaCpuIntegrate", "COMPUTER"),
-    "DPADISK":         ("asset", "DpaDiskIntegrate", "COMPUTER"),
-    "DPALOGICALDRIVE": ("asset", "DpaLogicalDriveIntegrate", "COMPUTER"),
-    "DPANETADAPTER":   ("asset", "DpaNetAdapterIntegrate", "COMPUTER"),
-    "DPATCPIP":        ("asset", "DpaTcpIpIntegrate", "COMPUTER"),
-    "DPAMEDIAADAPTER": ("asset", "DpaMediaAdapterIntegrate", "COMPUTER"),
-    "DPADISPLAY":      ("asset", "DpaDisplayIntegrate", "COMPUTER"),
-    "DPASWSUITE":      ("asset", "DpaSwSuiteIntegrate", "COMPUTER"),
-    "DPANETDEVICE":    ("asset", "DpaNetDeviceIntegrate", "NETDEVICE"),
-    "DPANETPRINTER":   ("asset", "DpaNetPrinterIntegrate", "NETPRINTER"),
-    "DPASOFTWARE":     ("software", "DpaSoftwareIntegrate", "COMPUTER"),
+    "DEPLOYEDASSET":   ("asset", "DeployedAssetWriter", "COMPUTER, NETDEVICE, NETPRINTER"),
+    "DPACOMPUTER":     ("asset", "DpaComputerWriter", "COMPUTER"),
+    "DPAOS":           ("asset", "DpaOsWriter", "COMPUTER"),
+    "DPACPU":          ("asset", "DpaCpuWriter", "COMPUTER"),
+    "DPADISK":         ("asset", "DpaDiskWriter", "COMPUTER"),
+    "DPALOGICALDRIVE": ("asset", "DpaLogicalDriveWriter", "COMPUTER"),
+    "DPANETADAPTER":   ("asset", "DpaNetAdapterWriter", "COMPUTER"),
+    "DPATCPIP":        ("asset", "DpaTcpIpWriter", "COMPUTER"),
+    "DPAMEDIAADAPTER": ("asset", "DpaMediaAdapterWriter", "COMPUTER"),
+    "DPADISPLAY":      ("asset", None, "COMPUTER"),
+    "DPASWSUITE":      ("asset", None, "COMPUTER"),
+    "DPANETDEVICE":    ("asset", "DpaNetDeviceWriter", "NETDEVICE"),
+    "DPANETPRINTER":   ("asset", "DpaNetPrinterWriter", "NETPRINTER"),
+    "DPASOFTWARE":     ("software", "DpaSoftwareWriter", "COMPUTER"),
 }
 
 
@@ -68,12 +68,14 @@ def type_label(row):
 
 def build(table, desc, columns):
     _package, impl, assetclass = TABLES[table]
+    implementation = f"maximo/{_package}/{impl}.java" if impl else "없음 (원천 없음)"
     lines = [
         f"# {table}",
         "",
         desc or "(설명 없음)",
         "",
-        f"> Target: MAXIMO.{table} · ASSETCLASS: {assetclass} · 구현: {impl}.java",
+        f"> Target: MAXIMO.{table} · ASSETCLASS: {assetclass} · 저장: {implementation}",
+        "> 조회·매핑 구현 참조는 해당 integration/d42maximo 기능 패키지에서 확인해 추가한다.",
         "",
         "## 1. 관계",
         "",

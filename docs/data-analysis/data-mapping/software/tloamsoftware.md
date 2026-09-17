@@ -2,7 +2,7 @@
 
 소프트웨어 카탈로그
 
-> Target: MAXIMO.TLOAMSOFTWARE · 구현: TloamSoftwareIntegrate.java
+> Target: MAXIMO.TLOAMSOFTWARE · 구현: [TloamSoftwareImport](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/software/catalog/TloamSoftwareImport.java) · [TloamSoftwareQuery](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/software/catalog/TloamSoftwareQuery.java) · [TloamSoftwareMapper](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/software/catalog/TloamSoftwareMapper.java) · [TloamSoftwareWriter](../../../../src/main/java/com/itmsg/device42/maximo/software/TloamSoftwareWriter.java)
 > 관측 2026-08-28 · Device42 192.168.1.35 · 192.168.2.68 / Maximo BLUDB
 > 재조회 `../../exploration-queries/device42/dpa-software-mapping.sql` · `../../exploration-queries/maximo/dpa-view-conversion-requirements.sql`
 
@@ -12,7 +12,7 @@
 - 카디널리티: TLOAMSOFTWARE 1 : N DPASOFTWARE
 - 선행: `DPAMMANUFACTURER` / `DPAMMANUVARIANT`
 - MERGE 키: `UNIQUEID`
-- 실행 위치: `software` 잡의 `DpaSoftwareIntegrate` 앞
+- 실행 위치: `software` 잡의 `DpaSoftwareImport` 앞
 
 UI 뷰의 필수 연결은 다음 두 개다.
 
@@ -136,10 +136,10 @@ ORDER BY software_name, version, manufacturer
 
 `software` 잡은 두 태스크를 순서대로 실행한다.
 
-1. `TloamSoftwareIntegrate`
+1. `TloamSoftwareImport`
    - 원천을 카탈로그 단위로 조회한다.
    - `UNIQUEID`로 MERGE하고 신규 행만 시퀀스로 발번한다.
-2. `DpaSoftwareIntegrate`
+2. `DpaSoftwareImport`
    - 설치 행에서 같은 `UNIQUEID`를 계산한다.
    - TLOAMSOFTWARE에서 `TLOAMSOFTWAREID`를 조회한다.
    - `TLOAMSOFTWAREID`와 `TLOAMPRODUCTID`에 같은 ID를 넣고 DPASOFTWARE를 MERGE한다.

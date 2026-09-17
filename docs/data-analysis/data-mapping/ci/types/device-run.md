@@ -1,6 +1,6 @@
 # Device CI 실행 준비
 
-구현: `CiIntegrationJob → CiDefinitionLoader → 공통 캐시 → DeviceCiIntegrate`.
+구현: `CiIntegrationJob → CiDefinitionLoader → 공통 캐시 → DeviceCiImport`.
 매핑 정본: [Device](device.md).
 
 ## 실행
@@ -24,13 +24,15 @@
 
 ```text
 CiIntegrationJob
-  CiDefinitionLoader.load → 실행 전용 캐시 생성
+  CiDefinitionLoader.load(CiClassification.ids()) → 실행 전용 캐시 생성
   각 CI 작업에 같은 캐시 전달
-    getTotalCount
-    배치 반복: getData → mapData → putData
+    Query.getTotalCount
+    PageLoop 반복: Query.getData → Mapper.mapData → ActCiWriter.write
+  CiRelationJob → CiRelationQuery → ActCiRelationWriter
 ```
 
-- `CiClassification` enum에서 조회할 분류를 정한다. enum 추가 시 SQL 조건이 자동으로 확장된다.
+- 연계의 `CiClassification` enum에서 조회할 분류를 정하고 Job이 ID 목록을 전달한다.
+  Maximo 로더·캐시는 연계 enum을 참조하지 않는다.
 - 캐시는 선택한 ACTCI 분류, 그 분류의 전체 스펙, ASSETATTRIBUTE 전체 행의 필요한 컬럼을 담는다.
   정상 구성에서는 분류·속성·스펙 3회 조회하며 개별 CI 작업은 정의 DB를 다시 조회하지 않는다.
   값 적재를 위한 ACTCI·ACTCISPEC 기존 행 조회는 계속 수행한다.
@@ -40,8 +42,8 @@ CiIntegrationJob
   상세 구조는 [공통 캐시 설계](../../../design/ci/definition-cache.md)를 참조한다.
 - 기존 asset처럼 COUNT와 LIMIT·OFFSET으로 조회한다.
   실행 중 원천 행이 추가·삭제되면 페이지 사이에서 누락·중복될 수 있다.
-- mapData에서 같은 `DeviceSource`로 ACTCI·ACTCISPEC DTO를 만든다.
-- putData에서 ACTCINUM 기준으로 본체를 MERGE한 뒤 스펙을 MERGE한다.
+- `DeviceCiMapper.mapData`에서 같은 `DeviceSource`로 ACTCI·ACTCISPEC DTO를 만든다.
+- `ActCiWriter.write`에서 ACTCINUM 기준으로 본체를 MERGE한 뒤 스펙을 MERGE한다.
 - 스펙의 부모 참조는 ACTCISPEC MERGE 내부에서 ACTCINUM으로 ACTCIID를 조회한다.
   본체와 스펙의 신규 ID는 각 MERGE의 INSERT 분기에서만 ACTCISEQ·ACTCISPECSEQ로 채번한다.
 - 중간 ID를 애플리케이션에서 임의로 발급하거나 MAXSEQUENCE·AUTOKEY를 수정하지 않는다.
@@ -61,14 +63,17 @@ CiIntegrationJob
   속성 자체의 미등록·전역 동명 정의 중복·조직/사이트 전용 정의만 존재하는 경우도 추가하지 않는다.
 - 본체 저장 실패는 해당 Device의 스펙을 저장하지 않고 다음 Device를 처리한다.
 - 스펙 저장 실패는 다음 스펙과 Device를 계속 처리한다.
-  Writer는 DB2 MERGE의 generated keys 반환을 위해 트랜잭션으로 실행하며, 건별로 잡은 실패 외의 성공 행은 종료 시 커밋한다.
+  Writer는 명시적 트랜잭션·롤백·generated keys 반환을 사용하지 않는다.
+  기존 JDBC 연결 설정에 따른 저장이며, 본체 성공 후 스펙 실패가 본체를 되돌리지 않는다.
 - 캐시 조회 실패·중복 분류/스펙 정의는 공통 준비 실패로 CI 실행을 중단한다. 이전 캐시를 재사용하지 않는다.
-  준비 후 개별 작업의 실패는 CiIntegrationJob이 기록하고 다음 CI 작업을 진행한다.
+  준비 후 개별 작업의 실패는 Job이 사용하는 TaskSequence가 기록하고 다음 CI 작업을 진행한다.
+  본체 작업 일부가 실패해도 관계 단계는 실행한다. 정의 로딩 자체가 실패하면 관계 단계에 도달하지 않는다.
 - 해당 분류의 정상 CLASSSPEC은 원천 값이 없어도 행을 만들어 ALNVALUE·NUMVALUE를 NULL로 동기화한다. 문자열·수치는 임의 절단·반올림하지 않는다.
 - LASTSCANDT 누락은 NULL을 전달하므로 대상 필수 제약에 걸리면 본체 저장이 실패한다.
   발견 시각을 실행 시각으로 대체하지 않는다.
 - 기존 ACTCI의 분류가 바뀌면 본체 분류와 이번 입력에 포함된 ACTCISPEC의 분류·템플릿 참조를 갱신한다.
-- 재시도·자동 삭제·이번 입력에 없는 이전 분류 스펙 정리·관계·승격은 구현 범위에 포함하지 않는다.
+- 저장 재시도·자동 삭제·이번 입력에 없는 이전 분류 스펙 정리·승격은 구현 범위에 포함하지 않는다.
+  관계는 본체 뒤의 별도 단계다. 접속 팩토리의 기존 연결 재시도는 유지한다.
 
 ## 검증
 

@@ -1,5 +1,10 @@
 # ACTCIRELATION
 
+구현: [관계 정의](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/ci/relation/CiRelationSource.java) ·
+[관계 실행](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/ci/relation/CiRelationJob.java) ·
+[관계 조회](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/ci/relation/CiRelationQuery.java) ·
+[공통 저장](../../../../src/main/java/com/itmsg/device42/maximo/ci/ActCiRelationWriter.java).
+
 실제 CI 관계의 공통 Target 매핑이다. 유형별 연결 의미와 원천 SQL은 출발 유형 문서가 소유한다.
 
 > 메타데이터 재조회: 2026-09-15 · MAXIMO / BLUDB.

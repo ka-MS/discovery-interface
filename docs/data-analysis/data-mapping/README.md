@@ -1,43 +1,45 @@
 # 데이터 매핑
 
-기본은 테이블 단위이며 문서 한 장이 구현 클래스 하나에 대응한다.
+기본은 테이블 단위이며 문서 한 장이 해당 연계의 조회·매핑과 타겟 Writer에 대응한다.
+Query·원천 모델·복잡한 Mapper·Import는 기능별로 모으고, 저장 SQL·DTO는 maximo에서 소유한다.
 CI는 [문서 예외 규칙](../README.md#ci-매핑-문서-예외)에 따라 공통 Target 규약과 유형별 매핑을 분리한다.
 
 | 문서 | 구현 |
 | --- | --- |
-| `asset/deployedasset.md` | `integration/asset/DeployedAssetIntegrate.java` |
-| `asset/dpacomputer.md` | `integration/asset/DpaComputerIntegrate.java` |
-| `asset/dpaos.md` | `integration/asset/DpaOsIntegrate.java` |
-| `asset/dpacpu.md` | `integration/asset/DpaCpuIntegrate.java` |
-| `asset/dpadisk.md` | `integration/asset/DpaDiskIntegrate.java` |
-| `asset/dpalogicaldrive.md` | `integration/asset/DpaLogicalDriveIntegrate.java` |
-| `asset/dpanetadapter.md` | `integration/asset/DpaNetAdapterIntegrate.java` |
-| `asset/dpatcpip.md` | `integration/asset/DpaTcpIpIntegrate.java` |
-| `asset/dpamediaadapter.md` | `integration/asset/DpaMediaAdapterIntegrate.java` |
-| `asset/dpadisplay.md` | `integration/asset/DpaDisplayIntegrate.java` |
-| `asset/dpaswsuite.md` | `integration/asset/DpaSwSuiteIntegrate.java` |
-| `asset/dpanetdevice.md` | `integration/asset/DpaNetDeviceIntegrate.java` |
-| `asset/dpanetprinter.md` | `integration/asset/DpaNetPrinterIntegrate.java` |
-| `software/tloamsoftware.md` | `integration/software/TloamSoftwareIntegrate.java` |
-| `software/dpasoftware.md` | `integration/software/DpaSoftwareIntegrate.java` |
+| `asset/deployedasset.md` | `integration/d42maximo/asset/device/` · `maximo/asset/DeployedAssetWriter.java` |
+| `asset/dpacomputer.md` | `integration/d42maximo/asset/computer/` · `maximo/asset/DpaComputerWriter.java` |
+| `asset/dpaos.md` | `integration/d42maximo/asset/os/` · `maximo/asset/DpaOsWriter.java` |
+| `asset/dpacpu.md` | `integration/d42maximo/asset/cpu/` · `maximo/asset/DpaCpuWriter.java` |
+| `asset/dpadisk.md` | `integration/d42maximo/asset/disk/` · `maximo/asset/DpaDiskWriter.java` |
+| `asset/dpalogicaldrive.md` | `integration/d42maximo/asset/logicaldrive/` · `maximo/asset/DpaLogicalDriveWriter.java` |
+| `asset/dpanetadapter.md` | `integration/d42maximo/asset/netadapter/` · `maximo/asset/DpaNetAdapterWriter.java` |
+| `asset/dpatcpip.md` | `integration/d42maximo/asset/tcpip/` · `maximo/asset/DpaTcpIpWriter.java` |
+| `asset/dpamediaadapter.md` | `integration/d42maximo/asset/mediaadapter/` · `maximo/asset/DpaMediaAdapterWriter.java` |
+| `asset/dpadisplay.md` | 미구현 (원천 없음) |
+| `asset/dpaswsuite.md` | 미구현 (원천 없음) |
+| `asset/dpanetdevice.md` | `integration/d42maximo/asset/netdevice/` · `maximo/asset/DpaNetDeviceWriter.java` |
+| `asset/dpanetprinter.md` | `integration/d42maximo/asset/netprinter/` · `maximo/asset/DpaNetPrinterWriter.java` |
+| `software/tloamsoftware.md` | `integration/d42maximo/software/catalog/` · `maximo/software/TloamSoftwareWriter.java` |
+| `software/dpasoftware.md` | `integration/d42maximo/software/installed/` · `maximo/software/DpaSoftwareWriter.java` |
 
 CI는 [ci/README.md](ci/README.md)에서 시작한다. `ACTCI`, `ACTCISPEC`,
 `ACTCIRELATION`의 Target 구조와 분류·속성 템플릿 조사는 완료했다.
 Computer·VM·Switch의 DPA와 독립된 수집·본체·스펙 매핑 및 SQL은 [Device](ci/types/device.md)에 있다. 저장 구현·D42 양 서버 검증과 [Switch·Printer 기준정보 설계](../design/ci/device-reference-data.md)는 완료했으며, MAS UI 적용과 실제 승격·UI 검증은 남아 있다.
 DB·DB Instance의 전체 원천 컬럼별 사용처와 실제 SQL은 `ci/types/`에 있다.
-일반 DB·DB Server 분류는 확정했으며, 추가 속성·관계·식별자·공통 적재 정책은 미결이다.
+DB Instance의 현재 구현·분류·관계·검증 범위는 [유형 매핑](ci/types/database-instance.md)을 따른다.
+독립 Database 등 별도 미결은 각 유형 문서와 open-issues에서 구분한다.
 
 ## 변환 데이터
 
 자식 테이블이 Maximo UI 에 보이려면 변환 변형에 값이 등록되어 있어야 한다.
 뷰가 INNER 조인하기 때문이다. `conversion/README.md` 참조.
 
-현재 실제 적재 구현은 `DeployedAssetIntegrate`, `DpaComputerIntegrate`,
-`DpaNetDeviceIntegrate`, `DpaNetPrinterIntegrate`, `DpaCpuIntegrate`,
-`DpaOsIntegrate`, `DpaDiskIntegrate`, `DpaLogicalDriveIntegrate`,
-`DpaNetAdapterIntegrate`, `DpaMediaAdapterIntegrate`, `DpaTcpIpIntegrate`,
-`TloamSoftwareIntegrate`, `DpaSoftwareIntegrate`다. 나머지 자식 구현 클래스는
-아직 없다. 표는 문서 한 장이 대응할 구현 클래스를 가리킨다.
+현재 실제 적재 구현은 `DeployedAssetImport`, `ComputerImport`,
+`NetDeviceImport`, `NetPrinterImport`, `CpuImport`,
+`OsImport`, `DiskImport`, `LogicalDriveImport`,
+`NetAdapterImport`, `MediaAdapterImport`, `TcpIpImport`,
+`TloamSoftwareImport`, `DpaSoftwareImport`다. 나머지 자식 구현 클래스는
+아직 없다. 표는 현재 기능 패키지와 저장 구현을 가리킨다.
 
 ## 실행 순서
 
@@ -53,7 +55,7 @@ Device42 PK를 DPA 행의 Maximo ID로 직접 사용한다. `DEPLOYEDASSET.NODEI
 자식의 `NODEID`에는 원천 `device_fk`를 직접 넣는다. 부모 조회는 하지 않지만
 참조 대상 행을 먼저 만들기 위해 실행 순서는 유지한다.
 
-전체 잡은 `conversion → asset → ci → software` 순서다. `software` 잡 안에서는
+운영 권장 호출 순서는 `conversion → asset → ci → software`다. CLI는 받은 인자 순서대로만 실행하며 자동으로 의존 작업을 추가하지 않는다. `software` 잡 안에서는
 `TLOAMSOFTWARE → DPASOFTWARE` 순서로 적재한다.
 
 ## ASSETCLASS 라우팅

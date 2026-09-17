@@ -2,7 +2,7 @@
 
 운영체제 변환 변형
 
-> Target: MAXIMO.DPAMOSVARIANT · 구현: DpamOsVariantIntegrate.java
+> Target: MAXIMO.DPAMOSVARIANT · 구현: [DpamOsVariantImport](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/conversion/os/DpamOsVariantImport.java) · [DpamOsVariantQuery](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/conversion/os/DpamOsVariantQuery.java) · [DpamOsVariantWriter](../../../../src/main/java/com/itmsg/device42/maximo/conversion/DpamOsVariantWriter.java)
 > 관측 2026-08-28 · Device42 192.168.1.35 · 192.168.2.68 / Maximo BLUDB
 > 재조회 `../../exploration-queries/maximo/dpa-view-conversion-requirements.sql`
 
@@ -30,7 +30,7 @@ where dpaos.manufacturer = dpammanuvariant.manufacturervar
 | --- | --- | --- |
 | `view_deviceos_v1.os_name` | MAXIMO.DPAMOSVARIANT | N:1 |
 
-`DpaOsIntegrate` 와 같은 원천·같은 필터를 쓴다. 자식이
+`OsQuery` 와 같은 원천·같은 필터를 쓴다. 자식이
 `defaultUnknown(os_name)` 으로 기록하므로 상수 `UNKNOWN` 도 함께 넣는다.
 
 기존 23행은 `Windows 98`, `Windows 2000`, `HP-UX` 같은 구세대 목록이며 Device42
@@ -40,7 +40,7 @@ where dpaos.manufacturer = dpammanuvariant.manufacturervar
 
 | 조건 | 식 | 사유 |
 | --- | --- | --- |
-| COMPUTER 대상 | `DpaOsIntegrate` 와 동일한 `DEVICE_FILTER` | 자식이 기록할 값만 등록한다 |
+| COMPUTER 대상 | `OsQuery` 와 동일한 `DEVICE_FILTER` | 자식이 기록할 값만 등록한다 |
 | 빈 값 제외 | `name IS NOT NULL AND name <> ''` | 이름 컬럼이 NOT NULL 이다 |
 
 ## 4. 컬럼 매핑

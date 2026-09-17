@@ -149,18 +149,20 @@ Cluster→Interface는 Interface CI 도입 시 별도로 설계한다.
 
 | 파일 | 역할 | 관계가 늘면 |
 | --- | --- | --- |
-| `integration/ci/relation/CiRelationSource` | 상수 하나 = relationnum + 건수 SQL + 페이지 SQL | **상수 추가** |
-| `integration/ci/relation/CiRelationJob` | `values()` 순회 · 페이징 · 변환 · 집계 | 변경 없음 |
-| `integration/ci/relation/ActCiRelationWriter` | 공통 MERGE · 건별 오류 격리 | 변경 없음 |
-| `dto/maximo/ci/ActCiRelationUpsert` | sourceCiNum · targetCiNum · relationNum | 변경 없음 |
+| `integration/d42maximo/ci/relation/CiRelationSource` | 상수 하나 = relationnum + 건수 SQL + 페이지 SQL | **상수 추가** |
+| `integration/d42maximo/ci/relation/CiRelationJob` | `values()` 순회 · PageLoop · 집계 | 변경 없음 |
+| `integration/d42maximo/ci/relation/CiRelationQuery` | 정의별 SQL 실행 · 관계 DTO 변환 | 변경 없음 |
+| `maximo/ci/ActCiRelationWriter` | 공통 MERGE · 건별 오류 격리 | 변경 없음 |
+| `maximo/ci/ActCiRelationUpsert` | sourceCiNum · targetCiNum · relationNum | 변경 없음 |
 
 enum 하나로 합친 이유는 관계 하나에 상수가 둘이 되는 것을 막기 위해서다.
 relationnum과 조회 SQL은 관계마다 1:1이라 `CiRelationRule`을 따로 둘 이유가 없다.
 허용 분류 집합은 넣지 않는다. MERGE가 실제 ACTCI 행과 RELATIONRULES로 검사한다.
 
-enum을 `enums/ci`가 아니라 관계 패키지에 두는 이유는 D42 SQL을 담기 때문이다.
-`enums/ci`는 Maximo 메타데이터만 두고, SQL은 기존 `*CiIntegrate`처럼 적재 코드 옆에 둔다.
-이를 위해 `CiSourceFilter`를 public으로 연다.
+enum은 D42 수집 SQL을 담으므로 연계의 관계 패키지에 둔다.
+분류·스펙 선택 enum은 `integration/d42maximo/ci/mapping`,
+공유 수집 조건은 `integration/d42maximo/ci/selection`에 둔다.
+Maximo는 타겟 DTO·저장 SQL·정의 조회만 소유한다.
 
 `CiRelationJob`은 `CiDefinitionCache`를 받지 않는다. 관계 저장에 분류·속성 정의가
 필요 없으므로 `ci-relation` 단독 실행이 본체 기준정보 로딩에 의존하지 않는다.

@@ -9,10 +9,10 @@
 | --- | --- |
 | CiClassification | 사용할 분류명 목록. SQL 조건을 별도 수정하지 않음 |
 | ComputerSpec | 전체 ASSETATTRID·적용 대상·명시적 추가 속성 설정 |
-| CiDefinitionLoader | 선택한 ACTCI 분류·스펙과 전체 ASSETATTRIBUTE를 조회 |
-| CiDefinitionCache | 실행 동안 공유하는 읽기 전용 스냅샷. DB 접근 없음 |
+| maximo.ci.definition.CiDefinitionLoader | 호출자가 전달한 분류 ID로 ACTCI 분류·스펙과 전체 ASSETATTRIBUTE를 조회 |
+| maximo.ci.definition.CiDefinitionCache | 실행 동안 공유하는 읽기 전용 스냅샷. DB 접근·연계 enum 의존 없음 |
 | CiIntegrationJob | 실행마다 캐시 한 번 생성, 같은 객체를 모든 작업에 전달 |
-| DeviceCiIntegrate | getData → mapData → putData. 정의는 전달받은 캐시 참조 |
+| DeviceCiImport | Query.getData → Mapper.mapData → ActCiWriter.write. 정의는 전달받은 캐시 참조 |
 
 분류는 분류명, 스펙은 (CLASSSTRUCTUREID, ASSETATTRID, SECTION), 속성은 숫자
 ASSETATTRIBUTEID로 조회한다. NULL 섹션을 빈 문자열로 바꾸지 않는다.
@@ -39,7 +39,8 @@ ASSETATTRIBUTEID로 조회한다. NULL 섹션을 빈 문자열로 바꾸지 않�
 
 ## 실행과 확장
 
-- 다음 유형 구현 시 CiClassification에 분류명을 추가하고 유형별 속성 enum·수집 작업을 만든다.
+- 다음 유형 구현 시 연계의 CiClassification에 분류명을 추가하고 유형별 속성 enum·수집 작업을 만든다.
+  Job이 `CiClassification.ids()`를 로더에 전달하고 명시적 작업 목록에 새 작업을 조립한다.
 - 캐시 로더의 SQL이나 Computer 코드를 수정해서 새 분류를 열거하지 않는다.
 - 조회 결과는 실행 중 갱신하지 않으며, 다음 실행은 새 캐시를 만든다.
 - 공통 준비 실패 시 이전 캐시를 사용하지 않는다. 준비 이후 개별 작업 실패는 다음 작업으로 이어간다.
