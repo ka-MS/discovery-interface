@@ -1,19 +1,15 @@
 package com.itmsg.device42.integration.d42maximo.asset.disk;
 
-import com.itmsg.device42.dto.device42.asset.DiskSource;
-import com.itmsg.device42.dto.maximo.asset.DpaDiskUpsert;
-import com.itmsg.device42.integration.asset.AssetIntegrationTask;
+import com.itmsg.device42.maximo.asset.DpaDiskUpsert;
 import com.itmsg.device42.maximo.asset.DpaDiskWriter;
 import com.itmsg.device42.runtime.PageLoop;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
-@Component("dpaDiskIntegrate")
-@Order(6)
-public class DiskImport implements AssetIntegrationTask {
+@Component
+public class DiskImport {
 
     private static final Logger log = LoggerFactory.getLogger(DiskImport.class);
 
@@ -29,7 +25,6 @@ public class DiskImport implements AssetIntegrationTask {
         this.writer = writer;
     }
 
-    @Override
     public void integrate() {
         long totalCount = query.getTotalCount();
         int batchSize = DEFAULT_BATCH_SIZE;

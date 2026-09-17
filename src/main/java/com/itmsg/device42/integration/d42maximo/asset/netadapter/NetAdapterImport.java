@@ -1,19 +1,15 @@
 package com.itmsg.device42.integration.d42maximo.asset.netadapter;
 
-import com.itmsg.device42.dto.device42.asset.NetworkInterfaceSource;
-import com.itmsg.device42.dto.maximo.asset.DpaNetAdapterUpsert;
-import com.itmsg.device42.integration.asset.AssetIntegrationTask;
+import com.itmsg.device42.maximo.asset.DpaNetAdapterUpsert;
 import com.itmsg.device42.maximo.asset.DpaNetAdapterWriter;
 import com.itmsg.device42.runtime.PageLoop;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
-@Component("dpaNetAdapterIntegrate")
-@Order(7)
-public class NetAdapterImport implements AssetIntegrationTask {
+@Component
+public class NetAdapterImport {
 
     private static final Logger log = LoggerFactory.getLogger(NetAdapterImport.class);
 
@@ -29,7 +25,6 @@ public class NetAdapterImport implements AssetIntegrationTask {
         this.writer = writer;
     }
 
-    @Override
     public void integrate() {
         long totalCount = query.getTotalCount();
         int batchSize = DEFAULT_BATCH_SIZE;

@@ -1,14 +1,9 @@
 package com.itmsg.device42.integration.d42maximo.asset.computer;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
+import com.itmsg.device42.device42.DoqlClient;
+import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
-
-import com.itmsg.device42.config.Device42ConnectionFactory;
-import com.itmsg.device42.dto.device42.asset.ComputerHardwareSource;
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Component;
@@ -16,18 +11,18 @@ import org.springframework.stereotype.Component;
 @Component
 public class ComputerQuery {
 
-    public ComputerQuery(Device42ConnectionFactory connectionFactory) {
-        this.connectionFactory = connectionFactory;
+    private final DoqlClient doql;
+
+    public ComputerQuery(DoqlClient doql) {
+        this.doql = doql;
     }
 
-    private final Device42ConnectionFactory connectionFactory;
-
     public long getTotalCount() {
-        try (Connection connection = connectionFactory.openConnection();
-             PreparedStatement statement = connection.prepareStatement(DEVICE_TOTAL_COUNT_QUERY);
-             ResultSet resultSet = statement.executeQuery()) {
+        try {
+            return doql.preparedQuery(DEVICE_TOTAL_COUNT_QUERY, resultSet -> {
 
-            return resultSet.next() ? resultSet.getLong(1) : 0L;
+                return resultSet.next() ? resultSet.getLong(1) : 0L;
+            });
         } catch (SQLException e) {
             throw new IllegalStateException("DPA Computer 대상 장비 건수 조회에 실패했습니다.", e);
         }
@@ -36,24 +31,24 @@ public class ComputerQuery {
     public List<ComputerHardwareSource> getData(long offset, int limit) {
         String query = DEVICE_QUERY + "LIMIT %d OFFSET %d".formatted(limit, offset);
 
-        try (Connection connection = connectionFactory.openConnection();
-             Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery(query)) {
+        try {
+            return doql.query(query, resultSet -> {
 
-            List<ComputerHardwareSource> computers = new ArrayList<>(limit);
-            while (resultSet.next()) {
-                computers.add(new ComputerHardwareSource(
-                        resultSet.getInt("device_pk"),
-                        resultSet.getString("bios_name"),
-                        resultSet.getString("bios_version"),
-                        resultSet.getString("bios_release_date"),
-                        resultSet.getBigDecimal("ram"),
-                        resultSet.getString("ram_size_type"),
-                        getNullableInteger(resultSet, "total_cpus"),
-                        getNullableInteger(resultSet, "core_per_cpu")
-                ));
-            }
-            return computers;
+                List<ComputerHardwareSource> computers = new ArrayList<>(limit);
+                while (resultSet.next()) {
+                    computers.add(new ComputerHardwareSource(
+                            resultSet.getInt("device_pk"),
+                            resultSet.getString("bios_name"),
+                            resultSet.getString("bios_version"),
+                            resultSet.getString("bios_release_date"),
+                            resultSet.getBigDecimal("ram"),
+                            resultSet.getString("ram_size_type"),
+                            getNullableInteger(resultSet, "total_cpus"),
+                            getNullableInteger(resultSet, "core_per_cpu")
+                    ));
+                }
+                return computers;
+            });
         } catch (SQLException e) {
             throw new IllegalStateException(
                     "DPA Computer 원천 조회에 실패했습니다. offset=" + offset + ", limit=" + limit,

@@ -1,19 +1,15 @@
 package com.itmsg.device42.integration.d42maximo.software.catalog;
 
-import com.itmsg.device42.dto.device42.software.SoftwareProductSource;
-import com.itmsg.device42.dto.maximo.software.TloamSoftwareUpsert;
-import com.itmsg.device42.integration.software.SoftwareIntegrationTask;
+import com.itmsg.device42.maximo.software.TloamSoftwareUpsert;
 import com.itmsg.device42.maximo.software.TloamSoftwareWriter;
 import com.itmsg.device42.runtime.PageLoop;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
-@Component("tloamSoftwareIntegrate")
-@Order(1)
-public class TloamSoftwareImport implements SoftwareIntegrationTask {
+@Component
+public class TloamSoftwareImport {
 
     private static final Logger log = LoggerFactory.getLogger(TloamSoftwareImport.class);
 
@@ -29,7 +25,6 @@ public class TloamSoftwareImport implements SoftwareIntegrationTask {
         this.writer = writer;
     }
 
-    @Override
     public void integrate() {
         long totalCount = query.getTotalCount();
         int batchSize = DEFAULT_BATCH_SIZE;

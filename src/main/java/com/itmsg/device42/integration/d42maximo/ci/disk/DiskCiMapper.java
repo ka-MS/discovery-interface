@@ -1,15 +1,14 @@
 package com.itmsg.device42.integration.d42maximo.ci.disk;
 
-import com.itmsg.device42.dto.device42.ci.DiskSource;
-import com.itmsg.device42.dto.maximo.ci.ActCiSpecUpsert;
-import com.itmsg.device42.dto.maximo.ci.ActCiUpsert;
-import com.itmsg.device42.dto.maximo.ci.CiUpsert;
-import com.itmsg.device42.dto.maximo.ci.ClassificationDefinition;
-import com.itmsg.device42.enums.ci.CiClassification;
-import com.itmsg.device42.enums.ci.DiskSpec;
-import com.itmsg.device42.integration.ci.CiDefinitionCache;
-import com.itmsg.device42.integration.ci.CiSpecMapper;
-import com.itmsg.device42.integration.ci.SourceTimestamp;
+import com.itmsg.device42.integration.d42maximo.ci.mapping.CiClassification;
+import com.itmsg.device42.integration.d42maximo.ci.mapping.CiSpecMapper;
+import com.itmsg.device42.integration.d42maximo.ci.mapping.DiskSpec;
+import com.itmsg.device42.integration.d42maximo.ci.mapping.SourceTimestamp;
+import com.itmsg.device42.maximo.ci.ActCiSpecUpsert;
+import com.itmsg.device42.maximo.ci.ActCiUpsert;
+import com.itmsg.device42.maximo.ci.CiUpsert;
+import com.itmsg.device42.maximo.ci.definition.CiDefinitionCache;
+import com.itmsg.device42.maximo.ci.definition.ClassificationDefinition;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -21,10 +20,6 @@ import org.springframework.stereotype.Component;
 @Component
 public class DiskCiMapper {
 
-    public DiskCiMapper(CiSpecMapper specMapper) {
-        this.specMapper = specMapper;
-    }
-
     private static final Logger log = LoggerFactory.getLogger(DiskCiMapper.class);
 
     private static final String CHANGE_BY = "Device42";
@@ -35,13 +30,17 @@ public class DiskCiMapper {
 
     private final CiSpecMapper specMapper;
 
+    public DiskCiMapper(CiSpecMapper specMapper) {
+        this.specMapper = specMapper;
+    }
+
     public List<CiUpsert> mapData(List<DiskSource> data, CiDefinitionCache definitions) {
         LocalDateTime applyDateTime = LocalDateTime.now();
         List<CiUpsert> mappedData = new ArrayList<>(data.size());
 
         for (DiskSource source : data) {
             try {
-                ClassificationDefinition definition = definitions.classification(CiClassification.DISK_DRIVE);
+                ClassificationDefinition definition = definitions.classification(CiClassification.DISK_DRIVE.classificationId());
                 if (definition == null) {
                     log.warn("Disk 분류가 없어 건너뜁니다. partPk={}", source.partPk());
                     continue;

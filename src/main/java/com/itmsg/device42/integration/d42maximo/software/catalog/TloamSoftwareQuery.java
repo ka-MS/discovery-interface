@@ -1,12 +1,7 @@
 package com.itmsg.device42.integration.d42maximo.software.catalog;
 
-import com.itmsg.device42.config.Device42ConnectionFactory;
-import com.itmsg.device42.dto.device42.software.SoftwareProductSource;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+import com.itmsg.device42.device42.DoqlClient;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Component;
@@ -14,22 +9,22 @@ import org.springframework.stereotype.Component;
 @Component
 public class TloamSoftwareQuery {
 
-    public TloamSoftwareQuery(Device42ConnectionFactory connectionFactory) {
-        this.connectionFactory = connectionFactory;
+    private final DoqlClient doql;
+
+    public TloamSoftwareQuery(DoqlClient doql) {
+        this.doql = doql;
     }
 
-    private final Device42ConnectionFactory connectionFactory;
-
     public long getTotalCount() {
-        try (Connection connection = connectionFactory.openConnection();
-             PreparedStatement statement = connection.prepareStatement(TOTAL_COUNT_QUERY);
-             ResultSet resultSet = statement.executeQuery()) {
+        try {
+            return doql.preparedQuery(TOTAL_COUNT_QUERY, resultSet -> {
 
-            if (resultSet.next()) {
-                return resultSet.getLong(1);
-            }
+                if (resultSet.next()) {
+                    return resultSet.getLong(1);
+                }
 
-            return 0L;
+                return 0L;
+            });
         } catch (SQLException e) {
             throw new IllegalStateException("TLOAM 소프트웨어 카탈로그 대상 건수 조회에 실패했습니다.", e);
         }
@@ -38,21 +33,21 @@ public class TloamSoftwareQuery {
     public List<SoftwareProductSource> getData(long offset, int limit) {
         String query = SOURCE_QUERY + "LIMIT %d OFFSET %d".formatted(limit, offset);
 
-        try (Connection connection = connectionFactory.openConnection();
-             Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery(query)) {
+        try {
+            return doql.query(query, resultSet -> {
 
-            List<SoftwareProductSource> rows = new ArrayList<>(limit);
+                List<SoftwareProductSource> rows = new ArrayList<>(limit);
 
-            while (resultSet.next()) {
-                rows.add(new SoftwareProductSource(
-                        resultSet.getString("software_name"),
-                        resultSet.getString("version"),
-                        resultSet.getString("manufacturer")
-                ));
-            }
+                while (resultSet.next()) {
+                    rows.add(new SoftwareProductSource(
+                            resultSet.getString("software_name"),
+                            resultSet.getString("version"),
+                            resultSet.getString("manufacturer")
+                    ));
+                }
 
-            return rows;
+                return rows;
+            });
         } catch (SQLException e) {
             throw new IllegalStateException(
                     "TLOAM 소프트웨어 카탈로그 원천 조회에 실패했습니다. offset=" + offset + ", limit=" + limit,

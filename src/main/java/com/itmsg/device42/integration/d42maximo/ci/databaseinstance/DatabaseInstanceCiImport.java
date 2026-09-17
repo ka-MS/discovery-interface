@@ -1,18 +1,16 @@
 package com.itmsg.device42.integration.d42maximo.ci.databaseinstance;
 
-import com.itmsg.device42.dto.device42.ci.DatabaseInstanceSource;
-import com.itmsg.device42.dto.maximo.ci.CiUpsert;
-import com.itmsg.device42.integration.ci.ActCiWriter;
-import com.itmsg.device42.integration.ci.CiDefinitionCache;
-import com.itmsg.device42.integration.ci.CiIntegrationTask;
+import com.itmsg.device42.maximo.ci.ActCiWriter;
+import com.itmsg.device42.maximo.ci.CiUpsert;
+import com.itmsg.device42.maximo.ci.definition.CiDefinitionCache;
 import com.itmsg.device42.runtime.PageLoop;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-@Component("databaseInstanceCiIntegrate")
-public class DatabaseInstanceCiImport implements CiIntegrationTask {
+@Component
+public class DatabaseInstanceCiImport {
 
     private static final Logger log = LoggerFactory.getLogger(DatabaseInstanceCiImport.class);
 
@@ -22,13 +20,15 @@ public class DatabaseInstanceCiImport implements CiIntegrationTask {
     private final DatabaseInstanceCiMapper mapper;
     private final ActCiWriter writer;
 
-    public DatabaseInstanceCiImport(DatabaseInstanceCiQuery query, DatabaseInstanceCiMapper mapper, ActCiWriter writer) {
+    public DatabaseInstanceCiImport(
+            DatabaseInstanceCiQuery query,
+            DatabaseInstanceCiMapper mapper,
+            ActCiWriter writer) {
         this.query = query;
         this.mapper = mapper;
         this.writer = writer;
     }
 
-    @Override
     public void integrate(CiDefinitionCache definitions) {
         long totalCount = query.getTotalCount();
         if (totalCount <= 0) {

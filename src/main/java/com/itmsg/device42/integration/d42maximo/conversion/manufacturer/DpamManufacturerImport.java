@@ -1,20 +1,16 @@
 package com.itmsg.device42.integration.d42maximo.conversion.manufacturer;
 
-import java.util.ArrayList;
-import com.itmsg.device42.dto.device42.conversion.ManufacturerSource;
-import com.itmsg.device42.dto.maximo.conversion.DpamManufacturerUpsert;
-import com.itmsg.device42.integration.conversion.ConversionIntegrationTask;
+import com.itmsg.device42.maximo.conversion.DpamManufacturerUpsert;
 import com.itmsg.device42.maximo.conversion.DpamManufacturerWriter;
 import com.itmsg.device42.runtime.PageLoop;
+import java.util.ArrayList;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
-@Component("dpamManufacturerIntegrate")
-@Order(1)
-public class DpamManufacturerImport implements ConversionIntegrationTask {
+@Component
+public class DpamManufacturerImport {
 
     private static final Logger log = LoggerFactory.getLogger(DpamManufacturerImport.class);
 
@@ -28,7 +24,6 @@ public class DpamManufacturerImport implements ConversionIntegrationTask {
         this.writer = writer;
     }
 
-    @Override
     public void integrate() {
         long totalCount = query.getTotalCount();
         int batchSize = DEFAULT_BATCH_SIZE;

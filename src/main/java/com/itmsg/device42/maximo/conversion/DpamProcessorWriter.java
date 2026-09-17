@@ -1,6 +1,5 @@
 package com.itmsg.device42.maximo.conversion;
 
-import com.itmsg.device42.dto.maximo.conversion.DpamProcessorUpsert;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.List;

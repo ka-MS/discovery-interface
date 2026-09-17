@@ -1,19 +1,15 @@
 package com.itmsg.device42.integration.d42maximo.software.installed;
 
-import com.itmsg.device42.dto.device42.software.InstalledSoftwareSource;
-import com.itmsg.device42.dto.maximo.software.DpaSoftwareUpsert;
-import com.itmsg.device42.integration.software.SoftwareIntegrationTask;
+import com.itmsg.device42.maximo.software.DpaSoftwareUpsert;
 import com.itmsg.device42.maximo.software.DpaSoftwareWriter;
 import com.itmsg.device42.runtime.PageLoop;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
-@Component("dpaSoftwareIntegrate")
-@Order(2)
-public class DpaSoftwareImport implements SoftwareIntegrationTask {
+@Component
+public class DpaSoftwareImport {
 
     private static final Logger log = LoggerFactory.getLogger(DpaSoftwareImport.class);
 
@@ -29,7 +25,6 @@ public class DpaSoftwareImport implements SoftwareIntegrationTask {
         this.writer = writer;
     }
 
-    @Override
     public void integrate() {
         long totalCount = query.getTotalCount();
         int batchSize = DEFAULT_BATCH_SIZE;

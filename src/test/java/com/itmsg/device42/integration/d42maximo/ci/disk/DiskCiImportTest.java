@@ -1,11 +1,9 @@
 package com.itmsg.device42.integration.d42maximo.ci.disk;
 
-import com.itmsg.device42.integration.ci.CiSpecMapper;
-import com.itmsg.device42.integration.ci.ActCiWriter;
-import com.itmsg.device42.integration.ci.CiDefinitionLoader;
-import com.itmsg.device42.config.Device42ConnectionFactory;
-import com.itmsg.device42.dto.device42.ci.DiskSource;
-import com.itmsg.device42.enums.ci.CiClassification;
+import com.itmsg.device42.integration.d42maximo.ci.mapping.CiSpecMapper;
+import com.itmsg.device42.maximo.ci.ActCiWriter;
+import com.itmsg.device42.maximo.ci.definition.CiDefinitionLoader;
+import com.itmsg.device42.integration.d42maximo.ci.mapping.CiClassification;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ClassPathResource;
@@ -18,7 +16,6 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
 
 class DiskCiImportTest {
     private JdbcTemplate jdbc;
@@ -102,7 +99,7 @@ class DiskCiImportTest {
     void missingClassificationSkipsEveryDisk() {
         jdbc.update("DELETE FROM MAXIMO.CLASSUSEWITH WHERE CLASSSTRUCTUREID='DSK'");
 
-        var mapped = mapper.mapData(List.of(disk(9, new BigDecimal("500"), "GB", "SER")), definitionLoader.load());
+        var mapped = mapper.mapData(List.of(disk(9, new BigDecimal("500"), "GB", "SER")), definitionLoader.load(CiClassification.ids()));
 
         assertThat(mapped).isEmpty();
     }
@@ -112,7 +109,7 @@ class DiskCiImportTest {
     }
 
     private void persist(DiskSource source) {
-        writer.write(mapper.mapData(List.of(source), definitionLoader.load()));
+        writer.write(mapper.mapData(List.of(source), definitionLoader.load(CiClassification.ids())));
     }
 
     private String text(String attributeId) {

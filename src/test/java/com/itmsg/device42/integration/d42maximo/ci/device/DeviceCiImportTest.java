@@ -1,12 +1,12 @@
 package com.itmsg.device42.integration.d42maximo.ci.device;
 
-import com.itmsg.device42.integration.ci.CiSpecMapper;
-import com.itmsg.device42.integration.ci.ActCiWriter;
-import com.itmsg.device42.integration.ci.CiDefinitionCache;
-import com.itmsg.device42.integration.ci.CiDefinitionLoader;
-import com.itmsg.device42.config.Device42ConnectionFactory;
-import com.itmsg.device42.dto.device42.ci.DeviceSource;
-import com.itmsg.device42.enums.ci.CiClassification;
+import com.itmsg.device42.device42.DoqlClient;
+import com.itmsg.device42.integration.d42maximo.ci.mapping.CiSpecMapper;
+import com.itmsg.device42.maximo.ci.ActCiWriter;
+import com.itmsg.device42.maximo.ci.definition.CiDefinitionCache;
+import com.itmsg.device42.maximo.ci.definition.CiDefinitionLoader;
+import com.itmsg.device42.device42.Device42ConnectionFactory;
+import com.itmsg.device42.integration.d42maximo.ci.mapping.CiClassification;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ClassPathResource;
@@ -165,7 +165,7 @@ class DeviceCiImportTest {
 
     @Test
     void mapsPhysicalAndVirtualUsingConfiguredTemplatesAndPreservesUnits() {
-        var definitions = definitionLoader.load();
+        var definitions = definitionLoader.load(CiClassification.ids());
         persist(source(7, "physical", "Physical", new BigDecimal("32.125")), definitions);
         persist(source(8, "virtual", "Virtual", new BigDecimal("16")), definitions);
 
@@ -198,7 +198,7 @@ class DeviceCiImportTest {
 
     @Test
     void mapsOnlyUnambiguousSwitchesToTheGenericSwitchClassification() {
-        var definitions = definitionLoader.load();
+        var definitions = definitionLoader.load(CiClassification.ids());
         persist(switchSource(9, "Switch", 1, 1), definitions);
 
         assertThat(jdbc.queryForObject(
@@ -219,7 +219,7 @@ class DeviceCiImportTest {
 
     @Test
     void mapsSwitchClustersWithOnlyClusterSpecificSpecs() {
-        persist(clusterSource(11, "Switch", "DC-1"), definitionLoader.load());
+        persist(clusterSource(11, "Switch", "DC-1"), definitionLoader.load(CiClassification.ids()));
 
         assertThat(jdbc.queryForObject(
                 "SELECT CLASSSTRUCTUREID FROM MAXIMO.ACTCI WHERE ACTCINUM='D42:DEVICE:11'",
@@ -244,7 +244,7 @@ class DeviceCiImportTest {
     @Test
     void skipsNonSwitchNetworkClusters() {
         assertThat(mapper.mapData(
-                List.of(clusterSource(11, "Router", null)), definitionLoader.load())).isEmpty();
+                List.of(clusterSource(11, "Router", null)), definitionLoader.load(CiClassification.ids()))).isEmpty();
     }
 
     @Test
@@ -254,14 +254,14 @@ class DeviceCiImportTest {
                 switchSource(10, "Router", 1, 1),
                 switchSource(11, null, 0, 1),
                 switchSource(12, "Switch", 1, 2),
-                printer), definitionLoader.load());
+                printer), definitionLoader.load(CiClassification.ids()));
 
         assertThat(mapped).isEmpty();
     }
 
     @Test
     void rerunKeepsParentAndSpecIdsIncludingNullSections() {
-        var definitions = definitionLoader.load();
+        var definitions = definitionLoader.load(CiClassification.ids());
         persist(source(7, "physical", "Before", new BigDecimal("32")), definitions);
         long parentId = jdbc.queryForObject("SELECT ACTCIID FROM MAXIMO.ACTCI", Long.class);
         var specIds = jdbc.queryForList("SELECT ACTCISPECID FROM MAXIMO.ACTCISPEC ORDER BY ACTCISPECID", Long.class);
@@ -279,7 +279,7 @@ class DeviceCiImportTest {
     @Test
     void mappingDoesNotWriteUntilPutDataIsCalled() {
         var mapped = mapper.mapData(
-                List.of(source(7, "physical", "Host", BigDecimal.TEN)), definitionLoader.load());
+                List.of(source(7, "physical", "Host", BigDecimal.TEN)), definitionLoader.load(CiClassification.ids()));
         assertThat(count("ACTCI")).isZero();
         assertThat(count("ACTCISPEC")).isZero();
         assertThat(mapped).hasSize(1);
@@ -293,7 +293,7 @@ class DeviceCiImportTest {
     void failedParentDoesNotStopFollowingComputerOrCreateOrphanSpecs() {
         var mapped = mapper.mapData(List.of(
                 source(7, "physical", "X".repeat(193), BigDecimal.TEN),
-                source(8, "virtual", "Good", BigDecimal.ONE)), definitionLoader.load());
+                source(8, "virtual", "Good", BigDecimal.ONE)), definitionLoader.load(CiClassification.ids()));
         writer.write(mapped);
 
         assertThat(jdbc.queryForList("SELECT ACTCINUM FROM MAXIMO.ACTCI", String.class))
@@ -308,7 +308,7 @@ class DeviceCiImportTest {
         rejectBiosVersion();
         writer.write(mapper.mapData(List.of(
                 source(7, "physical", "A", BigDecimal.TEN),
-                source(8, "virtual", "B", BigDecimal.ONE)), definitionLoader.load()));
+                source(8, "virtual", "B", BigDecimal.ONE)), definitionLoader.load(CiClassification.ids())));
 
         assertThat(count("ACTCI")).isEqualTo(2);
         assertThat(jdbc.queryForObject(
@@ -322,7 +322,7 @@ class DeviceCiImportTest {
 
     @Test
     void failedSpecUpdateKeepsParentUpdateAndContinuesOtherSpecs() {
-        var definitions = definitionLoader.load();
+        var definitions = definitionLoader.load(CiClassification.ids());
         persist(source(7, "physical", "Before", BigDecimal.TEN), definitions);
         jdbc.update("ALTER TABLE MAXIMO.ACTCISPEC ADD CONSTRAINT reject_new_name CHECK (ALNVALUE <> 'After')");
         persist(source(7, "physical", "After", BigDecimal.ONE), definitions);
@@ -338,7 +338,7 @@ class DeviceCiImportTest {
         jdbc.update("DELETE FROM MAXIMO.ASSETATTRIBUTE WHERE ASSETATTRID='COMPUTERSYSTEM_BIOSRELEASEDATE'");
         jdbc.update("UPDATE MAXIMO.ASSETATTRIBUTE SET DATATYPE='ALN' WHERE ASSETATTRID='COMPUTERSYSTEM_MEMORYSIZE'");
         jdbc.update("UPDATE MAXIMO.CLASSSPECUSEWITH SET CLASSSTRUCTUREID='WRONG' WHERE ASSETATTRID='COMPUTERSYSTEM_NAME'");
-        persist(source(7, "physical", "Host", BigDecimal.TEN), definitionLoader.load());
+        persist(source(7, "physical", "Host", BigDecimal.TEN), definitionLoader.load(CiClassification.ids()));
 
         assertThat(count("ACTCI")).isEqualTo(1);
         assertThat(jdbc.queryForList("SELECT ASSETATTRID FROM MAXIMO.ACTCISPEC", String.class))
@@ -351,7 +351,7 @@ class DeviceCiImportTest {
         jdbc.update("DELETE FROM MAXIMO.CLASSUSEWITH WHERE CLASSSTRUCTUREID=?", COMPUTER_CLASS_STRUCTURE_ID);
         writer.write(mapper.mapData(List.of(
                 source(7, "physical", "Physical", BigDecimal.TEN),
-                switchSource(8, "Switch", 1, 1)), definitionLoader.load()));
+                switchSource(8, "Switch", 1, 1)), definitionLoader.load(CiClassification.ids())));
         assertThat(jdbc.queryForList("SELECT ACTCINUM FROM MAXIMO.ACTCI", String.class))
                 .containsExactly("D42:DEVICE:8");
     }
@@ -360,7 +360,7 @@ class DeviceCiImportTest {
     void readsAllOffsetsEvenWhenAnEntirePageFailsMapping() {
         int batchSize = DeviceCiImport.DEFAULT_BATCH_SIZE;
         List<Long> offsets = new ArrayList<>();
-        var query = new DeviceCiQuery(mock(Device42ConnectionFactory.class)) {
+        var query = new DeviceCiQuery(new DoqlClient(mock(Device42ConnectionFactory.class))) {
             @Override public long getTotalCount() {
                 return batchSize * 2L + 1;
             }
@@ -374,7 +374,7 @@ class DeviceCiImportTest {
                 return List.of(row);
             }
         };
-        new DeviceCiImport(query, mapper, writer).integrate(definitionLoader.load());
+        new DeviceCiImport(query, mapper, writer).integrate(definitionLoader.load(CiClassification.ids()));
         assertThat(offsets).containsExactly(0L, (long) batchSize, batchSize * 2L);
         assertThat(count("ACTCI")).isEqualTo(2);
     }
@@ -383,7 +383,7 @@ class DeviceCiImportTest {
     void unknownUnitsSkipOnlyMeasuredAttributes() {
         var row = withTimeAndUnits(source(7, "physical", "Host", BigDecimal.ONE),
                 "2026-09-14T00:00:00Z", "unknown", "unknown");
-        persist(row, definitionLoader.load());
+        persist(row, definitionLoader.load(CiClassification.ids()));
 
         assertThat(count("ACTCI")).isEqualTo(1);
         assertThat(jdbc.queryForList("SELECT ASSETATTRID FROM MAXIMO.ACTCISPEC", String.class))
@@ -404,7 +404,7 @@ class DeviceCiImportTest {
         when(rs.getLong("device_pk")).thenReturn(7L, 7L, 8L, 8L);
         when(rs.getBigDecimal("total_cpus")).thenReturn(new BigDecimal("1.5"), BigDecimal.ONE);
 
-        var query = new DeviceCiQuery(factory);
+        var query = new DeviceCiQuery(new DoqlClient(factory));
         var rows = query.getData(100, 100);
 
         assertThat(rows).hasSize(1);
@@ -414,7 +414,7 @@ class DeviceCiImportTest {
 
     @Test
     void missingSpecValueCreatesOrUpdatesTemplateRowWithNullValue() {
-        var definitions = definitionLoader.load();
+        var definitions = definitionLoader.load(CiClassification.ids());
         persist(source(7, "physical", "Host", BigDecimal.TEN), definitions);
         persist(source(7, "physical", "Host", null), definitions);
         assertThat(value("D42:DEVICE:7", "MEMORYSIZE", "NUMVALUE")).isNull();
@@ -428,7 +428,7 @@ class DeviceCiImportTest {
 
     @Test
     void usesCurrentClassificationWhenExistingDeviceTypeChanges() {
-        var definitions = definitionLoader.load();
+        var definitions = definitionLoader.load(CiClassification.ids());
         persist(source(7, "physical", "Physical", BigDecimal.TEN), definitions);
         persist(source(7, "virtual", "Virtual", BigDecimal.ONE), definitions);
         assertThat(jdbc.queryForObject("SELECT CLASSSTRUCTUREID FROM MAXIMO.ACTCI", String.class))
@@ -438,7 +438,7 @@ class DeviceCiImportTest {
 
     @Test
     void usesSharedSnapshotWithoutQueryingDefinitionsDuringMapping() {
-        var cache = definitionLoader.load();
+        var cache = definitionLoader.load(CiClassification.ids());
         jdbc.update("UPDATE MAXIMO.ASSETATTRIBUTE SET DATATYPE='ALN' WHERE ASSETATTRID='COMPUTERSYSTEM_MEMORYSIZE'");
         clearInvocations(jdbc);
         var mapped = mapper.mapData(List.of(source(7, "physical", "Host", BigDecimal.TEN)), cache);
@@ -447,7 +447,7 @@ class DeviceCiImportTest {
             assertThat(spec.assetAttrId()).isEqualTo("COMPUTERSYSTEM_MEMORYSIZE");
             assertThat(spec.numValue()).isEqualByComparingTo("10");
         });
-        var refreshed = definitionLoader.load();
+        var refreshed = definitionLoader.load(CiClassification.ids());
         assertThat(refreshed.spec("PHYS", "COMPUTERSYSTEM_MEMORYSIZE", null).dataType()).isEqualTo("ALN");
         assertThat(cache.spec("PHYS", "COMPUTERSYSTEM_MEMORYSIZE", null).dataType()).isEqualTo("NUMERIC");
     }
@@ -455,7 +455,7 @@ class DeviceCiImportTest {
     @Test
     void explicitlyAllowedAdditionalAttributeUsesNullTemplateAndLaterAdoptsRegisteredTemplate() {
         jdbc.update("DELETE FROM MAXIMO.CLASSSPEC WHERE ASSETATTRID='COMPUTERSYSTEM_BIOSRELEASEDATE'");
-        persist(source(7, "physical", "Host", BigDecimal.TEN), definitionLoader.load());
+        persist(source(7, "physical", "Host", BigDecimal.TEN), definitionLoader.load(CiClassification.ids()));
         var first = jdbc.queryForMap("""
                 SELECT ACTCISPECID,CLASSSPECID,DISPLAYSEQUENCE,MANDATORY,SECTION,LINKEDTOATTRIBUTE,ALNVALUE
                 FROM MAXIMO.ACTCISPEC WHERE ASSETATTRID='COMPUTERSYSTEM_BIOSRELEASEDATE'
@@ -478,7 +478,7 @@ class DeviceCiImportTest {
                     (CLASSSPECID,OBJECTNAME,SEQUENCE,MANDATORY,USEINSPEC,CLASSSTRUCTUREID,ASSETATTRID)
                 VALUES (900,'ACTCI',42,1,1,'PHYS','COMPUTERSYSTEM_BIOSRELEASEDATE')
                 """);
-        persist(source(7, "physical", "Host", BigDecimal.TEN), definitionLoader.load());
+        persist(source(7, "physical", "Host", BigDecimal.TEN), definitionLoader.load(CiClassification.ids()));
         var second = jdbc.queryForMap("""
                 SELECT ACTCISPECID,CLASSSPECID,DISPLAYSEQUENCE,MANDATORY
                 FROM MAXIMO.ACTCISPEC WHERE ASSETATTRID='COMPUTERSYSTEM_BIOSRELEASEDATE'
@@ -493,7 +493,7 @@ class DeviceCiImportTest {
     void doesNotUseAdditionalPathForUnmarkedAttributesOrInvalidExistingTemplates() {
         jdbc.update("DELETE FROM MAXIMO.CLASSSPEC WHERE ASSETATTRID='COMPUTERSYSTEM_NAME'");
         jdbc.update("UPDATE MAXIMO.CLASSSPECUSEWITH SET USEINSPEC=0 WHERE ASSETATTRID='COMPUTERSYSTEM_BIOSRELEASEDATE'");
-        var cache = definitionLoader.load();
+        var cache = definitionLoader.load(CiClassification.ids());
         assertThat(cache.additionalSpec("PHYS", "COMPUTERSYSTEM_BIOSRELEASEDATE", null, 180, false)).isNull();
         persist(source(7, "physical", "Host", BigDecimal.TEN), cache);
         assertThat(jdbc.queryForList("SELECT ASSETATTRID FROM MAXIMO.ACTCISPEC", String.class))
@@ -508,7 +508,7 @@ class DeviceCiImportTest {
                 INSERT INTO MAXIMO.ASSETATTRIBUTE (ASSETATTRIBUTEID,ASSETATTRID,DATATYPE)
                 VALUES (900,'COMPUTERSYSTEM_BIOSRELEASEDATE','NUMERIC')
                 """);
-        var cache = definitionLoader.load();
+        var cache = definitionLoader.load(CiClassification.ids());
         assertThat(cache.attribute(900).dataType()).isEqualTo("NUMERIC");
         assertThat(cache.additionalSpec("PHYS", "COMPUTERSYSTEM_BIOSRELEASEDATE", null, 180, false)).isNull();
         persist(source(7, "physical", "Host", BigDecimal.TEN), cache);
@@ -520,7 +520,7 @@ class DeviceCiImportTest {
     void organizationSpecificAttributeIsNotUsedAsGlobalAdditionalDefinition() {
         jdbc.update("DELETE FROM MAXIMO.CLASSSPEC WHERE ASSETATTRID='COMPUTERSYSTEM_BIOSRELEASEDATE'");
         jdbc.update("UPDATE MAXIMO.ASSETATTRIBUTE SET ORGID='ORG1' WHERE ASSETATTRID='COMPUTERSYSTEM_BIOSRELEASEDATE'");
-        assertThat(definitionLoader.load().additionalSpec(
+        assertThat(definitionLoader.load(CiClassification.ids()).additionalSpec(
                 "PHYS", "COMPUTERSYSTEM_BIOSRELEASEDATE", null, 180, false)).isNull();
     }
 
@@ -545,8 +545,8 @@ class DeviceCiImportTest {
                     VALUES (?,'ACTCI',1,0,1,?,'MODELOBJECT_NAME',?)
                     """, 900 + i, classId, section);
         }
-        var cache = definitionLoader.load();
-        assertThat(cache.classification(CiClassification.COMPUTER).classStructureId()).isEqualTo("PHYS");
+        var cache = definitionLoader.load(CiClassification.ids());
+        assertThat(cache.classification(CiClassification.COMPUTER.classificationId()).classStructureId()).isEqualTo("PHYS");
         assertThat(cache.spec("PHYS", "MODELOBJECT_NAME", null).classSpecId()).isEqualTo(900);
         assertThat(cache.spec("PHYS", "MODELOBJECT_NAME", "SLOT").classSpecId()).isEqualTo(901);
         assertThat(cache.spec("OTHER", "MODELOBJECT_NAME", "SLOT")).isNull();
@@ -570,7 +570,7 @@ class DeviceCiImportTest {
                 VALUES (101,'ACTCI',9,1,1,'PHYS','COMPUTERSYSTEM_SERIALNUMBER','ORG1')
                 """);
 
-        var cache = definitionLoader.load();
+        var cache = definitionLoader.load(CiClassification.ids());
 
         assertThat(cache.spec("PHYS", "COMPUTERSYSTEM_NAME", null).classSpecId()).isEqualTo(100);
         assertThat(cache.spec("PHYS", "COMPUTERSYSTEM_SERIALNUMBER", null).displaySequence()).isEqualTo(101);

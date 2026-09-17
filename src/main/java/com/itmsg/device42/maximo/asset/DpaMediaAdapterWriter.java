@@ -1,6 +1,5 @@
 package com.itmsg.device42.maximo.asset;
 
-import com.itmsg.device42.dto.maximo.asset.DpaMediaAdapterUpsert;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Timestamp;

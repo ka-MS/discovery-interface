@@ -1,12 +1,8 @@
 package com.itmsg.device42.integration.d42maximo.ci.os;
 
-import com.itmsg.device42.config.Device42ConnectionFactory;
-import com.itmsg.device42.dto.device42.ci.OsSource;
-import com.itmsg.device42.integration.ci.CiSourceFilter;
-import java.sql.Connection;
-import java.sql.ResultSet;
+import com.itmsg.device42.device42.DoqlClient;
+import com.itmsg.device42.integration.d42maximo.ci.selection.CiSourceFilter;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import org.slf4j.Logger;
@@ -16,19 +12,19 @@ import org.springframework.stereotype.Component;
 @Component
 public class OsCiQuery {
 
-    public OsCiQuery(Device42ConnectionFactory connectionFactory) {
-        this.connectionFactory = connectionFactory;
-    }
-
     private static final Logger log = LoggerFactory.getLogger(OsCiQuery.class);
 
-    private final Device42ConnectionFactory connectionFactory;
+    private final DoqlClient doql;
+
+    public OsCiQuery(DoqlClient doql) {
+        this.doql = doql;
+    }
 
     public long getTotalCount() {
-        try (Connection connection = connectionFactory.openConnection();
-             Statement statement = connection.createStatement();
-             ResultSet rs = statement.executeQuery(TOTAL_COUNT_QUERY)) {
-            return rs.next() ? rs.getLong(1) : 0L;
+        try {
+            return doql.query(TOTAL_COUNT_QUERY, rs -> {
+                return rs.next() ? rs.getLong(1) : 0L;
+            });
         } catch (SQLException e) {
             throw new IllegalStateException("OS 건수 조회에 실패했습니다.", e);
         }
@@ -36,22 +32,22 @@ public class OsCiQuery {
 
     public List<OsSource> getData(long offset, int limit) {
         String query = SOURCE_QUERY.formatted(limit, offset);
-        try (Connection connection = connectionFactory.openConnection();
-             Statement statement = connection.createStatement();
-             ResultSet rs = statement.executeQuery(query)) {
-            List<OsSource> data = new ArrayList<>(limit);
-            while (rs.next()) {
-                long deviceOsPk = rs.getLong("deviceos_pk");
-                try {
-                    data.add(new OsSource(
-                            deviceOsPk, rs.getLong("device_fk"), rs.getString("os_name"),
-                            rs.getString("os_version"), rs.getString("os_version_no"),
-                            rs.getString("os_arch_name"), rs.getString("last_discovered")));
-                } catch (SQLException e) {
-                    log.error("OS 원천 변환에 실패했습니다. deviceOsPk={}", deviceOsPk, e);
+        try {
+            return doql.query(query, rs -> {
+                List<OsSource> data = new ArrayList<>(limit);
+                while (rs.next()) {
+                    long deviceOsPk = rs.getLong("deviceos_pk");
+                    try {
+                        data.add(new OsSource(
+                                deviceOsPk, rs.getLong("device_fk"), rs.getString("os_name"),
+                                rs.getString("os_version"), rs.getString("os_version_no"),
+                                rs.getString("os_arch_name"), rs.getString("last_discovered")));
+                    } catch (SQLException e) {
+                        log.error("OS 원천 변환에 실패했습니다. deviceOsPk={}", deviceOsPk, e);
+                    }
                 }
-            }
-            return data;
+                return data;
+            });
         } catch (SQLException e) {
             throw new IllegalStateException("OS 조회에 실패했습니다. offset=" + offset, e);
         }

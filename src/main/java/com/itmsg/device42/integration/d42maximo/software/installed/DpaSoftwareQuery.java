@@ -1,12 +1,8 @@
 package com.itmsg.device42.integration.d42maximo.software.installed;
 
-import com.itmsg.device42.config.Device42ConnectionFactory;
-import com.itmsg.device42.dto.device42.software.InstalledSoftwareSource;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
+import com.itmsg.device42.device42.DoqlClient;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -16,22 +12,22 @@ import org.springframework.stereotype.Component;
 @Component
 public class DpaSoftwareQuery {
 
-    public DpaSoftwareQuery(Device42ConnectionFactory connectionFactory) {
-        this.connectionFactory = connectionFactory;
+    private final DoqlClient doql;
+
+    public DpaSoftwareQuery(DoqlClient doql) {
+        this.doql = doql;
     }
 
-    private final Device42ConnectionFactory connectionFactory;
-
     public long getTotalCount() {
-        try (Connection connection = connectionFactory.openConnection();
-             PreparedStatement statement = connection.prepareStatement(TOTAL_COUNT_QUERY);
-             ResultSet resultSet = statement.executeQuery()) {
+        try {
+            return doql.preparedQuery(TOTAL_COUNT_QUERY, resultSet -> {
 
-            if (resultSet.next()) {
-                return resultSet.getLong(1);
-            }
+                if (resultSet.next()) {
+                    return resultSet.getLong(1);
+                }
 
-            return 0L;
+                return 0L;
+            });
         } catch (SQLException e) {
             throw new IllegalStateException("DPA 소프트웨어 대상 건수 조회에 실패했습니다.", e);
         }
@@ -40,27 +36,27 @@ public class DpaSoftwareQuery {
     public List<InstalledSoftwareSource> getData(long offset, int limit) {
         String query = SOURCE_QUERY + "LIMIT %d OFFSET %d".formatted(limit, offset);
 
-        try (Connection connection = connectionFactory.openConnection();
-             Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery(query)) {
+        try {
+            return doql.query(query, resultSet -> {
 
-            List<InstalledSoftwareSource> rows = new ArrayList<>(limit);
+                List<InstalledSoftwareSource> rows = new ArrayList<>(limit);
 
-            while (resultSet.next()) {
-                rows.add(new InstalledSoftwareSource(
-                        resultSet.getLong("softwareinuse_pk"),
-                        resultSet.getLong("device_fk"),
-                        resultSet.getString("software_name"),
-                        resultSet.getString("version"),
-                        resultSet.getString("install_path"),
-                        getNullableLocalDateTime(resultSet, "install_date"),
-                        getNullableLocalDateTime(resultSet, "first_detected"),
-                        getNullableLocalDateTime(resultSet, "last_updated"),
-                        resultSet.getString("vendor_name")
-                ));
-            }
+                while (resultSet.next()) {
+                    rows.add(new InstalledSoftwareSource(
+                            resultSet.getLong("softwareinuse_pk"),
+                            resultSet.getLong("device_fk"),
+                            resultSet.getString("software_name"),
+                            resultSet.getString("version"),
+                            resultSet.getString("install_path"),
+                            getNullableLocalDateTime(resultSet, "install_date"),
+                            getNullableLocalDateTime(resultSet, "first_detected"),
+                            getNullableLocalDateTime(resultSet, "last_updated"),
+                            resultSet.getString("vendor_name")
+                    ));
+                }
 
-            return rows;
+                return rows;
+            });
         } catch (SQLException e) {
             throw new IllegalStateException(
                     "DPA 소프트웨어 원천 조회에 실패했습니다. offset=" + offset + ", limit=" + limit,

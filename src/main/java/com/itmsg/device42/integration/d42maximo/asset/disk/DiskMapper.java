@@ -1,7 +1,6 @@
 package com.itmsg.device42.integration.d42maximo.asset.disk;
 
-import com.itmsg.device42.dto.device42.asset.DiskSource;
-import com.itmsg.device42.dto.maximo.asset.DpaDiskUpsert;
+import com.itmsg.device42.maximo.asset.DpaDiskUpsert;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;

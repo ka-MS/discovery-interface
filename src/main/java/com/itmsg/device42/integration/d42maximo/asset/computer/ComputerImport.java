@@ -1,19 +1,15 @@
 package com.itmsg.device42.integration.d42maximo.asset.computer;
 
-import com.itmsg.device42.dto.device42.asset.ComputerHardwareSource;
-import com.itmsg.device42.dto.maximo.asset.DpaComputerUpsert;
-import com.itmsg.device42.integration.asset.AssetIntegrationTask;
+import com.itmsg.device42.maximo.asset.DpaComputerUpsert;
 import com.itmsg.device42.maximo.asset.DpaComputerWriter;
 import com.itmsg.device42.runtime.PageLoop;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
-@Component("dpaComputerIntegrate")
-@Order(2)
-public class ComputerImport implements AssetIntegrationTask {
+@Component
+public class ComputerImport {
 
     private static final Logger log = LoggerFactory.getLogger(ComputerImport.class);
 
@@ -29,7 +25,6 @@ public class ComputerImport implements AssetIntegrationTask {
         this.writer = writer;
     }
 
-    @Override
     public void integrate() {
         long totalCount = query.getTotalCount();
         int batchSize = DEFAULT_BATCH_SIZE;

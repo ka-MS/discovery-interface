@@ -1,13 +1,10 @@
 package com.itmsg.device42.integration.d42maximo.ci.device;
 
-import com.itmsg.device42.config.Device42ConnectionFactory;
-import com.itmsg.device42.dto.device42.ci.DeviceSource;
-import com.itmsg.device42.integration.ci.CiSourceFilter;
+import com.itmsg.device42.device42.DoqlClient;
+import com.itmsg.device42.integration.d42maximo.ci.selection.CiSourceFilter;
 import java.math.BigDecimal;
-import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import org.slf4j.Logger;
@@ -17,19 +14,19 @@ import org.springframework.stereotype.Component;
 @Component
 public class DeviceCiQuery {
 
-    public DeviceCiQuery(Device42ConnectionFactory connectionFactory) {
-        this.connectionFactory = connectionFactory;
-    }
-
     private static final Logger log = LoggerFactory.getLogger(DeviceCiQuery.class);
 
-    private final Device42ConnectionFactory connectionFactory;
+    private final DoqlClient doql;
+
+    public DeviceCiQuery(DoqlClient doql) {
+        this.doql = doql;
+    }
 
     public long getTotalCount() {
-        try (Connection connection = connectionFactory.openConnection();
-             Statement statement = connection.createStatement();
-             ResultSet rs = statement.executeQuery(TOTAL_COUNT_QUERY)) {
-            return rs.next() ? rs.getLong(1) : 0L;
+        try {
+            return doql.query(TOTAL_COUNT_QUERY, rs -> {
+                return rs.next() ? rs.getLong(1) : 0L;
+            });
         } catch (SQLException e) {
             throw new IllegalStateException("Device 건수 조회에 실패했습니다.", e);
         }
@@ -37,19 +34,19 @@ public class DeviceCiQuery {
 
     public List<DeviceSource> getData(long offset, int limit) {
         String query = SOURCE_QUERY.formatted(limit, offset);
-        try (Connection connection = connectionFactory.openConnection();
-             Statement statement = connection.createStatement();
-             ResultSet rs = statement.executeQuery(query)) {
-            List<DeviceSource> data = new ArrayList<>(limit);
-            while (rs.next()) {
-                long devicePk = rs.getLong("device_pk");
-                try {
-                    data.add(readDevice(rs));
-                } catch (SQLException | ArithmeticException e) {
-                    log.error("Device 원천 변환에 실패했습니다. devicePk={}", devicePk, e);
+        try {
+            return doql.query(query, rs -> {
+                List<DeviceSource> data = new ArrayList<>(limit);
+                while (rs.next()) {
+                    long devicePk = rs.getLong("device_pk");
+                    try {
+                        data.add(readDevice(rs));
+                    } catch (SQLException | ArithmeticException e) {
+                        log.error("Device 원천 변환에 실패했습니다. devicePk={}", devicePk, e);
+                    }
                 }
-            }
-            return data;
+                return data;
+            });
         } catch (SQLException e) {
             throw new IllegalStateException("Device 조회에 실패했습니다. offset=" + offset, e);
         }

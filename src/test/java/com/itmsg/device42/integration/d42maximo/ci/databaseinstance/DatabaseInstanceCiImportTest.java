@@ -1,11 +1,11 @@
 package com.itmsg.device42.integration.d42maximo.ci.databaseinstance;
 
-import com.itmsg.device42.integration.ci.CiSpecMapper;
-import com.itmsg.device42.integration.ci.ActCiWriter;
-import com.itmsg.device42.integration.ci.CiDefinitionLoader;
-import com.itmsg.device42.config.Device42ConnectionFactory;
-import com.itmsg.device42.dto.device42.ci.DatabaseInstanceSource;
-import com.itmsg.device42.enums.ci.CiClassification;
+import com.itmsg.device42.device42.DoqlClient;
+import com.itmsg.device42.integration.d42maximo.ci.mapping.CiSpecMapper;
+import com.itmsg.device42.maximo.ci.ActCiWriter;
+import com.itmsg.device42.maximo.ci.definition.CiDefinitionLoader;
+import com.itmsg.device42.device42.Device42ConnectionFactory;
+import com.itmsg.device42.integration.d42maximo.ci.mapping.CiClassification;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ClassPathResource;
@@ -177,7 +177,7 @@ class DatabaseInstanceCiImportTest {
 
         var mapped = mapper.mapData(
                 List.of(source(9126, ":EPISODE", "Oracle Database"), source(9215, "db2inst1", "DB2")),
-                definitionLoader.load());
+                definitionLoader.load(CiClassification.ids()));
 
         assertThat(mapped).hasSize(1);
         assertThat(mapped.getFirst().actCi().actCiNum()).isEqualTo("D42:DATABASEINSTANCE:9215");
@@ -189,7 +189,7 @@ class DatabaseInstanceCiImportTest {
                 "not-a-time");
 
         var mapped = mapper.mapData(List.of(bad, source(9215, "db2inst1", "DB2")),
-                definitionLoader.load());
+                definitionLoader.load(CiClassification.ids()));
 
         assertThat(mapped).hasSize(1);
         assertThat(mapped.getFirst().actCi().actCiNum()).isEqualTo("D42:DATABASEINSTANCE:9215");
@@ -199,7 +199,7 @@ class DatabaseInstanceCiImportTest {
     void readsEveryOffsetUntilTotalCount() {
         int batchSize = DatabaseInstanceCiImport.DEFAULT_BATCH_SIZE;
         List<Long> offsets = new ArrayList<>();
-        var query = new DatabaseInstanceCiQuery(mock(Device42ConnectionFactory.class)) {
+        var query = new DatabaseInstanceCiQuery(new DoqlClient(mock(Device42ConnectionFactory.class))) {
             @Override public long getTotalCount() {
                 return batchSize * 2L + 1;
             }
@@ -210,7 +210,7 @@ class DatabaseInstanceCiImportTest {
             }
         };
 
-        new DatabaseInstanceCiImport(query, mapper, writer).integrate(definitionLoader.load());
+        new DatabaseInstanceCiImport(query, mapper, writer).integrate(definitionLoader.load(CiClassification.ids()));
 
         assertThat(offsets).containsExactly(0L, (long) batchSize, batchSize * 2L);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM MAXIMO.ACTCI", Integer.class)).isEqualTo(3);
@@ -224,7 +224,7 @@ class DatabaseInstanceCiImportTest {
     }
 
     private void persist(DatabaseInstanceSource... sources) {
-        writer.write(mapper.mapData(List.of(sources), definitionLoader.load()));
+        writer.write(mapper.mapData(List.of(sources), definitionLoader.load(CiClassification.ids())));
     }
 
     private String classStructureOf(String actCiNum) {

@@ -1,12 +1,7 @@
 package com.itmsg.device42.integration.d42maximo.asset.netprinter;
 
-import com.itmsg.device42.config.Device42ConnectionFactory;
-import com.itmsg.device42.dto.device42.asset.NetworkPrinterSource;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+import com.itmsg.device42.device42.DoqlClient;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Component;
@@ -14,18 +9,18 @@ import org.springframework.stereotype.Component;
 @Component
 public class NetPrinterQuery {
 
-    public NetPrinterQuery(Device42ConnectionFactory connectionFactory) {
-        this.connectionFactory = connectionFactory;
+    private final DoqlClient doql;
+
+    public NetPrinterQuery(DoqlClient doql) {
+        this.doql = doql;
     }
 
-    private final Device42ConnectionFactory connectionFactory;
-
     public long getTotalCount() {
-        try (Connection connection = connectionFactory.openConnection();
-             PreparedStatement statement = connection.prepareStatement(DEVICE_TOTAL_COUNT_QUERY);
-             ResultSet resultSet = statement.executeQuery()) {
+        try {
+            return doql.preparedQuery(DEVICE_TOTAL_COUNT_QUERY, resultSet -> {
 
-            return resultSet.next() ? resultSet.getLong(1) : 0L;
+                return resultSet.next() ? resultSet.getLong(1) : 0L;
+            });
         } catch (SQLException e) {
             throw new IllegalStateException("DPA NetPrinter 대상 장비 건수 조회에 실패했습니다.", e);
         }
@@ -34,22 +29,22 @@ public class NetPrinterQuery {
     public List<NetworkPrinterSource> getData(long offset, int limit) {
         String query = DEVICE_QUERY + "LIMIT %d OFFSET %d".formatted(limit, offset);
 
-        try (Connection connection = connectionFactory.openConnection();
-             Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery(query)) {
+        try {
+            return doql.query(query, resultSet -> {
 
-            List<NetworkPrinterSource> printers = new ArrayList<>(limit);
-            while (resultSet.next()) {
-                printers.add(new NetworkPrinterSource(
-                        resultSet.getInt("device_pk"),
-                        resultSet.getBigDecimal("ram"),
-                        resultSet.getString("ram_size_type"),
-                        resultSet.getString("hwaddress"),
-                        resultSet.getString("ip_address"),
-                        resultSet.getInt("tray_cnt")
-                ));
-            }
-            return printers;
+                List<NetworkPrinterSource> printers = new ArrayList<>(limit);
+                while (resultSet.next()) {
+                    printers.add(new NetworkPrinterSource(
+                            resultSet.getInt("device_pk"),
+                            resultSet.getBigDecimal("ram"),
+                            resultSet.getString("ram_size_type"),
+                            resultSet.getString("hwaddress"),
+                            resultSet.getString("ip_address"),
+                            resultSet.getInt("tray_cnt")
+                    ));
+                }
+                return printers;
+            });
         } catch (SQLException e) {
             throw new IllegalStateException(
                     "DPA NetPrinter 원천 조회에 실패했습니다. offset=" + offset + ", limit=" + limit,

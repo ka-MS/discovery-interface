@@ -1,12 +1,7 @@
 package com.itmsg.device42.integration.d42maximo.asset.logicaldrive;
 
-import com.itmsg.device42.config.Device42ConnectionFactory;
-import com.itmsg.device42.dto.device42.asset.LogicalDriveSource;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+import com.itmsg.device42.device42.DoqlClient;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Component;
@@ -14,22 +9,22 @@ import org.springframework.stereotype.Component;
 @Component
 public class LogicalDriveQuery {
 
-    public LogicalDriveQuery(Device42ConnectionFactory connectionFactory) {
-        this.connectionFactory = connectionFactory;
+    private final DoqlClient doql;
+
+    public LogicalDriveQuery(DoqlClient doql) {
+        this.doql = doql;
     }
 
-    private final Device42ConnectionFactory connectionFactory;
-
     public long getTotalCount() {
-        try (Connection connection = connectionFactory.openConnection();
-             PreparedStatement statement = connection.prepareStatement(TOTAL_COUNT_QUERY);
-             ResultSet resultSet = statement.executeQuery()) {
+        try {
+            return doql.preparedQuery(TOTAL_COUNT_QUERY, resultSet -> {
 
-            if (resultSet.next()) {
-                return resultSet.getLong(1);
-            }
+                if (resultSet.next()) {
+                    return resultSet.getLong(1);
+                }
 
-            return 0L;
+                return 0L;
+            });
         } catch (SQLException e) {
             throw new IllegalStateException("DPA LogicalDrive 대상 마운트포인트 건수 조회에 실패했습니다.", e);
         }
@@ -38,26 +33,26 @@ public class LogicalDriveQuery {
     public List<LogicalDriveSource> getData(long offset, int limit) {
         String query = SOURCE_QUERY + "LIMIT %d OFFSET %d".formatted(limit, offset);
 
-        try (Connection connection = connectionFactory.openConnection();
-             Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery(query)) {
+        try {
+            return doql.query(query, resultSet -> {
 
-            List<LogicalDriveSource> rows = new ArrayList<>(limit);
+                List<LogicalDriveSource> rows = new ArrayList<>(limit);
 
-            while (resultSet.next()) {
-                rows.add(new LogicalDriveSource(
-                        resultSet.getLong("mountpoint_pk"),
-                        resultSet.getLong("device_fk"),
-                        resultSet.getString("mountpoint"),
-                        resultSet.getString("filesystem"),
-                        resultSet.getString("fstype_name"),
-                        resultSet.getBigDecimal("capacity"),
-                        resultSet.getBigDecimal("free_capacity"),
-                        resultSet.getString("label")
-                ));
-            }
+                while (resultSet.next()) {
+                    rows.add(new LogicalDriveSource(
+                            resultSet.getLong("mountpoint_pk"),
+                            resultSet.getLong("device_fk"),
+                            resultSet.getString("mountpoint"),
+                            resultSet.getString("filesystem"),
+                            resultSet.getString("fstype_name"),
+                            resultSet.getBigDecimal("capacity"),
+                            resultSet.getBigDecimal("free_capacity"),
+                            resultSet.getString("label")
+                    ));
+                }
 
-            return rows;
+                return rows;
+            });
         } catch (SQLException e) {
             throw new IllegalStateException(
                     "DPA LogicalDrive 원천 조회에 실패했습니다. offset=" + offset + ", limit=" + limit,

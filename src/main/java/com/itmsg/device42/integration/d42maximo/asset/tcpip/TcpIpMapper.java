@@ -1,7 +1,6 @@
 package com.itmsg.device42.integration.d42maximo.asset.tcpip;
 
-import com.itmsg.device42.dto.device42.asset.IpAddressSource;
-import com.itmsg.device42.dto.maximo.asset.DpaTcpIpUpsert;
+import com.itmsg.device42.maximo.asset.DpaTcpIpUpsert;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;

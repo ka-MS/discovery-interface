@@ -1,7 +1,6 @@
 package com.itmsg.device42.integration.d42maximo.asset.computer;
 
-import com.itmsg.device42.dto.device42.asset.ComputerHardwareSource;
-import com.itmsg.device42.dto.maximo.asset.DpaComputerUpsert;
+import com.itmsg.device42.maximo.asset.DpaComputerUpsert;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;

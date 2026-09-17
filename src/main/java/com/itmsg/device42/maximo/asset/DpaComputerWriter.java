@@ -5,7 +5,6 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.sql.Types;
 
-import com.itmsg.device42.dto.maximo.asset.DpaComputerUpsert;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.slf4j.Logger;

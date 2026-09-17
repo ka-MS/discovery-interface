@@ -1,13 +1,9 @@
 package com.itmsg.device42.integration.d42maximo.asset.cpu;
 
-import com.itmsg.device42.config.Device42ConnectionFactory;
-import com.itmsg.device42.dto.device42.asset.ProcessorSource;
+import com.itmsg.device42.device42.DoqlClient;
 import java.math.BigDecimal;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Component;
@@ -15,22 +11,22 @@ import org.springframework.stereotype.Component;
 @Component
 public class CpuQuery {
 
-    public CpuQuery(Device42ConnectionFactory connectionFactory) {
-        this.connectionFactory = connectionFactory;
+    private final DoqlClient doql;
+
+    public CpuQuery(DoqlClient doql) {
+        this.doql = doql;
     }
 
-    private final Device42ConnectionFactory connectionFactory;
-
     public long getTotalCount() {
-        try (Connection connection = connectionFactory.openConnection();
-             PreparedStatement statement = connection.prepareStatement(TOTAL_COUNT_QUERY);
-             ResultSet resultSet = statement.executeQuery()) {
+        try {
+            return doql.preparedQuery(TOTAL_COUNT_QUERY, resultSet -> {
 
-            if (resultSet.next()) {
-                return resultSet.getLong(1);
-            }
+                if (resultSet.next()) {
+                    return resultSet.getLong(1);
+                }
 
-            return 0L;
+                return 0L;
+            });
         } catch (SQLException e) {
             throw new IllegalStateException("DPA CPU 대상 파트 건수 조회에 실패했습니다.", e);
         }
@@ -39,27 +35,27 @@ public class CpuQuery {
     public List<ProcessorSource> getData(long offset, int limit) {
         String query = SOURCE_QUERY + "LIMIT %d OFFSET %d".formatted(limit, offset);
 
-        try (Connection connection = connectionFactory.openConnection();
-             Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery(query)) {
+        try {
+            return doql.query(query, resultSet -> {
 
-            List<ProcessorSource> rows = new ArrayList<>(limit);
+                List<ProcessorSource> rows = new ArrayList<>(limit);
 
-            while (resultSet.next()) {
-                rows.add(new ProcessorSource(
-                        resultSet.getLong("part_pk"),
-                        resultSet.getLong("device_fk"),
-                        resultSet.getString("slot"),
-                        resultSet.getString("description"),
-                        resultSet.getString("model_name"),
-                        getNullableInteger(resultSet, "cores"),
-                        resultSet.getBigDecimal("speed"),
-                        resultSet.getString("speed_unit"),
-                        resultSet.getString("vendor_name")
-                ));
-            }
+                while (resultSet.next()) {
+                    rows.add(new ProcessorSource(
+                            resultSet.getLong("part_pk"),
+                            resultSet.getLong("device_fk"),
+                            resultSet.getString("slot"),
+                            resultSet.getString("description"),
+                            resultSet.getString("model_name"),
+                            getNullableInteger(resultSet, "cores"),
+                            resultSet.getBigDecimal("speed"),
+                            resultSet.getString("speed_unit"),
+                            resultSet.getString("vendor_name")
+                    ));
+                }
 
-            return rows;
+                return rows;
+            });
         } catch (SQLException e) {
             throw new IllegalStateException(
                     "DPA CPU 원천 조회에 실패했습니다. offset=" + offset + ", limit=" + limit,

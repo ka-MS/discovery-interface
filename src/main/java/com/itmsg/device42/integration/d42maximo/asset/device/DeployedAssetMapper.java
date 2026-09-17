@@ -1,7 +1,6 @@
 package com.itmsg.device42.integration.d42maximo.asset.device;
 
-import com.itmsg.device42.dto.device42.asset.DeviceSource;
-import com.itmsg.device42.dto.maximo.asset.DeployedAssetUpsert;
+import com.itmsg.device42.maximo.asset.DeployedAssetUpsert;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;

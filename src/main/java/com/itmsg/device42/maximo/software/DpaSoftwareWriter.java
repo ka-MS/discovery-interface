@@ -1,6 +1,5 @@
 package com.itmsg.device42.maximo.software;
 
-import com.itmsg.device42.dto.maximo.software.DpaSoftwareUpsert;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Timestamp;

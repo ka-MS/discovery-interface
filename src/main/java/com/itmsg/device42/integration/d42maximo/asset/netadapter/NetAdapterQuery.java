@@ -1,12 +1,7 @@
 package com.itmsg.device42.integration.d42maximo.asset.netadapter;
 
-import com.itmsg.device42.config.Device42ConnectionFactory;
-import com.itmsg.device42.dto.device42.asset.NetworkInterfaceSource;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+import com.itmsg.device42.device42.DoqlClient;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Component;
@@ -14,22 +9,22 @@ import org.springframework.stereotype.Component;
 @Component
 public class NetAdapterQuery {
 
-    public NetAdapterQuery(Device42ConnectionFactory connectionFactory) {
-        this.connectionFactory = connectionFactory;
+    private final DoqlClient doql;
+
+    public NetAdapterQuery(DoqlClient doql) {
+        this.doql = doql;
     }
 
-    private final Device42ConnectionFactory connectionFactory;
-
     public long getTotalCount() {
-        try (Connection connection = connectionFactory.openConnection();
-             PreparedStatement statement = connection.prepareStatement(TOTAL_COUNT_QUERY);
-             ResultSet resultSet = statement.executeQuery()) {
+        try {
+            return doql.preparedQuery(TOTAL_COUNT_QUERY, resultSet -> {
 
-            if (resultSet.next()) {
-                return resultSet.getLong(1);
-            }
+                if (resultSet.next()) {
+                    return resultSet.getLong(1);
+                }
 
-            return 0L;
+                return 0L;
+            });
         } catch (SQLException e) {
             throw new IllegalStateException("DPA 네트워크 어댑터 대상 포트 건수 조회에 실패했습니다.", e);
         }
@@ -38,27 +33,27 @@ public class NetAdapterQuery {
     public List<NetworkInterfaceSource> getData(long offset, int limit) {
         String query = SOURCE_QUERY + "LIMIT %d OFFSET %d".formatted(limit, offset);
 
-        try (Connection connection = connectionFactory.openConnection();
-             Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery(query)) {
+        try {
+            return doql.query(query, resultSet -> {
 
-            List<NetworkInterfaceSource> rows = new ArrayList<>(limit);
+                List<NetworkInterfaceSource> rows = new ArrayList<>(limit);
 
-            while (resultSet.next()) {
-                rows.add(new NetworkInterfaceSource(
-                        resultSet.getLong("netport_pk"),
-                        resultSet.getLong("device_fk"),
-                        resultSet.getString("port"),
-                        resultSet.getString("description"),
-                        resultSet.getString("hwaddress"),
-                        resultSet.getString("hwaddress2"),
-                        resultSet.getString("port_speed"),
-                        resultSet.getString("global_type"),
-                        resultSet.getString("vendor_name")
-                ));
-            }
+                while (resultSet.next()) {
+                    rows.add(new NetworkInterfaceSource(
+                            resultSet.getLong("netport_pk"),
+                            resultSet.getLong("device_fk"),
+                            resultSet.getString("port"),
+                            resultSet.getString("description"),
+                            resultSet.getString("hwaddress"),
+                            resultSet.getString("hwaddress2"),
+                            resultSet.getString("port_speed"),
+                            resultSet.getString("global_type"),
+                            resultSet.getString("vendor_name")
+                    ));
+                }
 
-            return rows;
+                return rows;
+            });
         } catch (SQLException e) {
             throw new IllegalStateException(
                     "DPA 네트워크 어댑터 원천 조회에 실패했습니다. offset=" + offset + ", limit=" + limit,

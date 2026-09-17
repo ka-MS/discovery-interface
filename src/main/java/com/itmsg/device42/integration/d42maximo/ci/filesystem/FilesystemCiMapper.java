@@ -1,15 +1,14 @@
 package com.itmsg.device42.integration.d42maximo.ci.filesystem;
 
-import com.itmsg.device42.dto.device42.ci.FilesystemSource;
-import com.itmsg.device42.dto.maximo.ci.ActCiSpecUpsert;
-import com.itmsg.device42.dto.maximo.ci.ActCiUpsert;
-import com.itmsg.device42.dto.maximo.ci.CiUpsert;
-import com.itmsg.device42.dto.maximo.ci.ClassificationDefinition;
-import com.itmsg.device42.enums.ci.CiClassification;
-import com.itmsg.device42.enums.ci.FilesystemSpec;
-import com.itmsg.device42.integration.ci.CiDefinitionCache;
-import com.itmsg.device42.integration.ci.CiSpecMapper;
-import com.itmsg.device42.integration.ci.SourceTimestamp;
+import com.itmsg.device42.integration.d42maximo.ci.mapping.CiClassification;
+import com.itmsg.device42.integration.d42maximo.ci.mapping.CiSpecMapper;
+import com.itmsg.device42.integration.d42maximo.ci.mapping.FilesystemSpec;
+import com.itmsg.device42.integration.d42maximo.ci.mapping.SourceTimestamp;
+import com.itmsg.device42.maximo.ci.ActCiSpecUpsert;
+import com.itmsg.device42.maximo.ci.ActCiUpsert;
+import com.itmsg.device42.maximo.ci.CiUpsert;
+import com.itmsg.device42.maximo.ci.definition.CiDefinitionCache;
+import com.itmsg.device42.maximo.ci.definition.ClassificationDefinition;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,10 +18,6 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class FilesystemCiMapper {
-
-    public FilesystemCiMapper(CiSpecMapper specMapper) {
-        this.specMapper = specMapper;
-    }
 
     private static final Logger log = LoggerFactory.getLogger(FilesystemCiMapper.class);
 
@@ -35,13 +30,17 @@ public class FilesystemCiMapper {
 
     private final CiSpecMapper specMapper;
 
+    public FilesystemCiMapper(CiSpecMapper specMapper) {
+        this.specMapper = specMapper;
+    }
+
     public List<CiUpsert> mapData(List<FilesystemSource> data, CiDefinitionCache definitions) {
         LocalDateTime applyDateTime = LocalDateTime.now();
         List<CiUpsert> mappedData = new ArrayList<>(data.size());
 
         for (FilesystemSource source : data) {
             try {
-                ClassificationDefinition definition = definitions.classification(CiClassification.FILE_SYSTEM);
+                ClassificationDefinition definition = definitions.classification(CiClassification.FILE_SYSTEM.classificationId());
                 if (definition == null) {
                     log.warn("Filesystem 분류가 없어 건너뜁니다. mountPointPk={}", source.mountPointPk());
                     continue;

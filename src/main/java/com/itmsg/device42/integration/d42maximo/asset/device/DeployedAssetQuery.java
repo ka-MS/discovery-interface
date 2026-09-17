@@ -1,14 +1,9 @@
 package com.itmsg.device42.integration.d42maximo.asset.device;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
+import com.itmsg.device42.device42.DoqlClient;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.sql.Timestamp;
-
-import com.itmsg.device42.config.Device42ConnectionFactory;
-import com.itmsg.device42.dto.device42.asset.DeviceSource;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,22 +12,22 @@ import org.springframework.stereotype.Component;
 @Component
 public class DeployedAssetQuery {
 
-    public DeployedAssetQuery(Device42ConnectionFactory connectionFactory) {
-        this.connectionFactory = connectionFactory;
+    private final DoqlClient doql;
+
+    public DeployedAssetQuery(DoqlClient doql) {
+        this.doql = doql;
     }
 
-    private final Device42ConnectionFactory connectionFactory;
-
     public long getTotalCount() {
-        try (Connection connection = connectionFactory.openConnection();
-             PreparedStatement statement = connection.prepareStatement(DEVICE_TOTAL_COUNT_QUERY);
-             ResultSet resultSet = statement.executeQuery()) {
+        try {
+            return doql.preparedQuery(DEVICE_TOTAL_COUNT_QUERY, resultSet -> {
 
-            if (resultSet.next()) {
-                return resultSet.getLong(1);
-            }
+                if (resultSet.next()) {
+                    return resultSet.getLong(1);
+                }
 
-            return 0L;
+                return 0L;
+            });
         } catch (SQLException e) {
             throw new IllegalStateException("장비 건수 조회에 실패했습니다.", e);
         }
@@ -42,31 +37,31 @@ public class DeployedAssetQuery {
 
         String query = DEVICE_QUERY + "LIMIT %d OFFSET %d".formatted(limit, offset);
 
-        try (Connection connection = connectionFactory.openConnection();
-             Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery(query)) {
+        try {
+            return doql.query(query, resultSet -> {
 
-            List<DeviceSource> devices = new ArrayList<>(limit);
+                List<DeviceSource> devices = new ArrayList<>(limit);
 
-            while (resultSet.next()) {
-                devices.add(new DeviceSource(
-                        resultSet.getInt("device_pk"),
-                        resultSet.getString("name"),
-                        resultSet.getString("type"),
-                        resultSet.getString("notes"),
-                        resultSet.getString("serial_no"),
-                        resultSet.getString("asset_no"),
-                        resultSet.getString("uuid"),
-                        resultSet.getBoolean("network_device"),
-                        resultSet.getString("physicalsubtype"),
-                        resultSet.getString("hardware_name"),
-                        resultSet.getString("vendor_name"),
-                        resultSet.getBoolean("in_service"),
-                        getNullableLocalDateTime(resultSet, "last_discovered")
-                ));
-            }
+                while (resultSet.next()) {
+                    devices.add(new DeviceSource(
+                            resultSet.getInt("device_pk"),
+                            resultSet.getString("name"),
+                            resultSet.getString("type"),
+                            resultSet.getString("notes"),
+                            resultSet.getString("serial_no"),
+                            resultSet.getString("asset_no"),
+                            resultSet.getString("uuid"),
+                            resultSet.getBoolean("network_device"),
+                            resultSet.getString("physicalsubtype"),
+                            resultSet.getString("hardware_name"),
+                            resultSet.getString("vendor_name"),
+                            resultSet.getBoolean("in_service"),
+                            getNullableLocalDateTime(resultSet, "last_discovered")
+                    ));
+                }
 
-            return devices;
+                return devices;
+            });
         } catch (SQLException e) {
             throw new IllegalStateException(
                     "데이터 조회에 실패했습니다. offset=" + offset + ", limit=" + limit,

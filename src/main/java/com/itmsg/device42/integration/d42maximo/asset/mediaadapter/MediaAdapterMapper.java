@@ -1,7 +1,6 @@
 package com.itmsg.device42.integration.d42maximo.asset.mediaadapter;
 
-import com.itmsg.device42.dto.device42.asset.MediaAdapterSource;
-import com.itmsg.device42.dto.maximo.asset.DpaMediaAdapterUpsert;
+import com.itmsg.device42.maximo.asset.DpaMediaAdapterUpsert;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;

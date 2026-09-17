@@ -1,11 +1,7 @@
 package com.itmsg.device42.integration.d42maximo.ci.ip;
 
-import com.itmsg.device42.config.Device42ConnectionFactory;
-import com.itmsg.device42.dto.device42.ci.IpSource;
-import java.sql.Connection;
-import java.sql.ResultSet;
+import com.itmsg.device42.device42.DoqlClient;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import org.slf4j.Logger;
@@ -15,19 +11,19 @@ import org.springframework.stereotype.Component;
 @Component
 public class IpCiQuery {
 
-    public IpCiQuery(Device42ConnectionFactory connectionFactory) {
-        this.connectionFactory = connectionFactory;
-    }
-
     private static final Logger log = LoggerFactory.getLogger(IpCiQuery.class);
 
-    private final Device42ConnectionFactory connectionFactory;
+    private final DoqlClient doql;
+
+    public IpCiQuery(DoqlClient doql) {
+        this.doql = doql;
+    }
 
     public long getTotalCount() {
-        try (Connection connection = connectionFactory.openConnection();
-             Statement statement = connection.createStatement();
-             ResultSet rs = statement.executeQuery(TOTAL_COUNT_QUERY)) {
-            return rs.next() ? rs.getLong(1) : 0L;
+        try {
+            return doql.query(TOTAL_COUNT_QUERY, rs -> {
+                return rs.next() ? rs.getLong(1) : 0L;
+            });
         } catch (SQLException e) {
             throw new IllegalStateException("IP 건수 조회에 실패했습니다.", e);
         }
@@ -35,22 +31,22 @@ public class IpCiQuery {
 
     public List<IpSource> getData(long offset, int limit) {
         String query = SOURCE_QUERY.formatted(limit, offset);
-        try (Connection connection = connectionFactory.openConnection();
-             Statement statement = connection.createStatement();
-             ResultSet rs = statement.executeQuery(query)) {
-            List<IpSource> data = new ArrayList<>(limit);
-            while (rs.next()) {
-                long ipAddressPk = rs.getLong("ipaddress_pk");
-                try {
-                    data.add(new IpSource(
-                            ipAddressPk, rs.getLong("device_fk"), rs.getString("ip_address"),
-                            rs.getString("device_name"), rs.getString("label"),
-                            rs.getString("notes"), rs.getString("last_discovered")));
-                } catch (SQLException e) {
-                    log.error("IP 원천 변환에 실패했습니다. ipAddressPk={}", ipAddressPk, e);
+        try {
+            return doql.query(query, rs -> {
+                List<IpSource> data = new ArrayList<>(limit);
+                while (rs.next()) {
+                    long ipAddressPk = rs.getLong("ipaddress_pk");
+                    try {
+                        data.add(new IpSource(
+                                ipAddressPk, rs.getLong("device_fk"), rs.getString("ip_address"),
+                                rs.getString("device_name"), rs.getString("label"),
+                                rs.getString("notes"), rs.getString("last_discovered")));
+                    } catch (SQLException e) {
+                        log.error("IP 원천 변환에 실패했습니다. ipAddressPk={}", ipAddressPk, e);
+                    }
                 }
-            }
-            return data;
+                return data;
+            });
         } catch (SQLException e) {
             throw new IllegalStateException("IP 조회에 실패했습니다. offset=" + offset, e);
         }

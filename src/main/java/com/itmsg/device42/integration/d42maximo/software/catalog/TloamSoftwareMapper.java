@@ -1,10 +1,9 @@
 package com.itmsg.device42.integration.d42maximo.software.catalog;
 
-import com.itmsg.device42.dto.device42.software.SoftwareProductSource;
-import com.itmsg.device42.dto.maximo.software.TloamSoftwareUpsert;
+import com.itmsg.device42.integration.d42maximo.software.mapping.SoftwareIdentity;
+import com.itmsg.device42.maximo.software.TloamSoftwareUpsert;
 import java.util.ArrayList;
 import java.util.List;
-import com.itmsg.device42.integration.d42maximo.software.SoftwareIdentity;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -30,8 +29,6 @@ public class TloamSoftwareMapper {
 
         return mappedData;
     }
-
-
 
     private static String defaultUnknown(String value) {
         String normalized = trimToNull(value);

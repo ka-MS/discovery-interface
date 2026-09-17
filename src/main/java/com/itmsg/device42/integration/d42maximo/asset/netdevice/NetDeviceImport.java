@@ -1,35 +1,30 @@
 package com.itmsg.device42.integration.d42maximo.asset.netdevice;
 
-import com.itmsg.device42.dto.device42.asset.NetworkDeviceSource;
-import com.itmsg.device42.dto.maximo.asset.DpaNetDeviceUpsert;
-import com.itmsg.device42.integration.asset.AssetIntegrationTask;
+import com.itmsg.device42.maximo.asset.DpaNetDeviceUpsert;
 import com.itmsg.device42.maximo.asset.DpaNetDeviceWriter;
 import com.itmsg.device42.runtime.PageLoop;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
-@Component("dpaNetDeviceIntegrate")
-@Order(3)
-public class NetDeviceImport implements AssetIntegrationTask {
+@Component
+public class NetDeviceImport {
 
     private static final Logger log = LoggerFactory.getLogger(NetDeviceImport.class);
 
     private static final int DEFAULT_BATCH_SIZE = 1000;
 
     private final NetDeviceQuery query;
-    private final NetDeviceMapper mapper;
     private final DpaNetDeviceWriter writer;
 
-    public NetDeviceImport(NetDeviceQuery query, NetDeviceMapper mapper, DpaNetDeviceWriter writer) {
+    public NetDeviceImport(NetDeviceQuery query, DpaNetDeviceWriter writer) {
         this.query = query;
-        this.mapper = mapper;
         this.writer = writer;
     }
 
-    @Override
     public void integrate() {
         long totalCount = query.getTotalCount();
 
@@ -38,9 +33,27 @@ public class NetDeviceImport implements AssetIntegrationTask {
             int limit = page.limit();
             List<NetworkDeviceSource> sourceData = query.getData(offset, limit);
 
-            List<DpaNetDeviceUpsert> mappedData = mapper.mapData(sourceData);
+            List<DpaNetDeviceUpsert> mappedData = mapData(sourceData);
 
             writer.write(mappedData);
         }
+    }
+
+    private List<DpaNetDeviceUpsert> mapData(List<NetworkDeviceSource> sourceData) {
+        LocalDateTime applyDateTime = LocalDateTime.now();
+        List<DpaNetDeviceUpsert> mappedData = new ArrayList<>(sourceData.size());
+
+        for (NetworkDeviceSource source : sourceData) {
+            mappedData.add(new DpaNetDeviceUpsert(
+                    source.devicePk().longValue(),
+                    source.macAddress(),
+                    source.networkAddress(),
+                    source.osVersion(),
+                    applyDateTime,
+                    applyDateTime
+            ));
+        }
+
+        return mappedData;
     }
 }

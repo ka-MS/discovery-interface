@@ -1,11 +1,11 @@
 package com.itmsg.device42.integration.d42maximo.ci.os;
 
-import com.itmsg.device42.integration.ci.CiSpecMapper;
-import com.itmsg.device42.integration.ci.ActCiWriter;
-import com.itmsg.device42.integration.ci.CiDefinitionLoader;
-import com.itmsg.device42.config.Device42ConnectionFactory;
-import com.itmsg.device42.dto.device42.ci.OsSource;
-import com.itmsg.device42.enums.ci.CiClassification;
+import com.itmsg.device42.device42.DoqlClient;
+import com.itmsg.device42.integration.d42maximo.ci.mapping.CiSpecMapper;
+import com.itmsg.device42.maximo.ci.ActCiWriter;
+import com.itmsg.device42.maximo.ci.definition.CiDefinitionLoader;
+import com.itmsg.device42.device42.Device42ConnectionFactory;
+import com.itmsg.device42.integration.d42maximo.ci.mapping.CiClassification;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ClassPathResource;
@@ -99,7 +99,7 @@ class OsCiImportTest {
     void missingClassificationSkipsEveryOs() {
         jdbc.update("DELETE FROM MAXIMO.CLASSUSEWITH WHERE CLASSSTRUCTUREID='OSC'");
 
-        var mapped = mapper.mapData(List.of(source(7, 100, "RHEL")), definitionLoader.load());
+        var mapped = mapper.mapData(List.of(source(7, 100, "RHEL")), definitionLoader.load(CiClassification.ids()));
 
         assertThat(mapped).isEmpty();
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM MAXIMO.ACTCI", Integer.class)).isZero();
@@ -110,7 +110,7 @@ class OsCiImportTest {
         var bad = new OsSource(7, 100, "RHEL", "8.10", "4.18", "64-bit", "not-a-time");
         var good = source(8, 101, "Ubuntu 24.04");
 
-        var mapped = mapper.mapData(List.of(bad, good), definitionLoader.load());
+        var mapped = mapper.mapData(List.of(bad, good), definitionLoader.load(CiClassification.ids()));
 
         assertThat(mapped).hasSize(1);
         assertThat(mapped.getFirst().actCi().actCiNum()).isEqualTo("D42:DEVICEOS:8");
@@ -120,7 +120,7 @@ class OsCiImportTest {
     void readsEveryOffsetUntilTotalCount() {
         int batchSize = OsCiImport.DEFAULT_BATCH_SIZE;
         List<Long> offsets = new ArrayList<>();
-        var query = new OsCiQuery(mock(Device42ConnectionFactory.class)) {
+        var query = new OsCiQuery(new DoqlClient(mock(Device42ConnectionFactory.class))) {
             @Override public long getTotalCount() {
                 return batchSize * 2L + 1;
             }
@@ -131,7 +131,7 @@ class OsCiImportTest {
             }
         };
 
-        new OsCiImport(query, mapper, writer).integrate(definitionLoader.load());
+        new OsCiImport(query, mapper, writer).integrate(definitionLoader.load(CiClassification.ids()));
 
         assertThat(offsets).containsExactly(0L, (long) batchSize, batchSize * 2L);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM MAXIMO.ACTCI", Integer.class)).isEqualTo(3);
@@ -143,7 +143,7 @@ class OsCiImportTest {
     }
 
     private void persist(OsSource source) {
-        writer.write(mapper.mapData(List.of(source), definitionLoader.load()));
+        writer.write(mapper.mapData(List.of(source), definitionLoader.load(CiClassification.ids())));
     }
 
     private String text(String attributeId) {

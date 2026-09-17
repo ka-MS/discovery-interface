@@ -1,12 +1,7 @@
 package com.itmsg.device42.integration.d42maximo.asset.netdevice;
 
-import com.itmsg.device42.config.Device42ConnectionFactory;
-import com.itmsg.device42.dto.device42.asset.NetworkDeviceSource;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+import com.itmsg.device42.device42.DoqlClient;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Component;
@@ -14,18 +9,18 @@ import org.springframework.stereotype.Component;
 @Component
 public class NetDeviceQuery {
 
-    public NetDeviceQuery(Device42ConnectionFactory connectionFactory) {
-        this.connectionFactory = connectionFactory;
+    private final DoqlClient doql;
+
+    public NetDeviceQuery(DoqlClient doql) {
+        this.doql = doql;
     }
 
-    private final Device42ConnectionFactory connectionFactory;
-
     public long getTotalCount() {
-        try (Connection connection = connectionFactory.openConnection();
-             PreparedStatement statement = connection.prepareStatement(DEVICE_TOTAL_COUNT_QUERY);
-             ResultSet resultSet = statement.executeQuery()) {
+        try {
+            return doql.preparedQuery(DEVICE_TOTAL_COUNT_QUERY, resultSet -> {
 
-            return resultSet.next() ? resultSet.getLong(1) : 0L;
+                return resultSet.next() ? resultSet.getLong(1) : 0L;
+            });
         } catch (SQLException e) {
             throw new IllegalStateException("DPA NetDevice 대상 장비 건수 조회에 실패했습니다.", e);
         }
@@ -34,20 +29,20 @@ public class NetDeviceQuery {
     public List<NetworkDeviceSource> getData(long offset, int limit) {
         String query = DEVICE_QUERY + "LIMIT %d OFFSET %d".formatted(limit, offset);
 
-        try (Connection connection = connectionFactory.openConnection();
-             Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery(query)) {
+        try {
+            return doql.query(query, resultSet -> {
 
-            List<NetworkDeviceSource> devices = new ArrayList<>(limit);
-            while (resultSet.next()) {
-                devices.add(new NetworkDeviceSource(
-                        resultSet.getInt("device_pk"),
-                        resultSet.getString("os_version"),
-                        resultSet.getString("mac"),
-                        resultSet.getString("mgmt_ip")
-                ));
-            }
-            return devices;
+                List<NetworkDeviceSource> devices = new ArrayList<>(limit);
+                while (resultSet.next()) {
+                    devices.add(new NetworkDeviceSource(
+                            resultSet.getInt("device_pk"),
+                            resultSet.getString("os_version"),
+                            resultSet.getString("mac"),
+                            resultSet.getString("mgmt_ip")
+                    ));
+                }
+                return devices;
+            });
         } catch (SQLException e) {
             throw new IllegalStateException(
                     "DPA NetDevice 원천 조회에 실패했습니다. offset=" + offset + ", limit=" + limit,

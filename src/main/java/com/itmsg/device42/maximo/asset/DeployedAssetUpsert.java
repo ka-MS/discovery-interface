@@ -1,0 +1,47 @@
+package com.itmsg.device42.maximo.asset;
+
+import java.time.LocalDateTime;
+
+public record DeployedAssetUpsert(
+        Long nodeId,
+        String nodeName,
+        String domainName,
+        String serialNumber,
+        String assetTag,
+        String makeModel,
+        String manufacturer,
+        String description,
+        LocalDateTime hwLastScanDate,
+        String hwDetectionTool,
+        Integer supportsSnmp,
+        String sourceId,
+        String systemRole,
+        String assetClass,
+        String siteId,
+        String orgId,
+        LocalDateTime createDate,
+        LocalDateTime changeDate,
+        String guid,
+        String tloamIsPromoted,
+        String tloamHwType,
+        String tloamStatus,
+        String tloamNrsGuid,
+        String tloamNrsSignature,
+        String tloamNrsVmId,
+        String tloamNrsManufacturer,
+        String tloamNrsModel,
+        String tloamNrsSerialNumber,
+        String tloamNrsSystemBoardUuid,
+        String tloamNrsPrimaryMacAddress,
+        String tloamNrsHostSystem,
+        String tloamNrsName,
+        String tloamHash,
+        String tloamNrsManagedSystemName,
+        String pluspCustomer,
+        String tloamNrsUuid,
+        Long rowstamp,
+        String sourceId2,
+        String importSource,
+        Long nodeId2
+) {
+}

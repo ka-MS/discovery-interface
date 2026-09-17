@@ -1,13 +1,9 @@
 package com.itmsg.device42.integration.d42maximo.asset.tcpip;
 
-import com.itmsg.device42.config.Device42ConnectionFactory;
-import com.itmsg.device42.dto.device42.asset.IpAddressSource;
+import com.itmsg.device42.device42.DoqlClient;
 import java.math.BigDecimal;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Component;
@@ -15,22 +11,22 @@ import org.springframework.stereotype.Component;
 @Component
 public class TcpIpQuery {
 
-    public TcpIpQuery(Device42ConnectionFactory connectionFactory) {
-        this.connectionFactory = connectionFactory;
+    private final DoqlClient doql;
+
+    public TcpIpQuery(DoqlClient doql) {
+        this.doql = doql;
     }
 
-    private final Device42ConnectionFactory connectionFactory;
-
     public long getTotalCount() {
-        try (Connection connection = connectionFactory.openConnection();
-             PreparedStatement statement = connection.prepareStatement(TOTAL_COUNT_QUERY);
-             ResultSet resultSet = statement.executeQuery()) {
+        try {
+            return doql.preparedQuery(TOTAL_COUNT_QUERY, resultSet -> {
 
-            if (resultSet.next()) {
-                return resultSet.getLong(1);
-            }
+                if (resultSet.next()) {
+                    return resultSet.getLong(1);
+                }
 
-            return 0L;
+                return 0L;
+            });
         } catch (SQLException e) {
             throw new IllegalStateException("DPA TCP/IP 대상 IP 건수 조회에 실패했습니다.", e);
         }
@@ -39,42 +35,42 @@ public class TcpIpQuery {
     public List<IpAddressSource> getData(long offset, int limit) {
         String query = SOURCE_QUERY + "LIMIT %d OFFSET %d".formatted(limit, offset);
 
-        try (Connection connection = connectionFactory.openConnection();
-             Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery(query)) {
+        try {
+            return doql.query(query, resultSet -> {
 
-            List<IpAddressSource> rows = new ArrayList<>(limit);
+                List<IpAddressSource> rows = new ArrayList<>(limit);
 
-            while (resultSet.next()) {
-                rows.add(new IpAddressSource(
-                        resultSet.getLong("ipaddress_pk"),
-                        resultSet.getLong("device_fk"),
-                        resultSet.getString("device_name"),
-                        resultSet.getString("ip_address"),
-                        resultSet.getString("ip_hybrid"),
-                        resultSet.getString("label"),
-                        getNullableLong(resultSet, "subnet_fk"),
-                        getNullableLong(resultSet, "type_id"),
-                        resultSet.getString("type"),
-                        getNullableBoolean(resultSet, "available"),
-                        getNullableBoolean(resultSet, "is_public"),
-                        getNullableLong(resultSet, "resource_fk"),
-                        resultSet.getString("notes"),
-                        resultSet.getString("first_added"),
-                        resultSet.getString("last_edited"),
-                        resultSet.getString("tags"),
-                        getNullableLong(resultSet, "netport_fk"),
-                        resultSet.getString("details"),
-                        resultSet.getString("last_changed"),
-                        resultSet.getString("last_discovered"),
-                        getNullableBoolean(resultSet, "is_shared"),
-                        getNullableLong(resultSet, "cloudinfrastructure_fk"),
-                        resultSet.getString("gateway"),
-                        getNullableInteger(resultSet, "mask_bits")
-                ));
-            }
+                while (resultSet.next()) {
+                    rows.add(new IpAddressSource(
+                            resultSet.getLong("ipaddress_pk"),
+                            resultSet.getLong("device_fk"),
+                            resultSet.getString("device_name"),
+                            resultSet.getString("ip_address"),
+                            resultSet.getString("ip_hybrid"),
+                            resultSet.getString("label"),
+                            getNullableLong(resultSet, "subnet_fk"),
+                            getNullableLong(resultSet, "type_id"),
+                            resultSet.getString("type"),
+                            getNullableBoolean(resultSet, "available"),
+                            getNullableBoolean(resultSet, "is_public"),
+                            getNullableLong(resultSet, "resource_fk"),
+                            resultSet.getString("notes"),
+                            resultSet.getString("first_added"),
+                            resultSet.getString("last_edited"),
+                            resultSet.getString("tags"),
+                            getNullableLong(resultSet, "netport_fk"),
+                            resultSet.getString("details"),
+                            resultSet.getString("last_changed"),
+                            resultSet.getString("last_discovered"),
+                            getNullableBoolean(resultSet, "is_shared"),
+                            getNullableLong(resultSet, "cloudinfrastructure_fk"),
+                            resultSet.getString("gateway"),
+                            getNullableInteger(resultSet, "mask_bits")
+                    ));
+                }
 
-            return rows;
+                return rows;
+            });
         } catch (SQLException e) {
             throw new IllegalStateException(
                     "DPA TCP/IP 원천 조회에 실패했습니다. offset=" + offset + ", limit=" + limit,

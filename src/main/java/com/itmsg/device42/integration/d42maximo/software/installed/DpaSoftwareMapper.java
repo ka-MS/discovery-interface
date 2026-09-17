@@ -1,8 +1,7 @@
 package com.itmsg.device42.integration.d42maximo.software.installed;
 
-import com.itmsg.device42.integration.d42maximo.software.SoftwareIdentity;
-import com.itmsg.device42.dto.device42.software.InstalledSoftwareSource;
-import com.itmsg.device42.dto.maximo.software.DpaSoftwareUpsert;
+import com.itmsg.device42.integration.d42maximo.software.mapping.SoftwareIdentity;
+import com.itmsg.device42.maximo.software.DpaSoftwareUpsert;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;

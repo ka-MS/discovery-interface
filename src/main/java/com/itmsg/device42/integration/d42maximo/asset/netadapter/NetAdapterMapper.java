@@ -1,7 +1,6 @@
 package com.itmsg.device42.integration.d42maximo.asset.netadapter;
 
-import com.itmsg.device42.dto.device42.asset.NetworkInterfaceSource;
-import com.itmsg.device42.dto.maximo.asset.DpaNetAdapterUpsert;
+import com.itmsg.device42.maximo.asset.DpaNetAdapterUpsert;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;

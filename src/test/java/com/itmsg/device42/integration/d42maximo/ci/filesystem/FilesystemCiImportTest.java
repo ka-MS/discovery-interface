@@ -1,12 +1,11 @@
 package com.itmsg.device42.integration.d42maximo.ci.filesystem;
 
-import com.itmsg.device42.integration.d42maximo.ci.FilesystemSelection;
-import com.itmsg.device42.integration.ci.CiSpecMapper;
-import com.itmsg.device42.integration.ci.ActCiWriter;
-import com.itmsg.device42.integration.ci.CiDefinitionLoader;
-import com.itmsg.device42.config.Device42ConnectionFactory;
-import com.itmsg.device42.dto.device42.ci.FilesystemSource;
-import com.itmsg.device42.enums.ci.CiClassification;
+import com.itmsg.device42.device42.DoqlClient;
+import com.itmsg.device42.integration.d42maximo.ci.mapping.CiSpecMapper;
+import com.itmsg.device42.maximo.ci.ActCiWriter;
+import com.itmsg.device42.maximo.ci.definition.CiDefinitionLoader;
+import com.itmsg.device42.device42.Device42ConnectionFactory;
+import com.itmsg.device42.integration.d42maximo.ci.mapping.CiClassification;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ClassPathResource;
@@ -101,7 +100,7 @@ class FilesystemCiImportTest {
         when(statement.executeQuery(anyString())).thenReturn(rs);
         when(rs.next()).thenReturn(false);
 
-        new FilesystemCiQuery(factory).getData(0, 10);
+        new FilesystemCiQuery(new DoqlClient(factory)).getData(0, 10);
 
         var sql = org.mockito.ArgumentCaptor.forClass(String.class);
         verify(statement).executeQuery(sql.capture());
@@ -117,13 +116,13 @@ class FilesystemCiImportTest {
         jdbc.update("DELETE FROM MAXIMO.CLASSUSEWITH WHERE CLASSSTRUCTUREID='FS'");
 
         var mapped = mapper.mapData(List.of(new FilesystemSource(4, 100, "/", "xfs", null,
-                BigDecimal.TEN, BigDecimal.ONE, "2026-09-15T00:00:00Z")), definitionLoader.load());
+                BigDecimal.TEN, BigDecimal.ONE, "2026-09-15T00:00:00Z")), definitionLoader.load(CiClassification.ids()));
 
         assertThat(mapped).isEmpty();
     }
 
     private void persist(FilesystemSource source) {
-        writer.write(mapper.mapData(List.of(source), definitionLoader.load()));
+        writer.write(mapper.mapData(List.of(source), definitionLoader.load(CiClassification.ids())));
     }
 
     private String text(String attributeId) {

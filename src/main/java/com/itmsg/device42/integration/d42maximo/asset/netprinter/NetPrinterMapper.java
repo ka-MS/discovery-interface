@@ -1,7 +1,6 @@
 package com.itmsg.device42.integration.d42maximo.asset.netprinter;
 
-import com.itmsg.device42.dto.device42.asset.NetworkPrinterSource;
-import com.itmsg.device42.dto.maximo.asset.DpaNetPrinterUpsert;
+import com.itmsg.device42.maximo.asset.DpaNetPrinterUpsert;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;

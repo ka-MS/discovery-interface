@@ -1,15 +1,14 @@
 package com.itmsg.device42.integration.d42maximo.ci.os;
 
-import com.itmsg.device42.dto.device42.ci.OsSource;
-import com.itmsg.device42.dto.maximo.ci.ActCiSpecUpsert;
-import com.itmsg.device42.dto.maximo.ci.ActCiUpsert;
-import com.itmsg.device42.dto.maximo.ci.CiUpsert;
-import com.itmsg.device42.dto.maximo.ci.ClassificationDefinition;
-import com.itmsg.device42.enums.ci.CiClassification;
-import com.itmsg.device42.enums.ci.OsSpec;
-import com.itmsg.device42.integration.ci.CiDefinitionCache;
-import com.itmsg.device42.integration.ci.CiSpecMapper;
-import com.itmsg.device42.integration.ci.SourceTimestamp;
+import com.itmsg.device42.integration.d42maximo.ci.mapping.CiClassification;
+import com.itmsg.device42.integration.d42maximo.ci.mapping.CiSpecMapper;
+import com.itmsg.device42.integration.d42maximo.ci.mapping.OsSpec;
+import com.itmsg.device42.integration.d42maximo.ci.mapping.SourceTimestamp;
+import com.itmsg.device42.maximo.ci.ActCiSpecUpsert;
+import com.itmsg.device42.maximo.ci.ActCiUpsert;
+import com.itmsg.device42.maximo.ci.CiUpsert;
+import com.itmsg.device42.maximo.ci.definition.CiDefinitionCache;
+import com.itmsg.device42.maximo.ci.definition.ClassificationDefinition;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,10 +19,6 @@ import org.springframework.stereotype.Component;
 @Component
 public class OsCiMapper {
 
-    public OsCiMapper(CiSpecMapper specMapper) {
-        this.specMapper = specMapper;
-    }
-
     private static final Logger log = LoggerFactory.getLogger(OsCiMapper.class);
 
     private static final String CHANGE_BY = "Device42";
@@ -32,13 +27,17 @@ public class OsCiMapper {
 
     private final CiSpecMapper specMapper;
 
+    public OsCiMapper(CiSpecMapper specMapper) {
+        this.specMapper = specMapper;
+    }
+
     public List<CiUpsert> mapData(List<OsSource> data, CiDefinitionCache definitions) {
         LocalDateTime applyDateTime = LocalDateTime.now();
         List<CiUpsert> mappedData = new ArrayList<>(data.size());
 
         for (OsSource source : data) {
             try {
-                ClassificationDefinition definition = definitions.classification(CiClassification.OPERATING_SYSTEM);
+                ClassificationDefinition definition = definitions.classification(CiClassification.OPERATING_SYSTEM.classificationId());
                 if (definition == null) {
                     log.warn("OS 분류가 없어 건너뜁니다. deviceOsPk={}", source.deviceOsPk());
                     continue;

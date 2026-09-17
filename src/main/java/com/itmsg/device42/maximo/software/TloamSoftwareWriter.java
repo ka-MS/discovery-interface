@@ -1,6 +1,5 @@
 package com.itmsg.device42.maximo.software;
 
-import com.itmsg.device42.dto.maximo.software.TloamSoftwareUpsert;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.List;

@@ -1,11 +1,11 @@
 package com.itmsg.device42.integration.d42maximo.ci.ip;
 
-import com.itmsg.device42.integration.ci.CiSpecMapper;
-import com.itmsg.device42.integration.ci.ActCiWriter;
-import com.itmsg.device42.integration.ci.CiDefinitionLoader;
-import com.itmsg.device42.config.Device42ConnectionFactory;
-import com.itmsg.device42.dto.device42.ci.IpSource;
-import com.itmsg.device42.enums.ci.CiClassification;
+import com.itmsg.device42.device42.DoqlClient;
+import com.itmsg.device42.integration.d42maximo.ci.mapping.CiSpecMapper;
+import com.itmsg.device42.maximo.ci.ActCiWriter;
+import com.itmsg.device42.maximo.ci.definition.CiDefinitionLoader;
+import com.itmsg.device42.device42.Device42ConnectionFactory;
+import com.itmsg.device42.integration.d42maximo.ci.mapping.CiClassification;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ClassPathResource;
@@ -61,7 +61,7 @@ class IpCiImportTest {
     @Test
     void mapsBodyAndFourSpecsUsingOwnScanTime() {
         writer.write(mapper.mapData(
-                List.of(ip(3, "192.168.2.57", "web-01", "ens160")), definitionLoader.load()));
+                List.of(ip(3, "192.168.2.57", "web-01", "ens160")), definitionLoader.load(CiClassification.ids())));
 
         assertThat(jdbc.queryForObject("SELECT ACTCINUM FROM MAXIMO.ACTCI", String.class)).isEqualTo("D42:IPADDRESS:3");
         assertThat(jdbc.queryForObject("SELECT ACTCINAME FROM MAXIMO.ACTCI", String.class)).isEqualTo("192.168.2.57");
@@ -84,7 +84,7 @@ class IpCiImportTest {
         jdbc.update("DELETE FROM MAXIMO.CLASSUSEWITH WHERE CLASSSTRUCTUREID='IPA'");
 
         var mapped = mapper.mapData(
-                List.of(ip(3, "192.168.2.57", "web-01", null)), definitionLoader.load());
+                List.of(ip(3, "192.168.2.57", "web-01", null)), definitionLoader.load(CiClassification.ids()));
 
         assertThat(mapped).isEmpty();
     }
@@ -100,7 +100,7 @@ class IpCiImportTest {
         when(statement.executeQuery(anyString())).thenReturn(rs);
         when(rs.next()).thenReturn(false);
 
-        new IpCiQuery(factory).getData(10, 5);
+        new IpCiQuery(new DoqlClient(factory)).getData(10, 5);
 
         var sql = org.mockito.ArgumentCaptor.forClass(String.class);
         verify(statement).executeQuery(sql.capture());
@@ -121,7 +121,7 @@ class IpCiImportTest {
         when(statement.executeQuery(anyString())).thenReturn(rs);
         when(rs.next()).thenReturn(false);
 
-        new IpCiQuery(factory).getData(0, 10);
+        new IpCiQuery(new DoqlClient(factory)).getData(0, 10);
 
         var sql = org.mockito.ArgumentCaptor.forClass(String.class);
         verify(statement).executeQuery(sql.capture());
@@ -134,7 +134,7 @@ class IpCiImportTest {
     @Test
     void missingLabelCreatesTemplateRowWithNullValue() {
         writer.write(mapper.mapData(
-                List.of(ip(4, "10.0.0.1", "db-01", null)), definitionLoader.load()));
+                List.of(ip(4, "10.0.0.1", "db-01", null)), definitionLoader.load(CiClassification.ids())));
 
         assertThat(jdbc.queryForList("SELECT ASSETATTRID FROM MAXIMO.ACTCISPEC ORDER BY ASSETATTRID", String.class))
                 .containsExactly("IPADDRESS_DOTNOTATION", "IPADDRESS_MANAGEDSYSTEMNAME",

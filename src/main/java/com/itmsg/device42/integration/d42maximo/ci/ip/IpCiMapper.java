@@ -1,15 +1,14 @@
 package com.itmsg.device42.integration.d42maximo.ci.ip;
 
-import com.itmsg.device42.dto.device42.ci.IpSource;
-import com.itmsg.device42.dto.maximo.ci.ActCiSpecUpsert;
-import com.itmsg.device42.dto.maximo.ci.ActCiUpsert;
-import com.itmsg.device42.dto.maximo.ci.CiUpsert;
-import com.itmsg.device42.dto.maximo.ci.ClassificationDefinition;
-import com.itmsg.device42.enums.ci.CiClassification;
-import com.itmsg.device42.enums.ci.IpSpec;
-import com.itmsg.device42.integration.ci.CiDefinitionCache;
-import com.itmsg.device42.integration.ci.CiSpecMapper;
-import com.itmsg.device42.integration.ci.SourceTimestamp;
+import com.itmsg.device42.integration.d42maximo.ci.mapping.CiClassification;
+import com.itmsg.device42.integration.d42maximo.ci.mapping.CiSpecMapper;
+import com.itmsg.device42.integration.d42maximo.ci.mapping.IpSpec;
+import com.itmsg.device42.integration.d42maximo.ci.mapping.SourceTimestamp;
+import com.itmsg.device42.maximo.ci.ActCiSpecUpsert;
+import com.itmsg.device42.maximo.ci.ActCiUpsert;
+import com.itmsg.device42.maximo.ci.CiUpsert;
+import com.itmsg.device42.maximo.ci.definition.CiDefinitionCache;
+import com.itmsg.device42.maximo.ci.definition.ClassificationDefinition;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,10 +19,6 @@ import org.springframework.stereotype.Component;
 @Component
 public class IpCiMapper {
 
-    public IpCiMapper(CiSpecMapper specMapper) {
-        this.specMapper = specMapper;
-    }
-
     private static final Logger log = LoggerFactory.getLogger(IpCiMapper.class);
 
     private static final String CHANGE_BY = "Device42";
@@ -32,13 +27,17 @@ public class IpCiMapper {
 
     private final CiSpecMapper specMapper;
 
+    public IpCiMapper(CiSpecMapper specMapper) {
+        this.specMapper = specMapper;
+    }
+
     public List<CiUpsert> mapData(List<IpSource> data, CiDefinitionCache definitions) {
         LocalDateTime applyDateTime = LocalDateTime.now();
         List<CiUpsert> mappedData = new ArrayList<>(data.size());
 
         for (IpSource source : data) {
             try {
-                ClassificationDefinition definition = definitions.classification(CiClassification.IP_ADDRESS);
+                ClassificationDefinition definition = definitions.classification(CiClassification.IP_ADDRESS.classificationId());
                 if (definition == null) {
                     log.warn("IP 분류가 없어 건너뜁니다. ipAddressPk={}", source.ipAddressPk());
                     continue;

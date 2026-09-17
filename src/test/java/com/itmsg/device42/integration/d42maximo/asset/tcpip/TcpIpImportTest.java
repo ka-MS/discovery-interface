@@ -1,9 +1,10 @@
 package com.itmsg.device42.integration.d42maximo.asset.tcpip;
 
+import com.itmsg.device42.device42.DoqlClient;
 import com.itmsg.device42.maximo.asset.DpaTcpIpWriter;
 
-import com.itmsg.device42.config.Device42ConnectionFactory;
-import com.itmsg.device42.dto.maximo.asset.DpaTcpIpUpsert;
+import com.itmsg.device42.device42.Device42ConnectionFactory;
+import com.itmsg.device42.maximo.asset.DpaTcpIpUpsert;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -59,7 +60,7 @@ class TcpIpImportTest {
         when(statement.executeQuery(anyString())).thenReturn(resultSet);
         when(resultSet.next()).thenReturn(false);
 
-        new TcpIpQuery(factory).getData(10, 5);
+        new TcpIpQuery(new DoqlClient(factory)).getData(10, 5);
 
         var sql = ArgumentCaptor.forClass(String.class);
         verify(statement).executeQuery(sql.capture());
@@ -86,7 +87,7 @@ class TcpIpImportTest {
         when(resultSet.next()).thenReturn(true);
         when(resultSet.getLong(1)).thenReturn(118L);
 
-        assertThat(new TcpIpQuery(factory).getTotalCount()).isEqualTo(118L);
+        assertThat(new TcpIpQuery(new DoqlClient(factory)).getTotalCount()).isEqualTo(118L);
 
         var sql = ArgumentCaptor.forClass(String.class);
         verify(connection).prepareStatement(sql.capture());

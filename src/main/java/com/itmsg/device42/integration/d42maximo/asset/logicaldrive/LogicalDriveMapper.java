@@ -1,7 +1,6 @@
 package com.itmsg.device42.integration.d42maximo.asset.logicaldrive;
 
-import com.itmsg.device42.dto.device42.asset.LogicalDriveSource;
-import com.itmsg.device42.dto.maximo.asset.DpaLogicalDriveUpsert;
+import com.itmsg.device42.maximo.asset.DpaLogicalDriveUpsert;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;

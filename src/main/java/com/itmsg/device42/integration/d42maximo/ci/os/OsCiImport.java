@@ -1,18 +1,16 @@
 package com.itmsg.device42.integration.d42maximo.ci.os;
 
-import com.itmsg.device42.dto.device42.ci.OsSource;
-import com.itmsg.device42.dto.maximo.ci.CiUpsert;
-import com.itmsg.device42.integration.ci.ActCiWriter;
-import com.itmsg.device42.integration.ci.CiDefinitionCache;
-import com.itmsg.device42.integration.ci.CiIntegrationTask;
+import com.itmsg.device42.maximo.ci.ActCiWriter;
+import com.itmsg.device42.maximo.ci.CiUpsert;
+import com.itmsg.device42.maximo.ci.definition.CiDefinitionCache;
 import com.itmsg.device42.runtime.PageLoop;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-@Component("osCiIntegrate")
-public class OsCiImport implements CiIntegrationTask {
+@Component
+public class OsCiImport {
 
     private static final Logger log = LoggerFactory.getLogger(OsCiImport.class);
 
@@ -28,7 +26,6 @@ public class OsCiImport implements CiIntegrationTask {
         this.writer = writer;
     }
 
-    @Override
     public void integrate(CiDefinitionCache definitions) {
         long totalCount = query.getTotalCount();
         if (totalCount <= 0) {
