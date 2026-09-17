@@ -171,7 +171,7 @@ OS는 장비당 정확히 1개지만 EOL·EOS를 가진 독립 관리 대상이�
 
 ## ISSUE-11 Actual CI 분류·속성·관계와 식별자 매핑
 
-**상태:** DB·DB Instance의 일반 분류 사용 확정. 기준정보 보완과 공통 적재 정책 논의 필요.
+**상태:** DB Instance는 엔진별 분류와 CI 합집합 기준 속성으로 2026-09-16 재확정. Database 본체는 일반 분류 유지. 기준정보 보완과 공통 적재 정책 논의 필요.
 
 근거: [원천](data-mapping/ci/ci-targets.md), [분류·속성](knowledge/maximo/ci-classification.md),
 [관계 규칙](knowledge/maximo/ci-model.md). 대상 포함 여부는 ISSUE-8에서 결정한다.
@@ -186,10 +186,18 @@ ASSETATTRIBUTE 등 연결 정보와 Maximo 애플리케이션 동작까지 검�
 
 ### 결정
 
-- DB·DB Instance는 엔진별로 분기하지 않고 일반 DB·DB Server 분류로 통일한다.
+- DB Instance는 `database_type`에 따라 엔진별 분류로 라우팅하고, 전용 분류가 없는 엔진은
+  `APP.DB.GENERICDATABASESERVER`로 보낸다. 2026-09-16에 기존 단일 분류 결정을 대체했다.
+- 수집 속성의 대조 기준은 승격 대상 CI 분류의 합집합이다. 1단계는 네 분류 공통 8개 중
+  원천이 있는 것만 적재하고 엔진 전용 11개는 원천·표본이 갖춰진 뒤 정한다.
+- Database 본체는 엔진별로 분기하지 않고 `APP.DB.DATABASE`를 유지한다.
 - 확정된 원천·분류·속성 대응은 [DB](data-mapping/ci/types/database.md)와
   [DB Instance](data-mapping/ci/types/database-instance.md)를 정본으로 삼는다.
-- SQL Server 전용 분류·속성 대응안은 채택하지 않는다.
+  선택 이유는 [Database CI 수집 설계](design/ci/databaseinstance.md)에 있다.
+- 전용 분류가 없는 엔진은 `APP.DB.DATABASESERVER`로 보낸다. `APP.DB.GENERICDATABASESERVER`와
+  관계 규칙이 완전히 같고 속성 차이가 하나뿐인데 그 값이 제품명과 중복되어 쓰지 않는다.
+- 남은 결정: `APPSERVER_VENDORNAME` 고정표 여부, 엔진 전용 속성 세 후보의 원천 확정,
+  Instance→Database 분류쌍 규칙 등록.
 
 ### 나머지 분류 선택 검토안
 
@@ -237,6 +245,7 @@ Switch 판정·ACTCI 분류와 2차 기준정보 추천안은 확정했다. 남�
 - **CI 기준 밖 속성의 승격 전달.** `OPERATINGSYSTEM_KERNELARCHITECTURE`는 `CI.OS`에 없는데 채택했다. Computer의 BIOS 출시일·CPU 코어 수와 같은 의도적 추가다. ACTCI→CI 승격에서 이런 속성이 누락되는지는 미검증이다. 승격 자체가 미구현이다.
 - **Disk의 승격 대상 분류 부재.** CI 계열에 디스크 분류가 없어 승격할 곳이 없다. 관리 단위 재검토 근거로 ISSUE-8에도 걸었다.
 - **LASTSCANDT 원천.** IP만 `last_discovered`를 전건 갖는다. OS·Disk·Filesystem은 부모 Computer의 값을 쓰는 안을 추천했다.
+  DB Instance는 Resource의 `last_discovered`가 전건 NULL이어서 2026-09-16에 `last_changed`로 확정했다.
 
 ### 속성 대응 검토안
 
@@ -246,7 +255,7 @@ Device 본체·스펙의 현재 대응은 [Device 매핑](data-mapping/ci/types/
 | 원천 필드 | 검토할 ASSETATTRID | 남은 판단 |
 | --- | --- | --- |
 | database.database_id / creation_date / collate / recovery_model / allocated_size | 일반 DB 분류에서 미선정 | 기존 속성 대응 또는 신규 속성 정의; DB ID 범위·날짜 형식·크기 단위 |
-| databaseinstance.database_count / connection_count / is_default_instance | 일반 DB Server 분류에서 미선정 | 기존 속성 대응 또는 신규 속성 정의; 연결 수의 수집 시점 |
+| databaseinstance.database_count / connection_count / is_default_instance | DB Instance 분류에서 미선정 | 기존 속성 대응 또는 신규 속성 정의; 연결 수의 수집 시점 |
 | subnet.mask_bits / vlan.number | IPNETWORK_PREFIXLENGTH / VLAN_VLANID | 대상 포함 및 분류 선택 |
 
 원천 명칭은 원천 문서와 유형별 문서에 기재한 View다.
@@ -267,17 +276,18 @@ compatibility_level의 일반 분류 속성 대응은 미정이며, DB 제품 �
 
 ### DB·Instance 원천별 남은 판단
 
-- databaseinstance_fk 기준은 9쌍, instance_id·Resource.root_resource_fk 기준은 10쌍이다.
+- `.68`은 databaseinstance_fk 기준 9쌍, instance_id·Resource.root_resource_fk 기준 10쌍이다(`.35`는 37쌍).
   현재 관계 SQL은 FK 기준을 유지한다. 차이의 원인과 보강 우선순위를 확인한 후 1건의 관계를 추가할지 결정한다.
 - 일반 DB의 34개 속성에는 DB 내부 ID·생성 시각·정렬 규칙·호환성 수준·복구 모드·크기에
   바로 대응시킬 전용 속성이 확인되지 않았다. 이름이 비슷한 DATABASE_ASSETID 등을 대신 쓰지 않고
   기존 속성 재해석 또는 신규 정의 여부를 결정한다.
-- 일반 DB Server의 DB 수·연결 수·기본 Instance 여부와 JSON의 주소·CPU·메모리·시작 시각·메모리 상태는
+- DB Instance의 DB 수·연결 수·기본 Instance 여부와 JSON의 주소·CPU·메모리·시작 시각·메모리 상태는
   Target 속성과 의미·단위·범위가 미확정이다. 호스트 자원 값을 Instance 속성으로 임의 대입하지 않는다.
 - db_type_id의 다른 엔진 코드 대응은 미확인이다. 제품명에는 database_type을 사용하므로
   코드표 미확인이 이름 매핑을 막지는 않는다.
-- Resource.details.version은 APPSERVER_VERSIONSTRING에 원문으로 대응한다.
-  제품 버전 번호·빌드·OS를 분해하는 규칙은 만들지 않는다. 표본 밖 엔진의 키·형식은 추가 검증 대상이다.
+- Resource.details.version은 APPSERVER_PRODUCTVERSION에 원문으로 대응한다. CI 쪽에 없는
+  APPSERVER_VERSIONSTRING은 쓰지 않는다. 제품 버전 번호·빌드·OS를 분해하는 규칙은 만들지 않는다.
+  표본 밖 엔진의 키·형식은 추가 검증 대상이다.
 - Resource.notes는 두 유형 모두 빈 문자열이지만 DESCRIPTION 원천으로 대응한다.
   원문 유지 조건과 별개로 비어 있지 않은 메모의 실제 적재·UI 표시는 미검증이다.
 
@@ -285,8 +295,9 @@ compatibility_level의 일반 분류 속성 대응은 미정이며, DB 제품 �
 
 - 일반 DB 분류의 선택 속성에 ASSETATTRIBUTEID 연결과 ACTCI용 CLASSSPECUSEWITH를
   보완해야 한다. 적용 범위, 표시 순서·필수 여부·기본값을 정하고 별도 변경 승인을 받는다.
-- Instance→DB는 RELATION.CONTAINS를 사용하는 안이다. 일반 DB Server→일반 DB
-  분류쌍 규칙이 없으므로 카디널리티 1:N·포함 관계·부모 방향 설정을 확정하고 등록해야 한다.
+- Instance→DB는 RELATION.CONTAINS를 사용하는 안이다. 엔진별 네 분류와 기존 범용 분류 모두
+  APP.DB.DATABASE 대상 분류쌍 규칙이 0건이므로 카디널리티 1:N·포함 관계·부모 방향 설정을
+  확정하고 등록해야 한다. 등록 전에는 MERGE 가드가 전건 거부한다.
 - 조회 SQL은 databaseinstance_fk가 없는 DB도 반환한다. 관계 부재를 이유로 본체를 제외하지 않는다.
   다만 발견 시각·식별자 정책이 정해지기 전에는 적재 가능으로 간주하지 않는다.
 
@@ -312,8 +323,8 @@ GUID 두 컬럼은 샘플 승격 결과에 따라 신규 NULL로 결정해 미�
 ETL 관리 범위와 원천 조회의 완전한 성공 여부를 전제로 한 정리 정책이 필요하다.
 부분 조회나 조회 실패를 근거로 관계를 삭제하지 않는다.
 
-- Instance→장치 연결이 없는 표본은 보강 원천을 찾을지 관계 없이 둘지 결정한다.
-  관계 규칙이 존재한다는 이유로 실제 관계를 만들지 않는다.
+- Instance→장치는 `appcomp_fk → device_fk`가 실제 행과 일치하는 `.35` 3쌍에
+  `RELATION.RUNSON`을 사용한다. `.68`의 `device_fk` 없는 Instance 1건은 본체만 유지하고 관계 미해결로 기록한다.
 - 신규 VIRTUALIZES의 Host→VM 1:N 방향·분류쌍과 실제 관계 연결은 검증했다.
   CI 승격과 호스트 이동 시 이전 관계 정리 정책은 남아 있다. 기존 CI의 관계 행은 정합성 기준 없이 복사하지 않는다.
 - ACTCINUM·GUID·CCIDISGUID·숫자 PK·MERGE 키를 구분한다. 유형 간 숫자 PK 충돌을

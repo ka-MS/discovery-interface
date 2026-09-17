@@ -3,7 +3,7 @@
 실제 CI 관계의 공통 Target 매핑이다. 유형별 연결 의미와 원천 SQL은 출발 유형 문서가 소유한다.
 
 > 메타데이터 재조회: 2026-09-15 · MAXIMO / BLUDB.
-> 관계 설계: [Computer 중심 관계](../../design/ci/relations.md).
+> 관계 설계: [CI 관계 설계](../../design/ci/relations.md).
 > 관측 근거: [관계 정의](../../knowledge/maximo/computer-ci-relations.md).
 > 아래 공통 MERGE는 2026-09-15 `./run.sh ci-relation`으로 운영 Maximo에 실행해 세 관계
 > (OS_INSTALLED_ON_COMPUTER 63건·COMPUTER_CONTAINS_DISK 19건·COMPUTER_CONTAINS_FILESYSTEM 60건)를
@@ -28,6 +28,8 @@ Computer→Disk·Filesystem은 [Device](types/device.md#7-관계-매핑--2026-09
 OS→Computer는 [OS](types/os.md#6-관계-매핑--2026-09-15)를 참조한다.
 DB Instance→DB의 기존 별도 검토는 [DB Instance](types/database-instance.md)를 유지하며,
 Computer 관계 조사 결과를 DB 관계의 승인으로 해석하지 않는다.
+DB Instance→Device는 같은 DB Instance 문서의 원천 경로를 사용하며 관계 코드는
+`RELATION.RUNSON`, 저장 방향은 Instance→Device다.
 
 ## 2. 컬럼 매핑
 

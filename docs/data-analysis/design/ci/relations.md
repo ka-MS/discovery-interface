@@ -1,10 +1,14 @@
-# Computer 중심 CI 관계 설계
+# CI 관계 설계
 
 > 2026-09-15 조사 결과에 따른 설계다. OS→Computer·Computer→Disk·Computer→Filesystem 세 관계는
 > 구현해 운영 적재까지 검증했다(아래 표). Host→VM도 2026-09-16 구현·원천 조회·기준정보 조회 후
-> 사용자가 실제 Maximo 관계 연결을 검증했다. Interface→IP는 여전히 설계 단계 제안이며 코드가 없다.
+> 사용자가 실제 Maximo 관계 연결을 검증했다. Computer/VM→IP는 2026-09-17 직접 관계로 결정하고
+> Maximo `USES` 정의와 두 분류 규칙을 등록·DB 재조회했다. 관계 적재 코드는 아직 없다.
 > 원천 근거: [D42 관계 원천](../../knowledge/device42/computer-ci-relations.md).
 > 타겟 근거: [Maximo 관계 정의](../../knowledge/maximo/computer-ci-relations.md).
+> DB 관계 근거: [Database Instance 설계](databaseinstance.md),
+> [DB Instance 연결 경로](../../exploration-queries/device42/db-instance-appcomp-device.sql),
+> [DB 분류·관계](../../exploration-queries/maximo/db-app-device-classifications.sql).
 > 미결 정본: [ISSUE-11](../../open-issues.md#issue-11-actual-ci-분류속성관계와-식별자-매핑).
 
 ## 먼저 구현할 관계
@@ -15,9 +19,8 @@
 | COMPUTER_CONTAINS_FILESYSTEM | Computer → Filesystem | RELATION.CONTAINS | 2026-09-15 자동 적재 60건, 재실행 ID 동일 확인. `filesystem-array-fanout` 0건 — 원천(D42 .35) 재조회로 원인 확인: `device_fks`가 Computer 둘 이상인 마운트포인트가 현재 없음(`pair_cnt=mountpoint_cnt=60`). 적재 결함 아님. 배열 펼침 경로 자체는 미검증 |
 | OS_INSTALLED_ON_COMPUTER | OS → Computer | RELATION.INSTALLEDON | 2026-09-15 자동 적재 63건(물리 5·가상 58 분류쌍 모두 관측), 기존 수동 샘플 `ACTCIRELATIONID=6001` 유지·재실행 ID 동일 확인(멱등성) |
 | HOST_VIRTUALIZES_VM | Host Computer → VM | VIRTUALIZES | 코드·원천 검증 완료. `.68` 3건, `.35` 55건. 2026-09-16 실제 관계 연결 검증 완료 |
-| COMPUTER_CONTAINS_INTERFACE | Computer → Interface | RELATION.CONTAINS | Interface CI 미구현. 별도 유형 도입 후 |
-| INTERFACE_BINDS_IP | Interface → IP | RELATION.BINDSTO | Interface 도입·카디널리티·미연결 IP 처리 검토 후 |
-| COMPUTER_IP 직접 연결 | 미선정 | 미선정 | 명시 규칙 없음. 기존 코드의 이름만 빌려 연결하지 않음 |
+| DB_INSTANCE_RUNS_ON_DEVICE | DB Instance → Device(Computer) | RELATION.RUNSON | 2026-09-16 구현 완료. 분류쌍 규칙·원천 경로 확인. `.68` 0건(미해결 1), `.35` 3건. 실제 적재 검증 전 |
+| COMPUTER_USES_IP | Computer/VM → IP | USES | 2026-09-17 신규 관계와 `N:N` 규칙 2개 등록·DB 재조회 완료. `view_ipaddress_device_v2` 직접 쌍 사용. 코드·실적재 검증 전 |
 
 Computer는 물리·가상 두 분류를 허용한다.
 OS → 물리 Computer의 단건 결과는 [검증 기록](../../knowledge/maximo/computer-ci-relations.md#oscomputer-승격-샘플-검증)을 참조한다.
@@ -35,16 +38,21 @@ flowchart TB
   end
 
   O["OS"] -->|"RELATION.INSTALLEDON"| C
+  DBI["DB Instance"] -->|"RELATION.RUNSON"| C
   C -->|"RELATION.CONTAINS"| D["Disk"]
   C -->|"RELATION.CONTAINS"| F["Filesystem"]
-  C -.->|"RELATION.CONTAINS · Interface 도입 후"| N["Network Interface"]
-  N -.->|"RELATION.BINDSTO · 검토"| I["IP"]
+  C -->|"USES"| I["IP"]
 ```
 
-실선은 우선 구현 매핑, 점선은 보류·확장 후보다.
+실선은 확정된 관계 매핑이다. 구현·운영 검증 상태는 위 표의 판정을 따른다.
 `COMPUTERSYSTEM · 물리 / VM`은 별도 CI 하나가 아니라 Device 본체 분류 범위를 묶어 보여 주는 영역이다.
 Virtual Host와 VM은 모두 그 영역의 Device CI이며, Host→VM 가상화 관계를 영역 안에서 표현한다.
-Disk·Filesystem·OS·Interface 관계는 두 역할과 중복 노드를 따로 그리지 않고 ComputerSystem 영역에 연결한다.
+Disk·Filesystem·OS·IP 관계는 두 역할과 중복 노드를 따로 그리지 않고 ComputerSystem 영역에 연결한다.
+DB Instance도 물리·가상 Device의 공통 ComputerSystem 영역으로 `RELATION.RUNSON` 방향을 갖는다.
+원천 조회는 `databaseinstance.appcomp_fk → appcomp.device_fk → device.device_pk`를 경유하지만,
+Application Component를 관계 노드로 만들지 않고 `DB Instance → Device` 쌍으로 저장한다.
+DB Instance 본체는 엔진별 네 분류로 나뉘지만 네 분류 모두 같은 `RELATION.RUNSON` 규칙을 가지므로
+관계 상수는 하나다. 출발 분류를 SQL로 구분하지 않고 MERGE가 저장된 분류로 규칙을 확인한다.
 가상화 관계는 사람이 읽는 의미에 맞춰 `Virtual Host → VIRTUALIZES → VM`으로 표시한다.
 D42 원천 참조는 반대로 VM의 `virtual_host_device_fk`가 Host의 `device_pk`를 가리킨다.
 새 Maximo 규칙은 Source Host가 `SYS.COMPUTERSYSTEM` 또는 `SYS.VIRTUALCOMPUTERSYSTEM`,
@@ -53,6 +61,21 @@ Target VM이 `SYS.VIRTUALCOMPUTERSYSTEM`인 `1:N` 관계다. 두 규칙 모두
 MAS UI에 등록한 관계 정의·규칙·체크박스 값은
 [VIRTUALIZES 등록 결과](../../knowledge/maximo/computer-ci-relations.md#virtualizes-mas-ui-등록-결과)를 정본으로 삼는다.
 
+IP는 Interface를 관계 노드로 만들지 않고 Computer/VM에서 직접 연결한다. D42 원천은
+`view_ipaddress_device_v2.device_fk → ipaddress_fk`이며, 장비 하나의 여러 IP와 공유 IP의 여러 장비를
+모두 보존하므로 카디널리티는 `N:N`이다. Maximo에는 기존 `RELATION.USES`를 수정하지 않고 별도 코드
+`USES`를 등록했다. 관계 정의는 `UNIDIRECTIONAL`, `USEWITH=CI`, 분류 미지정, 가져옴 해제다.
+등록된 규칙은 다음 두 개다.
+
+| Source 분류 | Target 분류 | Cardinality | 변경 전파 | 포함 | 대상 상위 여부 | 가져옴 |
+| --- | --- | --- | :---: | :---: | :---: | :---: |
+| `SYS.COMPUTERSYSTEM` | `NET.IPADDRESS` | `N:N` | 해제 | 해제 | 해제 | 해제 |
+| `SYS.VIRTUALCOMPUTERSYSTEM` | `NET.IPADDRESS` | `N:N` | 해제 | 해제 | 해제 | 해제 |
+
+`SYS.GENERICSWITCH → NET.IPADDRESS` 규칙은 현재 등록하지 않았으므로 이 직접 관계의 확정 범위는
+Computer와 VM까지다. `CONTAINMENT=0`, `PROPAGATECHANGE=0`, `REVRELATIONSHIP=0`, `SWAPPED=0`이며,
+IP를 Computer의 구성요소나 상위 CI로 취급하지 않는다.
+
 ## 실행 위치 — CI 본체 적재 이후 별도 단계
 
 관계는 본체 task 안에서 저장하지 않는다. 모든 본체·스펙 task가 끝난 뒤 관계 단계를 실행한다.
@@ -60,7 +83,7 @@ MAS UI에 등록한 관계 정의·규칙·체크박스 값은
 ```text
 ./run.sh ci            CiIntegrationJob
                          1. 분류·속성 기준정보 조회
-                         2. CI 본체·스펙 task 실행   Computer · OS · Disk · Filesystem · IP
+                         2. CI 본체·스펙 task 실행   Computer · OS · Disk · Filesystem · IP · DB Instance
                          3. CiRelationJob.run()
 
 ./run.sh ci-relation   CiRelationJob                 관계만
@@ -132,7 +155,8 @@ relationnum    정확한 RELATION 코드. RELATION.CONTAINS와 CONTAINS를 구�
 | COMPUTER_CONTAINS_DISK | Computer → Disk | Hard Disk 조건의 `part_pk` · `device_fk` | [device.md](../../data-mapping/ci/types/device.md#7-관계-매핑--2026-09-15) |
 | COMPUTER_CONTAINS_FILESYSTEM | Computer → Filesystem | `mountpoint_pk` · `device_fks` | [device.md](../../data-mapping/ci/types/device.md#7-관계-매핑--2026-09-15) |
 | HOST_VIRTUALIZES_VM | Host → VM | VM의 `device_pk` · `virtual_host_device_fk`를 역방향 해석 | [device.md](../../data-mapping/ci/types/device.md#7-관계-매핑--2026-09-15) |
-| INTERFACE_BINDS_IP | Interface → IP | `ipaddress_pk` · `netport_fk` | 보류 |
+| DB_INSTANCE_RUNS_ON_DEVICE | DB Instance → Device | `databaseinstance.appcomp_fk` → `appcomp.device_fk` | [database-instance.md](../../data-mapping/ci/types/database-instance.md#5-관계) |
+| COMPUTER_USES_IP | Computer/VM → IP | `view_ipaddress_device_v2.device_fk` · `ipaddress_fk` | IP 매핑 문서 후속 갱신 |
 
 상수 이름과 관계 열은 토폴로지 의미를 따른다. SQL은 연결 근거를 가진 원천에서 나오므로
 Host→VM 관계도 VM 행의 `virtual_host_device_fk`를 읽어서 만든다.
@@ -169,14 +193,15 @@ OS_INSTALLED_ON_COMPUTER(63건)·COMPUTER_CONTAINS_DISK(19건)·COMPUTER_CONTAIN
 ## 본체 중복 제거와 관계 보존
 
 - 본체는 원천 개체 PK마다 하나. 관계는 (SOURCECI,TARGETCI,RELATIONNUM)마다 하나.
-- IP·Filesystem의 device_fks는 단일 장비로 축약하지 않는다.
+- IP의 장비 연결과 Filesystem의 `device_fks`는 단일 장비로 축약하지 않는다.
 - 기존 DISTINCT ON은 본체 적재에 유지한다. 관계 단계는 본체 조회를 재사용하지 않고
   연결 쌍을 전용 SELECT로 다시 읽으므로 배열이 축약되지 않는다.
   마운트포인트 10에 device_fks={173,174}이면 관계는 두 행이다.
 - 관계 조회에서 제거하는 중복은 최종 관계 키 (SOURCECI,TARGETCI,RELATIONNUM)가 같은 경우뿐이다.
-- IP 관계는 원천에서 netport_fk와 장비 배열을 읽어야 한다. 본체 DTO에는 없다.
-  Interface 도입 시 관계 조회 정의에서 확보한다.
-- netport_fk가 없는 IP를 같은 장비의 임의 포트에 연결하지 않는다.
+- IP 관계는 `view_ipaddress_device_v2`의 모든 `(device_fk, ipaddress_fk)` 쌍을 읽는다.
+  본체 조회의 대표 장비 선택이나 `netport_fk` 유무로 관계를 축약하지 않는다.
+- Interface CI는 이번 직접 관계의 전제나 중간 노드가 아니다. `netport_fk`가 없는 IP도
+  직접 관계 뷰에 장비 쌍이 있으면 연결한다.
 
 ## 저장 전제와 이번 조사 한계
 
@@ -198,8 +223,10 @@ OS_INSTALLED_ON_COMPUTER(63건)·COMPUTER_CONTAINS_DISK(19건)·COMPUTER_CONTAIN
 ## 보류 근거
 
 - Host–VM: 코드·1:N 규칙·실제 관계 연결은 검증했다. CI 승격과 호스트 이동 시 이전 관계 정리는 남아 있다.
-- IP: 직접 규칙이 없다는 것이 물리 저장 불가를 뜻하지는 않는다. 새 규칙 추가 또는 Interface 도입은
-  수집 모델 선택이며 이번에 임의 결정하지 않는다. Interface 경로만으로 공유 IP의 모든 장비 연결이 복구되지 않는다.
+- DB Instance–Device: 본체·관계를 구현했다. `RELATION.RUNSON` 1:1 규칙과 `.35` 원천 3쌍을 확인했고
+  `.68`의 `device_fk` 없는 Instance는 본체만 적재된다. 실제 적재 검증과 승격 범위 등록은 남아 있다.
+- IP: Computer/VM→IP 직접 관계와 `USES`의 두 `N:N` 규칙은 확정·등록했다. 관계 조회·적재 코드와
+  실제 ACTCIRELATION 검증은 남아 있다. Switch는 분류 규칙이 없어 현재 직접 관계 대상이 아니다.
 - OS–Filesystem: BOOTSFROM 규칙은 있지만 같은 장비라는 정보만으로 부팅 파일시스템을 특정할 수 없다.
 - Disk–Filesystem: 확인한 두 원천 사이에 직접 FK가 없으며, 중간 볼륨 계층을 추정하지 않는다.
 - VM 관리 장비·섀시·Computer 네트워크 연결: 원천 역할/표본과 대상 분류 규칙이 부족하다.

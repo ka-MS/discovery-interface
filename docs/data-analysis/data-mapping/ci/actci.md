@@ -45,7 +45,7 @@ Computer의 물리·VM 수집 조건은 유형 문서 2절에 있다. 그 밖의
 | GUID | 발견 ID | ALN(192) | Y | 미결 | `view_resource_v2.identifier` | DB·Instance 모두 원천 보유; 적용·동일성 정책 ISSUE-11 |
 | HASLD | 상세 설명 있음 | YORN(1) | N | 미결 | Maximo 메타데이터 기본값 0 | 물리 DEFAULT 없음; JDBC 기본값 적용 정책 ISSUE-11 |
 | LANGCODE | 언어 코드 | UPPER(4) | N | 원천없음 | D42 언어 코드 미제공 | 필수값 생성 정책 ISSUE-11 |
-| LASTSCANDT | 최종 스캔 날짜 | DATETIME(10) | N | 미결 | Computer: `view_device_v2.last_discovered`; DB·Instance: `view_resource_v2.last_discovered` | 원천 대응은 유형별 정의; 누락·시간대 처리 ISSUE-11 |
+| LASTSCANDT | 최종 스캔 날짜 | DATETIME(10) | N | 미결 | Computer: `view_device_v2.last_discovered`; DB Instance: `view_resource_v2.last_changed` | REQUIRED=1이라 값이 없으면 적재되지 않는다. Instance는 last_discovered가 전건 NULL이어서 last_changed를 쓴다. 나머지 유형의 원천 대응은 유형별 정의; 시간대 처리 ISSUE-11 |
 | PLUSPCUSTOMER | 기본 고객 | UPPER(12) | Y | 원천없음 | 확인된 Maximo 고객 코드 대응 없음 | Component의 customer_fk를 직접 대입하지 않음; ISSUE-11 |
 
 ## 5. SQL

@@ -20,7 +20,14 @@ public enum CiRelationSource {
     COMPUTER_CONTAINS_FILESYSTEM("RELATION.CONTAINS", Queries.FILESYSTEM_COUNT, Queries.FILESYSTEM_PAGE),
 
     /** Virtual Host → VM. 근거: VM 행의 device_pk·virtual_host_device_fk. */
-    HOST_VIRTUALIZES_VM("VIRTUALIZES", Queries.HOST_VM_COUNT, Queries.HOST_VM_PAGE);
+    HOST_VIRTUALIZES_VM("VIRTUALIZES", Queries.HOST_VM_COUNT, Queries.HOST_VM_PAGE),
+
+    /**
+     * DB Instance → Device. 근거: databaseinstance.appcomp_fk → appcomp.device_fk.
+     * 경유하는 Application Component는 관계 노드로 만들지 않는다.
+     * 엔진별 네 분류가 모두 같은 규칙을 가지므로 출발 분류로 분기하지 않는다.
+     */
+    DB_INSTANCE_RUNS_ON_DEVICE("RELATION.RUNSON", Queries.DB_INSTANCE_COUNT, Queries.DB_INSTANCE_PAGE);
 
     private final String relationNum;
     private final String countQuery;
@@ -148,6 +155,30 @@ public enum CiRelationSource {
                 JOIN computer host ON host.device_pk = vm.virtual_host_device_fk
                 WHERE vm.type = 'virtual'
                   AND host.device_pk <> vm.device_pk
+                ORDER BY sourceci, targetci
+                LIMIT %d OFFSET %d
+                """;
+
+        static final String DB_INSTANCE_COUNT = """
+                SELECT COUNT(*)
+                FROM view_databaseinstance_v2 i
+                JOIN view_appcomp_v1 a ON a.appcomp_pk = i.appcomp_fk
+                JOIN view_device_v2 d ON d.device_pk = a.device_fk
+                WHERE
+                """ + CiSourceFilter.COMPUTER;
+
+        static final String DB_INSTANCE_PAGE = """
+                WITH computer AS (
+                    SELECT d.device_pk
+                    FROM view_device_v2 d
+                    WHERE
+                """ + CiSourceFilter.COMPUTER + """
+                )
+                SELECT 'D42:DATABASEINSTANCE:' || CAST(i.databaseinstance_pk AS varchar) AS sourceci,
+                       'D42:DEVICE:' || CAST(c.device_pk AS varchar) AS targetci
+                FROM view_databaseinstance_v2 i
+                JOIN view_appcomp_v1 a ON a.appcomp_pk = i.appcomp_fk
+                JOIN computer c ON c.device_pk = a.device_fk
                 ORDER BY sourceci, targetci
                 LIMIT %d OFFSET %d
                 """;
