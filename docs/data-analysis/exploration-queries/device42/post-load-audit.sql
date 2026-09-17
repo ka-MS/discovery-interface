@@ -58,8 +58,7 @@ WITH target AS (
     FROM view_softwareinuse_v1 u
     JOIN computer c ON c.device_pk = u.device_fk
     UNION ALL
-    SELECT DISTINCT ON (i.ipaddress_pk)
-           'DPATCPIP', CAST(i.ipaddress_pk AS VARCHAR), CAST(c.device_pk AS VARCHAR)
+    SELECT 'DPATCPIP', HOST(i.ip_address), CAST(c.device_pk AS VARCHAR)
     FROM view_ipaddress_v2 i
     JOIN computer c ON c.device_pk = ANY(i.device_fks)
     UNION ALL

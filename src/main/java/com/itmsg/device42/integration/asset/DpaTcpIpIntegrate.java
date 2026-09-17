@@ -91,6 +91,24 @@ public class DpaTcpIpIntegrate implements AssetIntegrationTask {
                         resultSet.getLong("device_fk"),
                         resultSet.getString("device_name"),
                         resultSet.getString("ip_address"),
+                        resultSet.getString("ip_hybrid"),
+                        resultSet.getString("label"),
+                        getNullableLong(resultSet, "subnet_fk"),
+                        getNullableLong(resultSet, "type_id"),
+                        resultSet.getString("type"),
+                        getNullableBoolean(resultSet, "available"),
+                        getNullableBoolean(resultSet, "is_public"),
+                        getNullableLong(resultSet, "resource_fk"),
+                        resultSet.getString("notes"),
+                        resultSet.getString("first_added"),
+                        resultSet.getString("last_edited"),
+                        resultSet.getString("tags"),
+                        getNullableLong(resultSet, "netport_fk"),
+                        resultSet.getString("details"),
+                        resultSet.getString("last_changed"),
+                        resultSet.getString("last_discovered"),
+                        getNullableBoolean(resultSet, "is_shared"),
+                        getNullableLong(resultSet, "cloudinfrastructure_fk"),
                         resultSet.getString("gateway"),
                         getNullableInteger(resultSet, "mask_bits")
                 ));
@@ -111,7 +129,6 @@ public class DpaTcpIpIntegrate implements AssetIntegrationTask {
 
         for (IpAddressSource source : data) {
             mappedData.add(new DpaTcpIpUpsert(
-                    source.ipAddressPk(),
                     source.deviceFk(),
                     source.gateway(),
                     source.deviceName(),
@@ -131,20 +148,19 @@ public class DpaTcpIpIntegrate implements AssetIntegrationTask {
                 (PreparedStatement statement) -> {
                     for (DpaTcpIpUpsert tcpIp : data) {
                         try {
-                            statement.setLong(1, tcpIp.tcpIpId());
-                            statement.setString(2, tcpIp.gateway());
-                            statement.setString(3, tcpIp.host());
-                            statement.setLong(4, tcpIp.nodeId());
-                            statement.setString(5, tcpIp.tcpIpAddress());
-                            statement.setString(6, tcpIp.tcpIpNetmask());
-                            statement.setTimestamp(7, toTimestamp(tcpIp.createDate()));
-                            statement.setTimestamp(8, toTimestamp(tcpIp.changeDate()));
+                            statement.setString(1, tcpIp.gateway());
+                            statement.setString(2, tcpIp.host());
+                            statement.setLong(3, tcpIp.nodeId());
+                            statement.setString(4, tcpIp.tcpIpAddress());
+                            statement.setString(5, tcpIp.tcpIpNetmask());
+                            statement.setTimestamp(6, toTimestamp(tcpIp.createDate()));
+                            statement.setTimestamp(7, toTimestamp(tcpIp.changeDate()));
                             statement.executeUpdate();
                         } catch (SQLException e) {
                             log.error(
-                                    "DPA TCP/IP MERGE에 실패했습니다. tcpIpId={}, nodeId={}",
-                                    tcpIp.tcpIpId(),
+                                    "DPA TCP/IP MERGE에 실패했습니다. nodeId={}, tcpIpAddress={}",
                                     tcpIp.nodeId(),
+                                    tcpIp.tcpIpAddress(),
                                     e
                             );
                         }
@@ -164,6 +180,23 @@ public class DpaTcpIpIntegrate implements AssetIntegrationTask {
         } catch (ArithmeticException e) {
             throw new SQLException(column + " 값을 정수로 변환할 수 없습니다: " + value, e);
         }
+    }
+
+    private static Long getNullableLong(ResultSet resultSet, String column) throws SQLException {
+        BigDecimal value = resultSet.getBigDecimal(column);
+        if (value == null) {
+            return null;
+        }
+        try {
+            return value.longValueExact();
+        } catch (ArithmeticException e) {
+            throw new SQLException(column + " 값을 long으로 변환할 수 없습니다: " + value, e);
+        }
+    }
+
+    private static Boolean getNullableBoolean(ResultSet resultSet, String column) throws SQLException {
+        boolean value = resultSet.getBoolean(column);
+        return resultSet.wasNull() ? null : value;
     }
 
     static String toIpv4Netmask(Integer maskBits) {
@@ -205,15 +238,33 @@ public class DpaTcpIpIntegrate implements AssetIntegrationTask {
             """ + DEVICE_FILTER;
 
     private static final String TOTAL_COUNT_QUERY = """
-            SELECT COUNT(DISTINCT i.ipaddress_pk)
+            SELECT COUNT(*)
             """ + SOURCE_FROM_AND_FILTER;
 
     private static final String SOURCE_QUERY = """
-            SELECT DISTINCT ON (i.ipaddress_pk)
+            SELECT
                 i.ipaddress_pk,
                 d.device_pk AS device_fk,
                 d.name AS device_name,
                 HOST(i.ip_address) AS ip_address,
+                i.ip_hybrid,
+                i.label,
+                i.subnet_fk,
+                i.type_id,
+                i.type,
+                i.available,
+                i.is_public,
+                i.resource_fk,
+                i.notes,
+                i.first_added,
+                i.last_edited,
+                i.tags,
+                i.netport_fk,
+                i.details,
+                i.last_changed,
+                i.last_discovered,
+                i.is_shared,
+                i.cloudinfrastructure_fk,
                 b.gateway,
                 b.mask_bits
             """ + SOURCE_FROM_AND_FILTER + """
@@ -223,9 +274,8 @@ public class DpaTcpIpIntegrate implements AssetIntegrationTask {
     private static final String MERGE_DPA_TCP_IP_QUERY = """
             MERGE INTO MAXIMO.DPATCPIP AS target
             USING (
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             ) AS source (
-                TCPIPID,
                 GATEWAY,
                 HOST,
                 NODEID,
@@ -234,13 +284,12 @@ public class DpaTcpIpIntegrate implements AssetIntegrationTask {
                 CREATEDATE,
                 CHANGEDATE
             )
-            ON target.TCPIPID = source.TCPIPID
+            ON target.NODEID = source.NODEID
+                AND target.TCPIPADDRESS = source.TCPIPADDRESS
             WHEN MATCHED THEN
                 UPDATE SET
                     GATEWAY = source.GATEWAY,
                     HOST = source.HOST,
-                    NODEID = source.NODEID,
-                    TCPIPADDRESS = source.TCPIPADDRESS,
                     TCPIPNETMASK = source.TCPIPNETMASK,
                     CHANGEDATE = source.CHANGEDATE
             WHEN NOT MATCHED THEN
@@ -255,7 +304,7 @@ public class DpaTcpIpIntegrate implements AssetIntegrationTask {
                     CHANGEDATE
                 )
                 VALUES (
-                    source.TCPIPID,
+                    NEXT VALUE FOR MAXIMO.DPATCPIPSEQ,
                     source.GATEWAY,
                     source.HOST,
                     source.NODEID,

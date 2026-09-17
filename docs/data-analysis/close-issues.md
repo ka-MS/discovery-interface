@@ -58,13 +58,15 @@ Maximo 시퀀스와 별도 교차키 없이 대상 ID를 MERGE 키로 사용한�
 ### 배열 조인이 만든 ID 중복
 
 한 IP 가 장비 여럿에 걸리면 같은 `ipaddress_pk` 가 여러 행이 되어 `TCPIPID` 가
-중복된다. MERGE 키가 깨지므로 `DISTINCT ON` 으로 장비 하나만 남긴다.
-건수 쿼리는 `COUNT(DISTINCT ...)` 로 맞춘다.
+중복된다. 2026-08-31에는 MERGE 키를 유지하기 위해 `DISTINCT ON`으로 장비 하나만
+남겼다. 2026-09-17 이 축약이 실제 장비–IP 연결을 잃는다는 점을 재검토해 폐기했다.
+현재는 배열의 모든 연결을 보존하고, `(NODEID, TCPIPADDRESS)`를 MERGE 자연키로,
+`DPATCPIPSEQ` 채번값을 `TCPIPID`로 쓴다. 정본은 `data-mapping/asset/dpatcpip.md`다.
 
-`MIN(device_fks)` 로 고르는 방법은 버렸다. 필터를 통과하지 못하는 장비가
+당시 `MIN(device_fks)` 로 고르는 방법은 버렸다. 필터를 통과하지 못하는 장비가
 뽑혀 행이 사라진다. `.68` 의 `192.168.1.81` 이 `unknown` 타입 장비와
-`DESKTOP-P7KJHB7` 에 함께 걸려 있어 45행이 44행이 됐다. `DISTINCT ON` 은
-필터 통과 후 최솟값을 고르므로 이 문제가 없다.
+`DESKTOP-P7KJHB7` 에 함께 걸려 있어 45행이 44행이 됐다. 현재 구현은 대표 장비를
+선택하지 않으므로 이 문제 자체가 없다.
 
 `DpaNetDeviceIntegrate` 와 `DpaNetPrinterIntegrate` 는 스칼라 서브쿼리라
 행이 늘지 않는다.

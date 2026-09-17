@@ -1,6 +1,6 @@
 # DEPLOYEDASSET 모델
 
-> 관측 2026-08-27 · Maximo BLUDB
+> 관측 2026-08-27 · DPATCPIP 적재키 설계 갱신 2026-09-17 · Maximo BLUDB
 > 재조회 docs/data-analysis/exploration-queries/maximo/dpa-child-coverage.sql
 
 배치된 자산(Deployed Assets). 수집 도구가 발견한 자산의 공통 헤더다.
@@ -41,7 +41,8 @@
 모두 `(자체ID, NODEID)` 형태라 `NODEID` 중복을 막지 않는다.
 
 자체 ID 를 쓰는 테이블에는 대응 시퀀스가 있다. 아래는 관측 당시 기존 수집분과
-시퀀스 상태다. Device42 적재는 이 시퀀스를 사용하지 않는다.
+시퀀스 상태다. Device42 적재는 대부분 원천 PK를 직접 쓰지만 DPATCPIP은 공유 IP의
+장비별 행을 구분하기 위해 `DPATCPIPSEQ`를 사용한다.
 
 | 테이블 | ID 범위 | 시퀀스 | START |
 | --- | --- | --- | --- |
@@ -61,8 +62,9 @@
 `DPACOMPUTERSEQ`, `DPANETDEVICESEQ`, `DPANETPRINTERSEQ`도 존재하지만 세 테이블은
 PK가 `NODEID`라 자기 시퀀스를 쓰지 않는다.
 
-Device42 적재는 원천 PK를 Maximo ID로 직접 사용한다. 부모와 자식 모두 별도
-교차키 조회, Maximo 시퀀스, `DISCOVERY.SOURCE_TARGET_MAP`을 사용하지 않는다.
+Device42 적재는 아래 표처럼 원천 PK를 Maximo ID로 직접 사용한다. DPATCPIP만
+장비–IP 연결에 원천 단일 PK가 없으므로 Maximo 시퀀스를 사용한다.
+`DISCOVERY.SOURCE_TARGET_MAP`은 사용하지 않는다.
 
 | 대상 | Maximo ID | Device42 원천 |
 | --- | --- | --- |
@@ -74,7 +76,7 @@ Device42 적재는 원천 PK를 Maximo ID로 직접 사용한다. 부모와 자�
 | `DPANETADAPTER` | `ADAPTERID` | `view_netport_v1.netport_pk` |
 | `DPAOS` | `OSID` | `view_deviceos_v1.deviceos_pk` |
 | `DPASOFTWARE` | `SOFTWAREID` | `view_softwareinuse_v1.softwareinuse_pk` |
-| `DPATCPIP` | `TCPIPID` | `view_ipaddress_v2.ipaddress_pk` |
+| `DPATCPIP` | `TCPIPID` | `MAXIMO.DPATCPIPSEQ`. 자연키는 `(device_pk, HOST(ip_address))` |
 
 모든 자식의 `NODEID`는 해당 원천 레코드의 `device_fk`다. 원천이 없는
 `DPADISPLAY`와 `DPASWSUITE`는 적재하지 않는다.
