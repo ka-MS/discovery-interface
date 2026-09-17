@@ -6,7 +6,7 @@ import java.math.BigDecimal;
 public record DeviceSource(
         long devicePk, String type, String physicalSubtype, Boolean networkDevice,
         Long clusterPk, String networkKind, Integer networkKindCount, Integer clusterCount,
-        String name, String notes, String serialNo,
+        String snmpLocation, String name, String notes, String serialNo,
         String uuid, String lastDiscovered, String model, String manufacturer,
         BigDecimal ram, String ramUnit, Integer totalCpus, Integer corePerCpu,
         BigDecimal cpuSpeed, String cpuSpeedUnit, String cpuType, String architecture,

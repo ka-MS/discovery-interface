@@ -84,6 +84,7 @@ IP·Mount는 배열에 포함된 Computer 각각과 연결한 쌍도 별도로 �
 - IP → Port / Subnet: `i.netport_fk=n.netport_pk` / `i.subnet_fk=b.subnet_pk`.
 
 IP의 원천 행은 50 / 97개지만 Computer 연결 쌍은 **51 / 118쌍**이다.
+Network Cluster까지 `CiSourceFilter.DEVICE`로 확장하면 **53 / 120쌍**이며 추가분은 Cluster 2 / 2쌍이다.
 Mount는 117 / 141쌍으로 이번 표본에서는 행 수와 같다.
 IP→Port FK는 42 / 87개이고 모두 실제 Port에 연결된다. 그 Port의 device_fk도 IP의 device_fks 안에 있다.
 나머지 IP에는 Port FK가 없다. Subnet 연결은 50 / 97개 전건 존재한다.

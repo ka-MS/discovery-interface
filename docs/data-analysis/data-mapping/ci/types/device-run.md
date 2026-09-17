@@ -72,18 +72,23 @@ CiIntegrationJob
 
 ## 검증
 
-2026-09-15 기준:
+2026-09-17 기준:
 
-- H2 Db2 모드에서 물리·가상·Switch 매핑, 부모·템플릿 참조, 단위·BIOS·코어 값,
+- H2 Db2 모드에서 물리·가상·Switch·Network Cluster 매핑, 부모·템플릿 참조, 단위·BIOS·코어 값,
   재실행 ID 유지, NULL 섹션 키, 건별 실패 후 계속 처리, 정의 누락·자료형 불일치,
   미지원 단위, 페이지 처리를 검증했다. Router·종류 누락·복수 cluster·Network Printer가
   적재에서 제외되는 것도 검증했다.
 - 공통 캐시 공유·다음 실행 갱신·실패 시 이전 캐시 미사용, 추가 속성 NULL 템플릿 적재,
   등록 템플릿으로 전환 시 기존 스펙 ID 유지, 동명 속성·섹션 구분도 테스트한다.
 - Device 원천 SQL을 D42 .68 / .35에서 읽기 전용으로 재실행했다.
-  `.68`은 36행(Computer/VM 34 + Switch 2), `.35`는 72행(70 + 2)이고
+  `.68`은 38행(Computer/VM 34 + Switch 2 + Cluster 2),
+  `.35`는 74행(70 + 2 + 2)이고
   두 서버 모두 장비 PK 중복이 없었다. Switch 네 행은 cluster 수와 종류 수가 모두 1이며
   `network_kind=Switch`, cluster 연결 경로의 대표 MAC을 가진다.
   기존 Computer/VM 34 / 70행의 공통 반환 필드는 확장 전 저장 결과와 행 단위로 동일했다.
+- Cluster→물리 Switch `FEDERATES` 관계 조회는 양 서버 각 2쌍이다. 실제 적재는
+  `SYS.COMPUTERSYSTEMCLUSTER → SYS.GENERICSWITCH` `1:N` 관계 규칙 등록 후 검증한다.
+- Device→IP `USES` 관계는 `.68` 53쌍, `.35` 120쌍이며 Network Cluster가 각 2쌍이다.
+  Cluster→IP `N:N` 규칙은 등록됐고 Cluster 포함 실제 적재·재실행은 미검증이다.
 - 이번 리팩터링은 실제 Maximo 업무 행 적재·등록 SQL 실행을 수행하지 않았다.
   특히 템플릿 없는 속성의 실제 화면 표시·승격은 미검증이다.

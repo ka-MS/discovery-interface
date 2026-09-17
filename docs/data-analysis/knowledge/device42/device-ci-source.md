@@ -24,7 +24,8 @@ Computer의 기존 조회에 쓰는 여섯 뷰만 대상으로 했다.
 조사 SELECT는 전체 표본을 조회하며 제품 페이지 처리나 적재를 실행한 것은 아니다.
 
 1차 제품 구현에서는 같은 `view_netport_v1`의 `second_device_fk`와 `view_device_v2`의 cluster 행을
-장비별로 집계하는 자기 조인을 추가했다. 제품 후보는 Computer·VM과 물리 network 장비이며 36 / 72행이다.
+장비별로 집계하는 자기 조인을 추가했다. Computer·VM과 물리 network 장비는 36 / 72행이다.
+2026-09-17 Network Cluster 본체 2 / 2개를 추가해 현재 제품 후보는 38 / 74행이다.
 
 ## 2. Device 범위 시뮬레이션
 
@@ -47,6 +48,9 @@ network cluster 2 / 2다. 미래 서브타입의 전체 목록을 뜻하지 않�
 1차 지원 범위는 위 후보에서 Network Printer 1 / 1을 뺀 36 / 72행이다.
 기존 Computer·VM은 34 / 70행이고 새 Switch는 2 / 2행이다. 각 서버에서 조회 행 수와
 고유 `device_pk` 수가 같았다.
+
+후속 Network Cluster 지원은 `type='cluster'`, `network_device=true`,
+`details->>'fw_device_type'='Switch'`인 2 / 2개를 더한다. 현재 지원 범위는 38 / 74행이다.
 
 ## 3. 네트워크·프린터에서 실제 확보한 정보
 
@@ -120,7 +124,8 @@ IP 뷰·Subnet을 새로 조인하거나 주소 하나를 임의 선택하지 �
 ## 7. 검증 범위
 
 두 서버에서 6개 원천 뷰 헤더·분류 분포·보강 투영·포트 범위·JSON 키를 실조회했다.
-1차 제품 Count·페이지 SQL도 재실행해 36 / 72행, 고유 PK 36 / 72개, Switch 2 / 2개와
-cluster·종류 수 1, 대표 MAC을 확인했다. 비정형 필드의 `has_*`는 **비NULL 여부만**
+1차 제품 Count·페이지 SQL은 36 / 72행이었고, Network Cluster 확장 후에는 38 / 74행과
+고유 PK 38 / 74개를 확인했다. Switch 2 / 2개는 cluster·종류 수 1과 대표 MAC을,
+Network Cluster 2 / 2개는 `fw_device_type=Switch`를 확인했다. 비정형 필드의 `has_*`는 **비NULL 여부만**
 나타내며 빈 JSON/문자열을 제외한 충전율이 아니다. Maximo 관계·스펙의 실제 저장이나 새 분류 승격은 실행하지 않았다.
 선택·매핑 제안과 미결은 [Device 통합 설계](../../design/ci/device.md)를 따른다.

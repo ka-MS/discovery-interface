@@ -2,8 +2,11 @@
 
 > 2026-09-15 조사 결과에 따른 설계다. OS→Computer·Computer→Disk·Computer→Filesystem 세 관계는
 > 구현해 운영 적재까지 검증했다(아래 표). Host→VM도 2026-09-16 구현·원천 조회·기준정보 조회 후
-> 사용자가 실제 Maximo 관계 연결을 검증했다. Computer/VM→IP는 2026-09-17 직접 관계로 결정하고
-> Maximo `USES` 정의와 두 분류 규칙을 등록·DB 재조회했다. 관계 적재 코드는 아직 없다.
+> 사용자가 실제 Maximo 관계 연결을 검증했다. Device→IP는 2026-09-17 직접 관계로 결정하고
+> Maximo `USES` 정의와 Computer·VM·Network Cluster 세 분류 규칙을 등록했다. Computer·VM 관계는
+> 운영 적재까지 검증했고 Cluster 관계는 코드·원천 검증을 완료했다. 같은 날 Network Cluster와
+> 물리 Network Device는 기존 `FEDERATES` 정의를 재사용하기로 결정했고 수집·관계 조회 코드를 구현했다.
+> MAS UI 분류 규칙 등록과 실제 적재 검증은 아직 남아 있다.
 > 원천 근거: [D42 관계 원천](../../knowledge/device42/computer-ci-relations.md).
 > 타겟 근거: [Maximo 관계 정의](../../knowledge/maximo/computer-ci-relations.md).
 > DB 관계 근거: [Database Instance 설계](databaseinstance.md),
@@ -20,7 +23,8 @@
 | OS_INSTALLED_ON_COMPUTER | OS → Computer | RELATION.INSTALLEDON | 2026-09-15 자동 적재 63건(물리 5·가상 58 분류쌍 모두 관측), 기존 수동 샘플 `ACTCIRELATIONID=6001` 유지·재실행 ID 동일 확인(멱등성) |
 | HOST_VIRTUALIZES_VM | Host Computer → VM | VIRTUALIZES | 코드·원천 검증 완료. `.68` 3건, `.35` 55건. 2026-09-16 실제 관계 연결 검증 완료 |
 | DB_INSTANCE_RUNS_ON_DEVICE | DB Instance → Device(Computer) | RELATION.RUNSON | 2026-09-16 구현 완료. 분류쌍 규칙·원천 경로 확인. `.68` 0건(미해결 1), `.35` 3건. 실제 적재 검증 전 |
-| COMPUTER_USES_IP | Computer/VM → IP | USES | 2026-09-17 신규 관계와 `N:N` 규칙 2개 등록. `view_ipaddress_device_v2` 직접 쌍 사용. 같은 날 `./run.sh ci-relation` 자동 적재 118건 (가상 112·물리 6 분류쌍 모두 관측), 조회=적재 |
+| DEVICE_USES_IP | Device(Computer/VM/Network Cluster) → IP | USES | `CiSourceFilter.DEVICE`와 `view_ipaddress_device_v2` 직접 쌍 사용. `N:N` 규칙 3개 등록. 원천 `.68` 53건, `.35` 120건이며 Cluster 각 2건. Cluster 포함 실적재는 미검증 |
+| NETWORK_CLUSTER_FEDERATES_DEVICE | Network Cluster → Network Device | FEDERATES | 코드 구현·자동 테스트 완료. 기존 관계 정의를 재사용하고 `SYS.COMPUTERSYSTEMCLUSTER → SYS.GENERICSWITCH` `1:N` 규칙을 추가해야 한다. 원천은 양 서버 각 2쌍이며 규칙 등록·실적재는 미완료 |
 
 Computer는 물리·가상 두 분류를 허용한다.
 OS → 물리 Computer의 단건 결과는 [검증 기록](../../knowledge/maximo/computer-ci-relations.md#oscomputer-승격-샘플-검증)을 참조한다.
@@ -42,17 +46,28 @@ flowchart TB
   C -->|"RELATION.CONTAINS"| D["Disk"]
   C -->|"RELATION.CONTAINS"| F["Filesystem"]
   C -->|"USES"| I["IP"]
+
+  subgraph N["NETWORKSYSTEM · 논리 / 물리"]
+    direction TB
+    NC["NETWORK CLUSTER<br/>(논리 스택)"] -->|"FEDERATES"| ND["NETWORK DEVICE<br/>(물리 장비)"]
+  end
+  NC -->|"USES"| I
 ```
 
 실선은 확정된 관계 매핑이다. 구현·운영 검증 상태는 위 표의 판정을 따른다.
 `COMPUTERSYSTEM · 물리 / VM`은 별도 CI 하나가 아니라 Device 본체 분류 범위를 묶어 보여 주는 영역이다.
 Virtual Host와 VM은 모두 그 영역의 Device CI이며, Host→VM 가상화 관계를 영역 안에서 표현한다.
-Disk·Filesystem·OS·IP 관계는 두 역할과 중복 노드를 따로 그리지 않고 ComputerSystem 영역에 연결한다.
+Disk·Filesystem·OS는 ComputerSystem 영역에 연결한다. IP는 ComputerSystem과 Network Cluster 양쪽에서
+같은 `USES`로 연결하되 분류 규칙은 각각 유지한다.
 DB Instance도 물리·가상 Device의 공통 ComputerSystem 영역으로 `RELATION.RUNSON` 방향을 갖는다.
 원천 조회는 `databaseinstance.appcomp_fk → appcomp.device_fk → device.device_pk`를 경유하지만,
 Application Component를 관계 노드로 만들지 않고 `DB Instance → Device` 쌍으로 저장한다.
 DB Instance 본체는 엔진별 네 분류로 나뉘지만 네 분류 모두 같은 `RELATION.RUNSON` 규칙을 가지므로
 관계 상수는 하나다. 출발 분류를 SQL로 구분하지 않고 MERGE가 저장된 분류로 규칙을 확인한다.
+Network 관계도는 특정 제조사나 Switch 구현에 종속되지 않도록 상위 개념인 Network Cluster와
+Network Device로 표시한다. 현재 원천과 실제 분류 규칙은 Switch 스택만 확인됐으므로 구현 범위는
+`SYS.COMPUTERSYSTEMCLUSTER → SYS.GENERICSWITCH`로 제한한다. Router 등 다른 Network Device 분류는
+원천 표본과 별도 규칙을 확인한 뒤 같은 개념 관계에 추가한다.
 가상화 관계는 사람이 읽는 의미에 맞춰 `Virtual Host → VIRTUALIZES → VM`으로 표시한다.
 D42 원천 참조는 반대로 VM의 `virtual_host_device_fk`가 Host의 `device_pk`를 가리킨다.
 새 Maximo 규칙은 Source Host가 `SYS.COMPUTERSYSTEM` 또는 `SYS.VIRTUALCOMPUTERSYSTEM`,
@@ -61,20 +76,40 @@ Target VM이 `SYS.VIRTUALCOMPUTERSYSTEM`인 `1:N` 관계다. 두 규칙 모두
 MAS UI에 등록한 관계 정의·규칙·체크박스 값은
 [VIRTUALIZES 등록 결과](../../knowledge/maximo/computer-ci-relations.md#virtualizes-mas-ui-등록-결과)를 정본으로 삼는다.
 
-IP는 Interface를 관계 노드로 만들지 않고 Computer/VM에서 직접 연결한다. D42 원천은
+IP는 Interface를 관계 노드로 만들지 않고 Device에서 직접 연결한다. 현재 확정 분류는
+Computer·VM·Network Cluster다. D42 원천은
 `view_ipaddress_device_v2.device_fk → ipaddress_fk`이며, 장비 하나의 여러 IP와 공유 IP의 여러 장비를
 모두 보존하므로 카디널리티는 `N:N`이다. Maximo에는 기존 `RELATION.USES`를 수정하지 않고 별도 코드
 `USES`를 등록했다. 관계 정의는 `UNIDIRECTIONAL`, `USEWITH=CI`, 분류 미지정, 가져옴 해제다.
-등록된 규칙은 다음 두 개다.
+등록된 규칙은 다음 세 개다.
 
 | Source 분류 | Target 분류 | Cardinality | 변경 전파 | 포함 | 대상 상위 여부 | 가져옴 |
 | --- | --- | --- | :---: | :---: | :---: | :---: |
 | `SYS.COMPUTERSYSTEM` | `NET.IPADDRESS` | `N:N` | 해제 | 해제 | 해제 | 해제 |
 | `SYS.VIRTUALCOMPUTERSYSTEM` | `NET.IPADDRESS` | `N:N` | 해제 | 해제 | 해제 | 해제 |
+| `SYS.COMPUTERSYSTEMCLUSTER` | `NET.IPADDRESS` | `N:N` | 해제 | 해제 | 해제 | 해제 |
 
-`SYS.GENERICSWITCH → NET.IPADDRESS` 규칙은 현재 등록하지 않았으므로 이 직접 관계의 확정 범위는
-Computer와 VM까지다. `CONTAINMENT=0`, `PROPAGATECHANGE=0`, `REVRELATIONSHIP=0`, `SWAPPED=0`이며,
-IP를 Computer의 구성요소나 상위 CI로 취급하지 않는다.
+`SYS.GENERICSWITCH → NET.IPADDRESS` 규칙은 등록하지 않는다. 현재 원천에서도 물리 Switch의 직접
+IP 관계는 0건이고 관리 IP는 Network Cluster에 연결된다. `CONTAINMENT=0`, `PROPAGATECHANGE=0`,
+`REVRELATIONSHIP=0`, `SWAPPED=0`이며 IP를 Device의 구성요소나 상위 CI로 취급하지 않는다.
+
+Network Cluster는 D42의 논리적 스위치 스택이고, 물리 멤버는 별도 Network Device다. 원천 관계는
+`view_netport_v1.device_fk=cluster.device_pk`와 `second_device_fk=physical.device_pk`의 고유 쌍이다.
+Cluster에는 관리 IP·포트가, 물리 Switch에는 모델·시리얼이 있으므로 어느 한쪽으로 합치지 않는다.
+
+Maximo에는 접두어 없는 `FEDERATES` 관계 정의가 이미 존재한다. `UNIDIRECTIONAL`, `USEWITH=CI`,
+분류 미지정, 가져옴 해제이며 현재 규칙은 0건이다. 따라서 관계 정의를 새로 만들거나 기존
+`RELATION.FEDERATES`를 수정하지 않고 다음 규칙 한 줄만 추가한다.
+
+| Source 분류 | Target 분류 | Cardinality | 변경 전파 | 포함 | 대상 상위 여부 | 가져옴 |
+| --- | --- | --- | :---: | :---: | :---: | :---: |
+| `SYS.COMPUTERSYSTEMCLUSTER` | `SYS.GENERICSWITCH` | `1:N` | 해제 | 해제 | 해제 | 해제 |
+
+`FEDERATES`는 논리 Cluster가 하나 이상의 물리 Network Device를 묶는 구성 관계다. 생명주기 종속이나
+부모·자식 삭제 전파를 뜻하지 않으므로 포함과 대상 상위 여부를 사용하지 않는다. 현재 표본은 Cluster당
+물리 멤버 1대뿐이지만 `1:N`으로 정의해 실제 다중 멤버 스택을 수용한다. 이 관계만으로 Cluster의 관리
+IP나 포트가 Switch로 이전되는 것은 아니다. Cluster→IP는 별도 `USES` 관계로 직접 연결하고,
+Cluster→Interface는 Interface CI 도입 시 별도로 설계한다.
 
 ## 실행 위치 — CI 본체 적재 이후 별도 단계
 
@@ -156,14 +191,15 @@ relationnum    정확한 RELATION 코드. RELATION.CONTAINS와 CONTAINS를 구�
 | COMPUTER_CONTAINS_FILESYSTEM | Computer → Filesystem | `mountpoint_pk` · `device_fks` | [device.md](../../data-mapping/ci/types/device.md#7-관계-매핑--2026-09-15) |
 | HOST_VIRTUALIZES_VM | Host → VM | VM의 `device_pk` · `virtual_host_device_fk`를 역방향 해석 | [device.md](../../data-mapping/ci/types/device.md#7-관계-매핑--2026-09-15) |
 | DB_INSTANCE_RUNS_ON_DEVICE | DB Instance → Device | `databaseinstance.appcomp_fk` → `appcomp.device_fk` | [database-instance.md](../../data-mapping/ci/types/database-instance.md#5-관계) |
-| COMPUTER_USES_IP | Computer/VM → IP | `view_ipaddress_device_v2.device_fk` · `ipaddress_fk` | [device.md](../../data-mapping/ci/types/device.md#computer--ip--2026-09-17) |
+| DEVICE_USES_IP | Device(Computer/VM/Network Cluster) → IP | `view_ipaddress_device_v2.device_fk` · `ipaddress_fk` | [device.md](../../data-mapping/ci/types/device.md#device--ip--2026-09-17) |
+| NETWORK_CLUSTER_FEDERATES_DEVICE | Network Cluster → Network Device | `view_netport_v1.device_fk` · `second_device_fk`의 고유 쌍 | [device.md](../../data-mapping/ci/types/device.md#network-cluster--물리-switch--2026-09-17) |
 
 상수 이름과 관계 열은 토폴로지 의미를 따른다. SQL은 연결 근거를 가진 원천에서 나오므로
 Host→VM 관계도 VM 행의 `virtual_host_device_fk`를 읽어서 만든다.
 문서 정본은 기존 규약대로 출발 유형 문서가 소유하므로 SQL을 양쪽에 복사하지 않는다.
 
-수집 범위 필터는 각 페이지 SQL의 `WITH computer AS (...)` 안에 둔다.
-본체와 같은 `CiSourceFilter.COMPUTER` 조건을 쓴다.
+수집 범위 필터는 각 페이지 SQL의 CTE 안에 둔다. `DEVICE_USES_IP`는 Cluster까지 포함하도록
+`CiSourceFilter.DEVICE`를 쓰고, Computer 자식 관계는 `CiSourceFilter.COMPUTER`를 유지한다.
 정렬은 두 SQL 모두 `sourceci,targetci`다. DOQL은 ORDER BY 없는 OFFSET의 순서를 보장하지 않는다.
 전체 ACTCI를 메모리에 올려 이름으로 찾지 않는다. 양 끝은 원천의 확인된 연결 키로 만든다.
 본체 task가 관계 후보를 누적해 넘기지 않는다. 관계 단계가 연결 키만 다시 읽는다.
@@ -225,8 +261,13 @@ OS_INSTALLED_ON_COMPUTER(63건)·COMPUTER_CONTAINS_DISK(19건)·COMPUTER_CONTAIN
 - Host–VM: 코드·1:N 규칙·실제 관계 연결은 검증했다. CI 승격과 호스트 이동 시 이전 관계 정리는 남아 있다.
 - DB Instance–Device: 본체·관계를 구현했다. `RELATION.RUNSON` 1:1 규칙과 `.35` 원천 3쌍을 확인했고
   `.68`의 `device_fk` 없는 Instance는 본체만 적재된다. 실제 적재 검증과 승격 범위 등록은 남아 있다.
-- IP: Computer/VM→IP 직접 관계와 `USES`의 두 `N:N` 규칙은 확정·등록했다. 관계 조회·적재 코드와
-  실제 ACTCIRELATION 검증은 남아 있다. Switch는 분류 규칙이 없어 현재 직접 관계 대상이 아니다.
+- IP: `DEVICE_USES_IP` 코드와 `USES`의 세 `N:N` 규칙을 등록했다. 기존 Computer/VM 118건은
+  운영 적재했고, Cluster 2건을 더한 `.35` 120건과 `.68` 53건은 원천 조회로 확인했다.
+  Cluster 포함 ACTCIRELATION 실적재·재실행 검증은 남아 있다.
+- Network Cluster–Device: 상위 개념은 `Network Cluster → FEDERATES → Network Device`로 확정했다.
+  `SYS.COMPUTERSYSTEMCLUSTER` 본체 수집과 `FEDERATES` 관계 조회 코드를 구현했다. 현재 구현 규칙은
+  `SYS.COMPUTERSYSTEMCLUSTER → SYS.GENERICSWITCH` `1:N` 한 줄이며 MAS UI 등록·실적재와
+  Authorized CI 승격 설계가 남아 있다.
 - OS–Filesystem: BOOTSFROM 규칙은 있지만 같은 장비라는 정보만으로 부팅 파일시스템을 특정할 수 없다.
 - Disk–Filesystem: 확인한 두 원천 사이에 직접 FK가 없으며, 중간 볼륨 계층을 추정하지 않는다.
 - VM 관리 장비·섀시·Computer 네트워크 연결: 원천 역할/표본과 대상 분류 규칙이 부족하다.

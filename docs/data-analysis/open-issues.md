@@ -119,7 +119,9 @@ Switch Authorized CI는 `CI.GENERICSWITCH`, 물리 Printer는 `SYS.PHYSICALPRINT
 `CI.PHYSICALPRINTER`로 제안하며 아직 MAS UI에는 적용하지 않았다.
 
 남은 결정은 Router 실제 표본과 판정 규칙, 추천 분류 ID의 운영 승인, MAS UI 설정·승격 검증이다.
-cluster·컨테이너·unknown·PDU는 이번 후보 범위에 포함하지 않는다.
+Network cluster는 별도 `SYS.COMPUTERSYSTEMCLUSTER` ACTCI로 수집하고 물리 Switch와 `FEDERATES`로
+연결하기로 결정했으며 수집·관계 조회 코드는 구현했다. MAS UI 관계 규칙 등록과 실제 적재 검증은
+남아 있다. 컨테이너·unknown·PDU는 이번 후보 범위에 포함하지 않는다.
 
 ### OS·Disk·Filesystem·IP 관리 단위 — 2026-09-15
 
@@ -131,10 +133,12 @@ OS는 장비당 정확히 1개지만 EOL·EOS를 가진 독립 관리 대상이�
 수집 구성안은 [os](design/ci/os.md)·[disk](design/ci/disk.md)·[filesystem](design/ci/filesystem.md)·[ip](design/ci/ip.md),
 확정 매핑은 `data-mapping/ci/types/` 의 같은 이름 문서다.
 
+IP 관계 경로는 접두어 없는 `USES`로 Device→IP를 직접 연결하기로 확정했다. Computer·VM에 이어
+Network Cluster→IP `N:N` 규칙도 등록했고 `DEVICE_USES_IP`가 전체 Device 필터로 원천 쌍을 읽는다.
+Interface CI 도입은 이 직접 관계와 별도 후속 범위다.
+
 남은 결정:
 
-- **IP의 관계 경로.** Computer와 `NET.IPADDRESS` 사이에 `RELATIONRULES`가 양방향 0건이다. CDM 경로는 `Computer → NET.IPINTERFACE → NET.IPADDRESS`다. Network Interface를 CI로 함께 도입할지, IP를 관계 없이 적재할지, IP를 다음 단계로 미룰지 정해야 한다. 범위 확대 여부라 사용자 결정이 필요하다.
-- **Disk·IP의 독립 CI 유지 여부.** 실제로 채울 수 있는 속성이 Disk 3개(모델·시리얼·용량), IP 1개(주소)뿐이다. 제조사·펌웨어·미디어 유형은 원천이 전건 비어 있다.
 - **컨테이너·가상 파일시스템 선별.** `overlay` 38 / 62건, `devtmpfs` 9 / 10건, `squashfs` 0 / 8건이다. 경로에 컨테이너 ID가 들어가 재기동 시 원천 PK가 바뀌면 매 실행마다 새 CI가 생긴다. 제외를 추천하나 목록이 확정되지 않았다.
 - **Subnet CI 도입 여부.** IP의 `mask_bits`가 전건 보유인데 `NET.IPADDRESS`에 담을 자리가 없다. `NET.IPNETWORK`가 별도 분류다.
 - **수집 대상 범위.** OS는 Computer 연결분이 30% / 80%로 두 서버 차이가 크다. Filesystem·Disk는 전건 Computer 연결이라 판단이 필요 없다. **IP는 2026-09-15 장비 연결 전체로 넓혔다**(105 / 111건). 장비 종속 개체가 아니므로 부모 유형으로 좁히지 않는다.
@@ -206,6 +210,8 @@ Switch 판정·ACTCI 분류와 2차 기준정보 추천안은 확정했다. 남�
 
 - Router 실제 표본과 판정 규칙. 표본이 없어 `SYS.GENERICROUTER` 분기는 구현하지 않는다.
 - Switch의 `CI.GENERICSWITCH` 신규 분류·18개 속성·본체 1:1 승격 범위를 MAS UI에서 적용하고 검증한다.
+- Network Cluster ACTCI 수집·관계 조회 코드는 완료했다. `FEDERATES` `1:N` 규칙을 MAS UI에 적용해
+  실제 적재를 검증하고, Authorized CI 분류와 승격 범위를 별도 결정한다.
 - Printer의 `SYS.PHYSICALPRINTER`·`CI.PHYSICALPRINTER`, 13개 속성, 본체 1:1 승격 범위를 MAS UI에서 적용하고 검증한다.
 - 추가 자산·위치·OS·EOL/EOS 등 필드의 대상 속성·단위와 Printer 대표 MAC·SysName 원천 대응.
 
@@ -266,17 +272,19 @@ compatibility_level의 일반 분류 속성 대응은 미정이며, DB 제품 �
 
 관측은 [네트워크 CI 모델](knowledge/maximo/network-ci-model.md)에 있다.
 
-- **스위치 CI 단위.** 현재 ACTCI로 올리는 스위치는 물리 멤버인데 netport가 0개다.
-  포트 33·28개는 전부 스택(`cluster`) 객체에 달려 있고 그건 수집하지 않는다.
+- **스위치 CI 단위 결정.** 물리 Switch와 논리 cluster를 모두 별도 ACTCI로 수집한다.
+  물리 Switch는 모델·시리얼을 유지하고, 포트 33·28개와 관리 IP를 가진 cluster는 기존
+  `SYS.COMPUTERSYSTEMCLUSTER`를 사용한다. 둘은 [관계 설계](design/ci/relations.md)의
+  `Network Cluster → FEDERATES → Network Device`로 연결한다. 현재 구현 분류쌍은
+  `SYS.COMPUTERSYSTEMCLUSTER → SYS.GENERICSWITCH` `1:N`이다.
   **IP도 같다.** `view_ipaddress_device_v2` 기준 IP를 가진 네트워크 장비는 cluster 2대(각 1건)뿐이고
-  물리 멤버는 0건이다. 그래서 IP 관계 필터를 `CiSourceFilter.DEVICE`로 넓혀도 추가되는 쌍이 0건이며
-  `cluster`는 그 필터에도 포함되지 않는다. 필터 확장은 이 항목이 정해진 뒤에 의미가 생긴다.
-  사업 범위의 네트워크 행에 "Network Interface 정보"가 명시돼 있으므로 인터페이스를 채우려면
-  스위치 CI를 cluster로 옮길지, 물리 멤버에 스택의 포트를 붙일지 먼저 정해야 한다.
+  물리 멤버는 0건이다. `DEVICE_USES_IP`가 `CiSourceFilter.DEVICE`를 사용하고
+  `SYS.COMPUTERSYSTEMCLUSTER → NET.IPADDRESS` `USES` `N:N` 규칙도 등록해 Cluster→IP 직접 관계로
+  결정했다. Interface CI 도입은 이 직접 관계와 별도로 판단한다.
 - **인터페이스 CI 도입 시점.** `NET.L2INTERFACE`는 netport와 속성이 그대로 대응한다.
   서버 NIC는 사업 범위 서버 행에 없으므로 네트워크 장비 작업에서 도입하고, 그때 서버 쪽 적용을
   다시 판단한다.
-- **Computer-IP 표준 경로.** 지금은 접두어 없는 `USES`로 직접 연결했다. 표준은
+- **Device-IP 표준 경로.** 지금은 접두어 없는 `USES`로 직접 연결했다. 표준은
   `NET.IPINTERFACE` 경유이며 원천에 그 계층이 생기거나 IBM 디스커버리를 병행하면 이관을 검토한다.
 - **서버-스위치 물리 연결.** 원천이 `.68` 5건·`.35` 2건이고 상대 포트가 전부 `Vlan1`이라
   MAC 학습 기반 연관으로 보인다. `NET.NETWORKCONNECTION` 중간 CI 도입 여부는 미결이다.

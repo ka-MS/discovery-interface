@@ -2,12 +2,12 @@
 
 > Target: MAXIMO.ACTCI · MAXIMO.ACTCISPEC
 > 원천·메타데이터 확인: 2026-09-15 · D42 .68 / .35 · Maximo BLUDB
-> 구현: DeviceCiIntegrate · 상태: Computer·VM·Switch 수집과 ACTCI·ACTCISPEC 저장 및 자동 테스트 완료. 실제 Maximo Switch 적재·CI 승격·UI 검증은 미완료.
+> 구현: DeviceCiIntegrate · 상태: Computer·VM·Switch·Network Cluster 수집과 ACTCI·ACTCISPEC 저장 및 자동 테스트 완료. 실제 Maximo Cluster 적재·관계·CI 승격·UI 검증은 미완료.
 > 실행 방법·추가 속성 등록·현재 처리 동작은 [실행 준비](device-run.md)를 따른다. 미대응 항목은 아래 표에 구분한다.
 
 ## 1. 대상과 식별자
 
-물리 Computer, VM과 판정 가능한 물리 Switch를 장비당 하나의 ACTCI로 수집한다.
+물리 Computer, VM, 판정 가능한 물리 Switch와 논리 Network Cluster를 장비당 하나의 ACTCI로 수집한다.
 이번 범위는 본체와 요약 스펙이며 Printer와 Router는 아직 적재하지 않는다.
 개별 CPU·Disk·OS·Interface 등의 CI와 관계는 후속 유형에서 정의한다.
 DPA 적재 결과나 변환 규칙에 의존하지 않는다.
@@ -17,11 +17,12 @@ DPA 적재 결과나 변환 규칙에 의존하지 않는다.
 | 물리 분류 | `SYS.COMPUTERSYSTEM` |
 | VM 분류 | `SYS.VIRTUALCOMPUTERSYSTEM` |
 | Switch 분류 | `SYS.GENERICSWITCH` |
+| Network Cluster 분류 | `SYS.COMPUTERSYSTEMCLUSTER` |
 | 원천 키 / ACTCINUM | `D42:DEVICE:<device_pk>` |
 | ACTCIID | Maximo 숫자 채번. 원천 PK를 대입하지 않음 |
 | 갱신 | 같은 ACTCINUM은 기존 ACTCIID 유지. device_pk가 바뀌면 신규 CI |
 | 스펙 참조 | ACTCINUM·CLASSSTRUCTUREID는 본체와 동일, REFOBJECTID=ACTCIID |
-| 스펙 선택 | Computer 공통 18개와 Switch의 GENERICTYPE. BIOS·CPU 코어 수 추가 경로 유지 |
+| 스펙 선택 | Computer 공통 18개와 Switch의 GENERICTYPE. Cluster는 MANAGEDSYSTEMNAME·LOCATIONTAG만 사용. BIOS·CPU 코어 수 추가 경로 유지 |
 
 CiClassification에 사용할 분류명을 명시하고, CI 실행 시작 시 공통 캐시로 CLASSSTRUCTUREID를 조회한다.
 환경별 숫자·문자열 ID를 상수로 고정하지 않는다. ComputerSpec에는 전체 ASSETATTRID를 명시한다.
@@ -36,8 +37,8 @@ cluster의 포트 수준 연결을 따라 얻은 단일 `fw_device_type=Switch`�
 | `view_hardware_v2 h` | 모델 | h.hardware_pk=d.hardware_fk |
 | `view_vendor_v1 v / b` | 장비 / BIOS 제조사 | v.vendor_pk=h.vendor_fk / b.vendor_pk=d.bios_vendor_fk |
 | `view_part_v1 p` + `view_partmodel_v1 pm` | CPU 모델·아키텍처 | p.device_fk=d.device_pk, pm.partmodel_pk=p.partmodel_fk, pm.type_name='CPU' |
-| `view_netport_v1 n` | Computer 기본 포트와 Switch cluster 연결·대표 MAC | 기본 포트 직접 연결 또는 n.second_device_fk=물리 device_pk |
-| `view_device_v2 c` | Switch 종류 | c.device_pk=n.device_fk, c.type='cluster' |
+| `view_netport_v1 n` | Computer 기본 포트와 Switch cluster 연결·대표 MAC·Cluster→Switch 관계 | 기본 포트 직접 연결 또는 n.second_device_fk=물리 device_pk |
+| `view_device_v2 c` | Switch와 Network Cluster 종류 | c.device_pk=n.device_fk 또는 cluster 본체의 details |
 
 보강 정보는 LEFT JOIN한다. CPU·포트는 먼저 장비별로 집계하여 본체 행을 늘리지 않는다.
 
@@ -49,11 +50,13 @@ cluster의 포트 수준 연결을 따라 얻은 단일 `fw_device_type=Switch`�
 | physical | Generic, Rackable, Blade, WorkStation, ThinClient, Laptop |
 | virtual | Internal VM, Amazon EC2 Instance, VMWare, Hyper-V |
 | Switch 후보 | `type='physical' AND network_device=true` |
+| Network Cluster | `type='cluster' AND network_device=true AND details->>'fw_device_type'='Switch'` |
 
 Switch 후보는 `second_device_fk`로 연결된 cluster가 정확히 하나이고, 연결 cluster의
 비어 있지 않은 `details->>'fw_device_type'` 종류도 정확히 하나이며 그 값이 `Switch`일 때만
 `SYS.GENERICSWITCH`로 매핑한다. Router·종류 누락·복수 cluster·종류 충돌은 조회하되 매핑에서
-제외하고 로그를 남긴다. Printer·설비·컨테이너·cluster·unknown은 이 범위에 포함되지 않는다.
+제외하고 로그를 남긴다. Network Cluster는 자기 `details.fw_device_type`이 정확히 `Switch`인 행만
+`SYS.COMPUTERSYSTEMCLUSTER`로 매핑한다. Printer·설비·컨테이너·unknown은 이 범위에 포함되지 않는다.
 서브타입 미지정·새로운 값은 자동으로 Computer에 편입하지 않고 대상 정의를 보완한다.
 `virtual_host`는 호스트 역할을 나타내므로 물리/가상 분류를 뒤집는 조건으로 사용하지 않는다.
 이 조건은 이번에 작성한 수집 규칙이며 기존 asset 구현의 필터와 별개다.
@@ -119,6 +122,19 @@ ALNVALUE는 문자열, NUMVALUE는 숫자다. 한 행에서 값 컬럼 하나만
 | BIOSRELEASEDATE | BIOS 출시일 원문 | ALNVALUE | 직접 | d.bios_release_date | 원문 보존. 전역 속성·CI 분류 등록됨, ACTCI 템플릿 미등록. 아래 참조 |
 | GENERICCOMPUTERSYSTEM_GENERICTYPE | Generic 장비 종류 | ALNVALUE | 변환 | network_kind | `SYS.GENERICSWITCH`에만 단일 판정값 `Switch` 적재 |
 
+### Network Cluster 전용
+
+`SYS.COMPUTERSYSTEMCLUSTER`는 Computer 공통 스펙을 재사용하지 않는다. 확인된 기존 분류 속성 중
+원천 의미가 직접 대응하는 두 항목만 적재한다.
+
+| ASSETATTRID | 한글 의미 | 값 컬럼 | Source | 변환·조건 |
+| --- | --- | --- | --- | --- |
+| `COMPUTERSYSTEMCLUSTER_MANAGEDSYSTEMNAME` | 관리 시스템 이름 | ALNVALUE | d.name | 원문 |
+| `COMPUTERSYSTEMCLUSTER_LOCATIONTAG` | 위치 태그 | ALNVALUE | d.details->>'snmp_location' | trim 후 빈 문자열은 NULL |
+
+Cluster ACTCINUM은 다른 Device와 같은 `D42:DEVICE:<device_pk>`다. 포트·관리 IP는 Cluster 본체
+스펙으로 압축하지 않고 별도 CI와 관계로 다룬다.
+
 코어 수는 D42의 “CPU 수 × CPU당 코어 수”로 계산한 해당 장비의 보고 총량이다.
 VM에서는 VM에 보고된 구성으로 해석하며 호스트의 물리 코어 수나 활성 코어 수를 뜻하지 않는다.
 CPU 파트 수·모델별 cores 합계로 대체하지 않는다.
@@ -167,7 +183,12 @@ WHERE (
             ('Internal VM', 'Amazon EC2 Instance', 'VMWare', 'Hyper-V'))
     )
 )
-OR (d.type = 'physical' AND d.network_device = true);
+OR (d.type = 'physical' AND d.network_device = true)
+OR (
+    d.type = 'cluster'
+    AND d.network_device = true
+    AND NULLIF(TRIM(d.details->>'fw_device_type'), '') = 'Switch'
+);
 ```
 
 페이지 SQL:
@@ -188,6 +209,11 @@ WITH device AS (
         )
     )
     OR (d.type = 'physical' AND d.network_device = true)
+    OR (
+        d.type = 'cluster'
+        AND d.network_device = true
+        AND NULLIF(TRIM(d.details->>'fw_device_type'), '') = 'Switch'
+    )
 ), cpu AS (
     SELECT p.device_fk,
         COUNT(DISTINCT NULLIF(TRIM(pm.name), '')) AS model_count,
@@ -221,7 +247,15 @@ WITH device AS (
     GROUP BY n.second_device_fk
 )
 SELECT d.device_pk, d.type, d.physicalsubtype, d.network_device,
-    ni.cluster_pk, ni.network_kind, ni.network_kind_count, ni.cluster_count,
+    ni.cluster_pk,
+    CASE WHEN d.type = 'cluster'
+         THEN NULLIF(TRIM(d.details->>'fw_device_type'), '')
+         ELSE ni.network_kind END AS network_kind,
+    CASE WHEN d.type = 'cluster'
+              AND NULLIF(TRIM(d.details->>'fw_device_type'), '') IS NOT NULL
+         THEN 1 ELSE ni.network_kind_count END AS network_kind_count,
+    ni.cluster_count,
+    NULLIF(TRIM(d.details->>'snmp_location'), '') AS snmp_location,
     'D42:DEVICE:' || CAST(d.device_pk AS varchar) AS source_id,
     d.name, d.notes, d.serial_no, d.uuid, d.last_discovered,
     h.name AS model, v.name AS manufacturer,
@@ -252,13 +286,14 @@ LIMIT ? OFFSET ?;
 
 CiDefinitionLoader가 CI 실행 시작 시 아래 정의를 조회한다. 실제 코드의 분류명 IN 목록은
 CiClassification.values()에서 생성하고, 스펙은 앞에서 조회한 분류 ID 목록을 바인딩한다.
-아래 SQL은 현재 Device 본체 enum의 세 분류로 재조회할 수 있는 형태다.
+아래 SQL은 현재 Device 본체 enum의 네 분류로 재조회할 수 있는 형태다.
 
 ```sql
 SELECT s.CLASSIFICATIONID,s.CLASSSTRUCTUREID
 FROM MAXIMO.CLASSSTRUCTURE s
 WHERE s.CLASSIFICATIONID IN
-    ('SYS.COMPUTERSYSTEM','SYS.VIRTUALCOMPUTERSYSTEM','SYS.GENERICSWITCH')
+    ('SYS.COMPUTERSYSTEM','SYS.VIRTUALCOMPUTERSYSTEM','SYS.GENERICSWITCH',
+     'SYS.COMPUTERSYSTEMCLUSTER')
   AND EXISTS (
       SELECT 1 FROM MAXIMO.CLASSUSEWITH u
       WHERE u.CLASSSTRUCTUREID=s.CLASSSTRUCTUREID AND u.OBJECTNAME='ACTCI'
@@ -286,7 +321,8 @@ LEFT JOIN MAXIMO.CLASSSPECUSEWITH u
   AND (u.SECTION=c.SECTION OR (u.SECTION IS NULL AND c.SECTION IS NULL))
 WHERE c.CLASSSTRUCTUREID IN (SELECT s.CLASSSTRUCTUREID FROM MAXIMO.CLASSSTRUCTURE s
     WHERE s.CLASSIFICATIONID IN
-        ('SYS.COMPUTERSYSTEM','SYS.VIRTUALCOMPUTERSYSTEM','SYS.GENERICSWITCH')
+        ('SYS.COMPUTERSYSTEM','SYS.VIRTUALCOMPUTERSYSTEM','SYS.GENERICSWITCH',
+         'SYS.COMPUTERSYSTEMCLUSTER')
       AND EXISTS (SELECT 1 FROM MAXIMO.CLASSUSEWITH w
           WHERE w.CLASSSTRUCTUREID=s.CLASSSTRUCTUREID AND w.OBJECTNAME='ACTCI'));
 ```
@@ -299,14 +335,16 @@ mapData에서 본체·스펙 DTO를 만들고 putData에서 본체 ID를 확보�
 
 ## 6. 검증과 남은 작업
 
-두 D42 서버에서 5절 원천 SQL을 2026-09-15 재실행했다. `.68`은 36행/고유 PK 36개,
-`.35`는 72행/고유 PK 72개다. 서버별 Switch 2대는 cluster 1개와 단일
+두 D42 서버에서 5절 원천 SQL을 2026-09-17 재실행했다. `.68`은 38행/고유 PK 38개,
+`.35`는 74행/고유 PK 74개다. 각각 기존 36/72개에 Network Cluster 2개가 추가됐다.
+서버별 Switch 2대는 cluster 1개와 단일
 `network_kind=Switch`를 가지며 대표 MAC도 확보됐다. 기존 Computer·VM 조건은 변경하지 않았다.
 기존 Computer·VM 34 / 70행의 공통 반환 필드는 확장 전 저장 결과와 행 단위로 동일했다.
 Maximo에서 분류·속성 타입·적용 설정·단위 코드를 대조했다. 실제 업무 테이블 쓰기는 수행하지 않았다.
 코드의 원천·정의 조회 SQL도 읽기 전용으로 확인했다. H2 Db2 모드에서 부모·템플릿 연결,
-재실행·페이징·정의 누락·건별 오류 후 계속 처리와 Switch 정상 판정,
-Router·종류 누락·cluster 충돌·Printer 제외를 테스트했다. 현재 검증 상태는 [실행 준비](device-run.md#검증)를 따른다.
+재실행·페이징·정의 누락·건별 오류 후 계속 처리와 Switch·Network Cluster 정상 판정,
+Router·종류 누락·cluster 충돌·Printer 제외를 테스트했다. Cluster 실제 Maximo 적재와
+`FEDERATES` 관계 적재는 UI 규칙 등록 후 검증해야 한다. 현재 검증 상태는 [실행 준비](device-run.md#검증)를 따른다.
 
 [ISSUE-11](../../../open-issues.md#issue-11-actual-ci-분류속성관계와-식별자-매핑)에서
 추가 속성 등록, 미대응 속성, 실제 적재 검증과 후속 운영 정책을 추적한다.
@@ -336,6 +374,7 @@ COMPUTER_CONTAINS_FILESYSTEM 60건 모두 조회=적재이고, 재실행에서 `
 | 파일시스템 포함 | D42:DEVICE:<각 device_fks 원소> | D42:MOUNTPOINT:<mountpoint_pk> | RELATION.CONTAINS | Filesystem 도메인 |
 | Host가 VM을 가상화 | D42:DEVICE:<virtual_host_device_fk> | D42:DEVICE:<VM device_pk> | VIRTUALIZES | Device 도메인 |
 | IP 사용 | D42:DEVICE:<device_fk> | D42:IPADDRESS:<ipaddress_fk> | USES | Device 도메인 |
+| Network Cluster가 물리 장비를 연합 | D42:DEVICE:<cluster device_pk> | D42:DEVICE:<physical device_pk> | FEDERATES | Device 도메인 |
 
 Disk·Filesystem 관계의 출발 분류는 SYS.COMPUTERSYSTEM 또는 SYS.VIRTUALCOMPUTERSYSTEM,
 도착 분류는 각각 DEV.DISKDRIVE, SYS.FILESYSTEM이다.
@@ -397,10 +436,11 @@ ORDER BY sourceci,targetci;
 `host_chassis_device_fk`, `vm_manager_device_fk`를 같은 관계로 대체하지 않는다.
 실제 Maximo 적재·재실행·UI·승격 검증은 아직 수행하지 않았다.
 
-### Computer → IP — 2026-09-17
+### Device → IP — 2026-09-17
 
-출발 분류는 `SYS.COMPUTERSYSTEM` 또는 `SYS.VIRTUALCOMPUTERSYSTEM`, 도착은 `NET.IPADDRESS`다.
-관계 코드는 **접두어 없는 `USES`** 이며 `RELATION.USES`가 아니다. 두 분류쌍 모두 `N:N`,
+출발 분류는 `SYS.COMPUTERSYSTEM`, `SYS.VIRTUALCOMPUTERSYSTEM` 또는
+`SYS.COMPUTERSYSTEMCLUSTER`, 도착은 `NET.IPADDRESS`다. 관계 코드는 **접두어 없는 `USES`** 이며
+`RELATION.USES`가 아니다. 세 분류쌍 모두 `N:N`,
 `CONTAINMENT=0`, `REVRELATIONSHIP=0`, `SWAPPED=0`이다. 공유 IP가 여러 장비에 걸리는 경우를
 `N:N`이 그대로 표현한다.
 
@@ -408,25 +448,43 @@ ORDER BY sourceci,targetci;
 나오지만(양쪽 서버에서 건수 일치 확인) 연결 뷰가 의도를 직접 드러낸다.
 
 ```sql
-WITH computer AS (SELECT d.device_pk FROM view_device_v2 d
-WHERE d.type IN ('physical','virtual')
-AND (d.network_device=false OR d.network_device IS NULL)
-AND ((d.type='physical' AND d.physicalsubtype IN ('Generic','Rackable','Blade','WorkStation','ThinClient','Laptop'))
-OR (d.type='virtual' AND d.virtualsubtype IN ('Internal VM','Amazon EC2 Instance','VMWare','Hyper-V'))))
-SELECT 'D42:DEVICE:' || CAST(c.device_pk AS varchar) AS sourceci,
+WITH device AS (
+    SELECT d.device_pk
+    FROM view_device_v2 d
+    WHERE (
+        d.type IN ('physical','virtual')
+        AND (d.network_device=false OR d.network_device IS NULL)
+        AND (
+            (d.type='physical' AND d.physicalsubtype IN
+                ('Generic','Rackable','Blade','WorkStation','ThinClient','Laptop'))
+            OR
+            (d.type='virtual' AND d.virtualsubtype IN
+                ('Internal VM','Amazon EC2 Instance','VMWare','Hyper-V'))
+        )
+    )
+    OR (d.type='physical' AND d.network_device=true)
+    OR (
+        d.type='cluster'
+        AND d.network_device=true
+        AND NULLIF(TRIM(d.details->>'fw_device_type'), '')='Switch'
+    )
+)
+SELECT 'D42:DEVICE:' || CAST(d.device_pk AS varchar) AS sourceci,
        'D42:IPADDRESS:' || CAST(x.ipaddress_fk AS varchar) AS targetci,
        'USES' AS relationnum
 FROM view_ipaddress_device_v2 x
-JOIN computer c ON c.device_pk=x.device_fk
+JOIN device d ON d.device_pk=x.device_fk
 ORDER BY sourceci,targetci;
 ```
 
-2026-09-17 실행 결과는 `.68` 51쌍(IP 50 · Computer 33), `.35` 118쌍(IP 97 · Computer 64)이다.
-쌍이 IP 수보다 많은 것은 공유 IP 때문이며 `.35`에서 21건이 그렇다.
+`CiSourceFilter.DEVICE`로 확장한 2026-09-17 실행 결과는 `.68` 53쌍(IP 52 · Device 35),
+`.35` 120쌍(IP 99 · Device 66)이다. 두 서버 모두 Cluster 관계가 2쌍씩 추가됐고 물리 Switch의
+직접 IP 관계는 0쌍이다. 쌍이 IP 수보다 많은 것은 공유 IP 때문이다.
 
 같은 날 `./run.sh ci-relation`으로 `.35` 기준 118건을 적재했다. 조회=적재이고 분류쌍은
 `SYS.VIRTUALCOMPUTERSYSTEM → NET.IPADDRESS` 112건, `SYS.COMPUTERSYSTEM → NET.IPADDRESS` 6건으로
-등록한 두 규칙 모두 관측됐다. 같은 실행에서 `RELATION.CONTAINS`가 89건이 됐다 —
+당시 등록한 두 규칙 모두 관측됐다. 이후 `SYS.COMPUTERSYSTEMCLUSTER → NET.IPADDRESS` `N:N`
+규칙을 추가했으며 Cluster 포함 실적재는 아직 검증하지 않았다. 같은 실행에서 `RELATION.CONTAINS`가 89건이 됐다 —
 `devtmpfs`를 수집 대상으로 되돌려 Filesystem 관계가 60 → 70건이 된 결과다(Disk 19 + Filesystem 70).
 
 관계 쌍에 본체 전용 `DISTINCT ON`을 적용하지 않는다. IP 본체는 원천 PK마다 하나지만
@@ -435,4 +493,45 @@ ORDER BY sourceci,targetci;
 `USES`는 CDM 표준 밖의 로컬 확장이다. 표준 경로는 `NET.IPINTERFACE`를 경유하며, 그 경로를
 택하지 않은 이유는 [관계 설계](../../../design/ci/relations.md)와
 [네트워크 CI 모델](../../../knowledge/maximo/network-ci-model.md)에 있다.
-`netport_fk`가 없는 IP는 본체만 남기고 Computer와 연결하지 않는다.
+`netport_fk` 유무는 이 직접 관계의 조건이 아니다. `view_ipaddress_device_v2`에 Device–IP 쌍이 있으면
+`USES`로 연결하고, Interface를 도입할 때만 `netport_fk`를 별도로 사용한다.
+
+### Network Cluster → 물리 Switch — 2026-09-17
+
+출발 분류는 `SYS.COMPUTERSYSTEMCLUSTER`, 도착은 `SYS.GENERICSWITCH`다. 관계 코드는 기존
+접두어 없는 `FEDERATES`이며 카디널리티는 `1:N`, 나머지 플래그는 모두 해제한다. 기존
+`RELATION.FEDERATES`와 그 imported 규칙은 수정하지 않는다.
+
+포트마다 같은 연결이 반복되므로 `view_netport_v1`을 물리 장비별로 먼저 집계한다. 한 물리 장비가
+정확히 하나의 Switch Cluster에 연결된 경우에만 한 관계 쌍을 만든다.
+
+```sql
+WITH network_info AS (
+    SELECT n.second_device_fk AS physical_pk,
+           CASE WHEN COUNT(DISTINCT n.device_fk) = 1
+                THEN MIN(n.device_fk) END AS cluster_pk,
+           COUNT(DISTINCT n.device_fk) AS cluster_count,
+           COUNT(DISTINCT NULLIF(TRIM(c.details->>'fw_device_type'), ''))
+               AS network_kind_count,
+           MIN(NULLIF(TRIM(c.details->>'fw_device_type'), '')) AS network_kind
+    FROM view_netport_v1 n
+    JOIN view_device_v2 p ON p.device_pk = n.second_device_fk
+    JOIN view_device_v2 c ON c.device_pk = n.device_fk
+    WHERE p.type = 'physical' AND p.network_device = true
+      AND (p.physicalsubtype IS NULL OR p.physicalsubtype <> 'Network Printer')
+      AND c.type = 'cluster' AND c.network_device = true
+    GROUP BY n.second_device_fk
+)
+SELECT 'D42:DEVICE:' || CAST(cluster_pk AS varchar) AS sourceci,
+       'D42:DEVICE:' || CAST(physical_pk AS varchar) AS targetci,
+       'FEDERATES' AS relationnum
+FROM network_info
+WHERE cluster_count = 1
+  AND network_kind_count = 1
+  AND network_kind = 'Switch'
+ORDER BY sourceci,targetci;
+```
+
+제품 조회 정의와 같은 조건에서 `.68` 2쌍, `.35` 2쌍이다. 코드의 건수·페이지 조회와 포트 중복 제거,
+Cluster→물리 Switch 방향은 자동 테스트했다. 실제 저장은 MAS UI에 위 분류 규칙을 등록한 뒤
+`./run.sh ci-relation`으로 조회=적재, 재실행 ID 유지, UI 토폴로지를 확인한다.

@@ -1,7 +1,7 @@
 # Device CI 기준정보 설계
 
-> 상태: 2차 추천안 완료 · MAS UI 미적용 · 2026-09-16.
-> 범위: Switch CI 승격, 물리 Printer ACTCI·CI 분류와 속성 세트.
+> 상태: 2차 추천안 완료 · Network Cluster 관계 결정 · MAS UI 미적용 · 2026-09-17.
+> 범위: Switch CI 승격, 물리 Printer ACTCI·CI 분류와 속성 세트, Network Cluster ACTCI 관계.
 > 근거: [Device 통합 설계](device.md), [Maximo 분류 관측](../../knowledge/maximo/device-ci-classifications.md), [Device 매핑](../../data-mapping/ci/types/device.md).
 
 이 문서는 MAS의 **분류**와 **승격 범위** 화면에 입력할 설계다. 등록 SQL은 만들지 않는다.
@@ -12,6 +12,8 @@
 
 - Switch Actual CI는 기존 `SYS.GENERICSWITCH`를 그대로 사용한다.
 - Switch Authorized CI는 기능 분류를 재사용하지 않고 `CI.GENERICSWITCH`를 새로 만든다.
+- Network Cluster Actual CI는 기존 `SYS.COMPUTERSYSTEMCLUSTER`를 사용하고 물리 Switch와 합치지 않는다.
+- 기존 접두어 없는 `FEDERATES` 정의에 Cluster→Switch `1:N` 규칙을 추가한다. 관계 정의는 새로 만들지 않는다.
 - 물리 Printer는 기존 기능 분류 `SYS.PRINTER`·`CI.PRINTER`를 사용하지 않는다.
 - 물리 Printer 본체용 `SYS.PHYSICALPRINTER`와 `CI.PHYSICALPRINTER`를 새로 만든다.
 - 두 승격 범위는 우선 본체 한 종류만 포함한다. Interface·IP·SNMP·기능 Printer는 관계 구현 후 별도로 확장한다.
@@ -27,6 +29,7 @@
 | --- | --- | --- | --- | --- | --- |
 | Switch Actual CI | `SYS.GENERICSWITCH` | 기존 `ACTUALCIROOTCLASS` | ACTCI | 선택 | 기존 분류 수정 |
 | Switch Authorized CI | `CI.GENERICSWITCH` | `CI.COMPUTERSYSTEM` | CI | 선택 | 신규 |
+| Network Cluster Actual CI | `SYS.COMPUTERSYSTEMCLUSTER` | 기존 `ACTUALCIROOTCLASS` | ACTCI | 기존 선택 | 기존 분류 사용 |
 | 물리 Printer Actual CI | `SYS.PHYSICALPRINTER` | `ACTUALCIROOTCLASS` | ACTCI | 선택 | 신규 |
 | 물리 Printer Authorized CI | `CI.PHYSICALPRINTER` | `CI.COMPUTERSYSTEM` | CI | 선택 | 신규 |
 
@@ -120,7 +123,28 @@ ASSETATTRID가 있는 값만 전달하므로, 수집하지 않는 99개 전체�
 | Generic Switch | `SYS.GENERICSWITCH` | `CI.GENERICSWITCH` | 본체 1:1 한 행 |
 | Physical Printer | `SYS.PHYSICALPRINTER` | `CI.PHYSICALPRINTER` | 본체 1:1 한 행 |
 
-이번 승격 범위에는 관련 분류를 추가하지 않는다. 본체만 있는 범위는 새 관계 규칙이 필요하지 않다.
+Network Cluster는 이번 단계에서 기존 `SYS.COMPUTERSYSTEMCLUSTER` ACTCI로 먼저 수집한다. 현재
+`CI.COMPUTERSYSTEMCLUSTER`와 이 분류를 시작점으로 하는 CITEMPLATE는 없으므로 Authorized CI 승격은
+별도 설계·등록 전까지 활성화하지 않는다.
+
+접두어 없는 `FEDERATES` 관계 정의는 이미 `UNIDIRECTIONAL`, `USEWITH=CI`, 분류 미지정,
+가져옴 해제로 존재하고 규칙은 0건이다. 관계를 새로 만들지 않고 다음 규칙만 MAS UI에서 추가한다.
+
+| Source 분류 | Target 분류 | Cardinality | 변경 전파 | 포함 | 대상 상위 여부 | 가져옴 |
+| --- | --- | --- | :---: | :---: | :---: | :---: |
+| `SYS.COMPUTERSYSTEMCLUSTER` | `SYS.GENERICSWITCH` | `1:N` | 해제 | 해제 | 해제 | 해제 |
+
+개념 관계는 `Network Cluster → FEDERATES → Network Device`이며, 현재 확인된 구현 대상이 Switch뿐이라
+위 분류쌍으로 제한한다. 기존 imported CDM 정의 `RELATION.FEDERATES`와 그 `N:1` 규칙은 수정하지 않는다.
+Cluster의 관리 IP와 Interface는 이 구성 관계에 포함되지 않는다. 관리 IP는 기존 접두어 없는 `USES`에
+다음 규칙을 추가해 직접 연결하고, Interface는 별도 관계로 설계한다.
+
+| Source 분류 | Target 분류 | Cardinality | 변경 전파 | 포함 | 대상 상위 여부 | 가져옴 |
+| --- | --- | --- | :---: | :---: | :---: | :---: |
+| `SYS.COMPUTERSYSTEMCLUSTER` | `NET.IPADDRESS` | `N:N` | 해제 | 해제 | 해제 | 해제 |
+
+이 `USES` 규칙은 2026-09-17 사용자가 MAS UI에서 등록했다. 관계 정의를 새로 만들지 않는다.
+
 Switch에 이미 있는 `NET.IPINTERFACE`·`NET.L2INTERFACE` 포함 규칙과
 `SYS.SNMPSYSTEMGROUP` 상세 규칙은 Actual CI 수집·관계가 구현되지 않았으므로 사용하지 않는다.
 Printer도 Interface→IP 경로가 설계되기 전에는 직접 IP 관계를 만들지 않는다.
@@ -135,9 +159,11 @@ Printer도 Interface→IP 경로가 설계되기 전에는 직접 IP 관계를 �
 3. 기존 `SYS.GENERICSWITCH`의 ACTCI Use With에서 Top Level을 선택하고 BIOS 출시일 속성을 추가한다.
 4. `SYS.PHYSICALPRINTER`와 `CI.PHYSICALPRINTER`를 만들고 2절의 Use With·상위·Top Level을 설정한다.
 5. 3·4절 속성을 순서대로 등록한다. 기존 속성은 선택해서 재사용하고 Printer 전용 세 개만 새로 만든다.
-6. 승격 범위 애플리케이션에서 5절의 본체 1:1 범위 두 개를 만든다.
-7. 각 승격 범위에서 **유효성 검증**을 실행한다.
-8. 테스트 Actual CI 한 건씩으로 승격·속성 표시를 확인한 뒤 운영 범위를 확장한다.
+6. 관계 애플리케이션에서 기존 `USES`의 Cluster→IP `N:N` 규칙이 등록됐는지 확인한다.
+7. 기존 `FEDERATES`를 열고 5절의 Cluster→Switch 규칙 한 줄을 추가한다.
+8. 승격 범위 애플리케이션에서 5절의 본체 1:1 범위 두 개를 만든다.
+9. 각 승격 범위에서 **유효성 검증**을 실행한다.
+10. 테스트 Actual CI 한 건씩으로 승격·속성 표시를 확인한 뒤 운영 범위를 확장한다.
 
 승격 범위의 최상위 두 값은 저장 후 직접 변경할 수 없으므로 잘못 등록하면 범위를 삭제하고 다시 만든다.
 운영 반영에는 가능하면 MAS Migration Manager 또는 환경의 표준 구성 이관 절차를 사용한다.
@@ -149,6 +175,8 @@ Printer도 Interface→IP 경로가 설계되기 전에는 직접 IP 관계를 �
 - 네 분류의 Use With·상위·Top Level·전역 범위가 2절과 같다.
 - Switch CI 속성 18개, Printer ACTCI·CI 속성 각 13개가 타입·순서·필수 여부와 일치한다.
 - Printer 신규 속성은 전역 정의가 각각 한 건뿐이다.
+- `USES`에 Cluster→IP `N:N` 비포함 규칙이 정확히 한 건이다.
+- `FEDERATES`에 Cluster→Switch `1:N` 비포함 규칙이 정확히 한 건이고 기존 관계 정의는 변경되지 않았다.
 - 두 승격 범위의 유효성 검사가 성공한다.
 - Switch 승격 후 CI 분류가 `CI.GENERICSWITCH`이고, 이름·모델·제조사·시리얼·MAC·GenericType이 유지된다.
 - Printer 구현 후 승격한 CI에서 이름·모델·제조사·시리얼·RAM·MAC·트레이·Firmware가 유지된다.

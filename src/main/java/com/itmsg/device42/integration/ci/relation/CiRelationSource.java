@@ -30,12 +30,16 @@ public enum CiRelationSource {
     DB_INSTANCE_RUNS_ON_DEVICE("RELATION.RUNSON", Queries.DB_INSTANCE_COUNT, Queries.DB_INSTANCE_PAGE),
 
     /**
-     * Computer → IP. 근거: view_ipaddress_device_v2 의 device_fk·ipaddress_fk.
+     * Device → IP. 근거: view_ipaddress_device_v2 의 device_fk·ipaddress_fk.
      * 접두어 없는 USES 는 CDM 표준 밖의 로컬 확장이다. 표준 경로는 IPINTERFACE 를 경유하지만
      * 원천에 그 계층이 없고 netport_fk 가 없는 IP 가 10~16% 라 연결이 줄어든다.
      * 사유와 대조는 design/ci/relations.md 의 IP 절에 있다.
      */
-    COMPUTER_USES_IP("USES", Queries.COMPUTER_IP_COUNT, Queries.COMPUTER_IP_PAGE);
+    DEVICE_USES_IP("USES", Queries.DEVICE_IP_COUNT, Queries.DEVICE_IP_PAGE),
+
+    /** Network Cluster → 물리 Network Device. 포트 반복은 물리 장비별 집계로 한 쌍만 남긴다. */
+    NETWORK_CLUSTER_FEDERATES_DEVICE(
+            "FEDERATES", Queries.NETWORK_CLUSTER_COUNT, Queries.NETWORK_CLUSTER_PAGE);
 
     private final String relationNum;
     private final String countQuery;
@@ -192,24 +196,75 @@ public enum CiRelationSource {
                 """;
 
         /** 장비-IP 연결은 배열 전개 대신 전용 연결 뷰를 쓴다. 같은 쌍 수를 돌려준다. */
-        static final String COMPUTER_IP_COUNT = """
+        static final String DEVICE_IP_COUNT = """
                 SELECT COUNT(*)
                 FROM view_ipaddress_device_v2 x
                 JOIN view_device_v2 d ON d.device_pk = x.device_fk
                 WHERE
-                """ + CiSourceFilter.COMPUTER;
+                """ + CiSourceFilter.DEVICE;
 
-        static final String COMPUTER_IP_PAGE = """
-                WITH computer AS (
+        static final String DEVICE_IP_PAGE = """
+                WITH device AS (
                     SELECT d.device_pk
                     FROM view_device_v2 d
                     WHERE
-                """ + CiSourceFilter.COMPUTER + """
+                """ + CiSourceFilter.DEVICE + """
                 )
-                SELECT 'D42:DEVICE:' || CAST(c.device_pk AS varchar) AS sourceci,
+                SELECT 'D42:DEVICE:' || CAST(d.device_pk AS varchar) AS sourceci,
                        'D42:IPADDRESS:' || CAST(x.ipaddress_fk AS varchar) AS targetci
                 FROM view_ipaddress_device_v2 x
-                JOIN computer c ON c.device_pk = x.device_fk
+                JOIN device d ON d.device_pk = x.device_fk
+                ORDER BY sourceci, targetci
+                LIMIT %d OFFSET %d
+                """;
+
+        static final String NETWORK_CLUSTER_COUNT = """
+                WITH network_info AS (
+                    SELECT n.second_device_fk AS physical_pk,
+                           CASE WHEN COUNT(DISTINCT n.device_fk) = 1
+                                THEN MIN(n.device_fk) END AS cluster_pk,
+                           COUNT(DISTINCT n.device_fk) AS cluster_count,
+                           COUNT(DISTINCT NULLIF(TRIM(c.details->>'fw_device_type'), ''))
+                               AS network_kind_count,
+                           MIN(NULLIF(TRIM(c.details->>'fw_device_type'), '')) AS network_kind
+                    FROM view_netport_v1 n
+                    JOIN view_device_v2 p ON p.device_pk = n.second_device_fk
+                    JOIN view_device_v2 c ON c.device_pk = n.device_fk
+                    WHERE p.type = 'physical' AND p.network_device = true
+                      AND (p.physicalsubtype IS NULL OR p.physicalsubtype <> 'Network Printer')
+                      AND c.type = 'cluster' AND c.network_device = true
+                    GROUP BY n.second_device_fk
+                )
+                SELECT COUNT(*)
+                FROM network_info
+                WHERE cluster_count = 1
+                  AND network_kind_count = 1
+                  AND network_kind = 'Switch'
+                """;
+
+        static final String NETWORK_CLUSTER_PAGE = """
+                WITH network_info AS (
+                    SELECT n.second_device_fk AS physical_pk,
+                           CASE WHEN COUNT(DISTINCT n.device_fk) = 1
+                                THEN MIN(n.device_fk) END AS cluster_pk,
+                           COUNT(DISTINCT n.device_fk) AS cluster_count,
+                           COUNT(DISTINCT NULLIF(TRIM(c.details->>'fw_device_type'), ''))
+                               AS network_kind_count,
+                           MIN(NULLIF(TRIM(c.details->>'fw_device_type'), '')) AS network_kind
+                    FROM view_netport_v1 n
+                    JOIN view_device_v2 p ON p.device_pk = n.second_device_fk
+                    JOIN view_device_v2 c ON c.device_pk = n.device_fk
+                    WHERE p.type = 'physical' AND p.network_device = true
+                      AND (p.physicalsubtype IS NULL OR p.physicalsubtype <> 'Network Printer')
+                      AND c.type = 'cluster' AND c.network_device = true
+                    GROUP BY n.second_device_fk
+                )
+                SELECT 'D42:DEVICE:' || CAST(cluster_pk AS varchar) AS sourceci,
+                       'D42:DEVICE:' || CAST(physical_pk AS varchar) AS targetci
+                FROM network_info
+                WHERE cluster_count = 1
+                  AND network_kind_count = 1
+                  AND network_kind = 'Switch'
                 ORDER BY sourceci, targetci
                 LIMIT %d OFFSET %d
                 """;

@@ -26,5 +26,10 @@ public final class CiSourceFilter {
                 d.type = 'physical'
                 AND d.network_device = true
             )
+            OR (
+                d.type = 'cluster'
+                AND d.network_device = true
+                AND NULLIF(TRIM(d.details->>'fw_device_type'), '') = 'Switch'
+            )
             """;
 }

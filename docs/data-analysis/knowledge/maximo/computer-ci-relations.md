@@ -3,6 +3,7 @@
 > 관측: 2026-09-15 · Maximo BLUDB / MAXIMO. 정의 조회 및 OS–Computer 한 쌍의 적재·승격 검증.
 > 재검증: 2026-09-16 · MAS UI에서 신규 VIRTUALIZES와 Host→VM 두 규칙 등록,
 > 읽기 전용 재조회 및 실제 관계 연결 확인.
+> 추가 설정: 2026-09-17 · 접두어 없는 USES에 Computer·VM·Network Cluster→IP `N:N` 규칙 등록.
 > 재조회: [computer-ci-relations.sql](../../exploration-queries/maximo/computer-ci-relations.sql).
 > 로컬 결과: `local/db-access-kit/work/ci-relations-20260915/maximo/`,
 > `local/db-access-kit/work/host-vm-20260916/maximo/`.
@@ -26,10 +27,14 @@ C는 SYS.COMPUTERSYSTEM 또는 SYS.VIRTUALCOMPUTERSYSTEM을 뜻한다.
 | SYS.COMPUTERSYSTEM | RELATION.VIRTUALIZES | SYS.COMPUTERSYSTEM | 1:1 | 1 | 1 | 1 |
 | SYS.COMPUTERSYSTEM | VIRTUALIZES | SYS.VIRTUALCOMPUTERSYSTEM | 1:N | 1 | 0 | 0 |
 | SYS.VIRTUALCOMPUTERSYSTEM | VIRTUALIZES | SYS.VIRTUALCOMPUTERSYSTEM | 1:N | 1 | 0 | 0 |
+| SYS.COMPUTERSYSTEM | USES | NET.IPADDRESS | N:N | 0 | 0 | 0 |
+| SYS.VIRTUALCOMPUTERSYSTEM | USES | NET.IPADDRESS | N:N | 0 | 0 | 0 |
+| SYS.COMPUTERSYSTEMCLUSTER | USES | NET.IPADDRESS | N:N | 0 | 0 | 0 |
 | SYS.OPERATINGSYSTEM | RELATION.BOOTSFROM | SYS.FILESYSTEM | 1:1 | 0 | 0 | 0 |
 | C | RELATION.CONTAINS | SYS.CPU | 1:N | 1 | 0 | 0 |
 
-Computer와 IPADDRESS의 직접 규칙은 양방향 모두 없다.
+2026-09-15 최초 관측에는 Computer와 IPADDRESS의 직접 규칙이 없었다. 이후 별도 코드 `USES`에
+Computer·VM 규칙을 등록했고, 2026-09-17 Network Cluster 규칙을 추가했다.
 접두어를 포함한 기존 `RELATION.VIRTUALIZES`에는
 SYS.COMPUTERSYSTEM → SYS.VIRTUALCOMPUTERSYSTEM 규칙이 없다. 2026-09-16 별도 코드
 `VIRTUALIZES`에 해당 Host→VM 규칙을 새로 등록했다.

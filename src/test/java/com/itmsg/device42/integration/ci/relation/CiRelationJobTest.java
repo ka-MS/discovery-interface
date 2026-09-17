@@ -27,12 +27,14 @@ class CiRelationJobTest {
                 CiRelationSource.COMPUTER_CONTAINS_FILESYSTEM,
                 CiRelationSource.HOST_VIRTUALIZES_VM,
                 CiRelationSource.DB_INSTANCE_RUNS_ON_DEVICE,
-                CiRelationSource.COMPUTER_USES_IP);
+                CiRelationSource.DEVICE_USES_IP,
+                CiRelationSource.NETWORK_CLUSTER_FEDERATES_DEVICE);
         assertThat(CiRelationSource.COMPUTER_CONTAINS_DISK.relationNum()).isEqualTo("RELATION.CONTAINS");
         assertThat(CiRelationSource.COMPUTER_CONTAINS_FILESYSTEM.relationNum()).isEqualTo("RELATION.CONTAINS");
         assertThat(CiRelationSource.HOST_VIRTUALIZES_VM.relationNum()).isEqualTo("VIRTUALIZES");
         assertThat(CiRelationSource.DB_INSTANCE_RUNS_ON_DEVICE.relationNum()).isEqualTo("RELATION.RUNSON");
-        assertThat(CiRelationSource.COMPUTER_USES_IP.relationNum()).isEqualTo("USES");
+        assertThat(CiRelationSource.DEVICE_USES_IP.relationNum()).isEqualTo("USES");
+        assertThat(CiRelationSource.NETWORK_CLUSTER_FEDERATES_DEVICE.relationNum()).isEqualTo("FEDERATES");
     }
 
     @Test
@@ -95,20 +97,44 @@ class CiRelationJobTest {
 
     /** 접두어 없는 USES 다. RELATION.USES 로 쓰면 규칙이 없어 MERGE 가 전건 거부한다. */
     @Test
-    void computerIpRelationUsesTheJunctionViewAndTheBareUsesCode() {
-        String page = CiRelationSource.COMPUTER_USES_IP.pageQuery(0, 10);
+    void deviceIpRelationUsesTheJunctionViewDeviceFilterAndBareUsesCode() {
+        String page = CiRelationSource.DEVICE_USES_IP.pageQuery(0, 10);
 
         assertThat(page)
                 .contains("view_ipaddress_device_v2")
-                .contains("c.device_pk = x.device_fk")
-                .contains("CAST(c.device_pk AS varchar) AS sourceci")
+                .contains("d.device_pk = x.device_fk")
+                .contains("CAST(d.device_pk AS varchar) AS sourceci")
                 .contains("CAST(x.ipaddress_fk AS varchar) AS targetci")
+                .contains("d.type = 'cluster'")
+                .contains("d.network_device = true")
+                .contains("fw_device_type")
                 .doesNotContain("device_fks")
                 .doesNotContain("DISTINCT ON");
-        assertThat(CiRelationSource.COMPUTER_USES_IP.countQuery())
+        assertThat(CiRelationSource.DEVICE_USES_IP.countQuery())
                 .contains("view_ipaddress_device_v2")
+                .contains("d.type = 'cluster'")
                 .contains("COUNT(*)");
-        assertThat(CiRelationSource.COMPUTER_USES_IP.relationNum()).isNotEqualTo("RELATION.USES");
+        assertThat(CiRelationSource.DEVICE_USES_IP.relationNum()).isNotEqualTo("RELATION.USES");
+    }
+
+    /** 접두어 없는 FEDERATES 관계는 논리 클러스터에서 물리 스위치 방향으로 적재한다. */
+    @Test
+    void networkClusterFederatesPhysicalSwitchAndDeduplicatesRepeatedPorts() {
+        String page = CiRelationSource.NETWORK_CLUSTER_FEDERATES_DEVICE.pageQuery(0, 10);
+
+        assertThat(page)
+                .contains("GROUP BY n.second_device_fk")
+                .contains("COUNT(DISTINCT n.device_fk) = 1")
+                .contains("CAST(cluster_pk AS varchar) AS sourceci")
+                .contains("CAST(physical_pk AS varchar) AS targetci")
+                .contains("c.type = 'cluster'")
+                .contains("p.type = 'physical'")
+                .contains("p.physicalsubtype <> 'Network Printer'")
+                .contains("network_kind = 'Switch'")
+                .doesNotContain("RELATION.FEDERATES");
+        assertThat(CiRelationSource.NETWORK_CLUSTER_FEDERATES_DEVICE.countQuery())
+                .contains("GROUP BY n.second_device_fk")
+                .contains("COUNT(*)");
     }
 
     @Test
@@ -123,7 +149,7 @@ class CiRelationJobTest {
             assertThat(source.countQuery()).as("%s 건수 SQL", source).contains("COUNT(*)");
             assertThat(source.relationNum()).as("%s 관계 코드", source)
                     .isIn("RELATION.INSTALLEDON", "RELATION.CONTAINS", "VIRTUALIZES",
-                            "RELATION.RUNSON", "USES");
+                            "RELATION.RUNSON", "USES", "FEDERATES");
         }
     }
 
@@ -184,7 +210,7 @@ class CiRelationJobTest {
         new CiRelationJob(factory, writer).run();
 
         // OS 소스만 배치 크기보다 1건 많아 두 페이지가 돌고,
-        // Disk·Filesystem·Host→VM은 0건이라 write()를 부르지 않는다.
+        // 나머지 관계 소스는 0건이라 write()를 부르지 않는다.
         verify(writer, times(2)).write(anyList());
 
         var executedQueries = ArgumentCaptor.forClass(String.class);
@@ -249,13 +275,14 @@ class CiRelationJobTest {
         new CiRelationJob(factory, writer).run();
 
         /*
-         * openConnection() 7회: 소스1 실패(1) + 소스2 DISK 건수·페이지(2)
+         * openConnection() 8회: 소스1 실패(1) + 소스2 DISK 건수·페이지(2)
          * + 소스3 FILESYSTEM 건수(1) + 소스4 HOST_VIRTUALIZES_VM 건수(1)
-         * + 소스5 DB_INSTANCE_RUNS_ON_DEVICE 건수(1) + 소스6 COMPUTER_USES_IP 건수(1).
+         * + 소스5 DB_INSTANCE_RUNS_ON_DEVICE 건수(1) + 소스6 DEVICE_USES_IP 건수(1)
+         * + 소스7 NETWORK_CLUSTER_FEDERATES_DEVICE 건수(1).
          * atLeast(values().length)이던 이전 단언은 "루프가 소스2 직후 멈춘 회귀"도
          * 통과시켰다(그 경우도 3회는 채워진다). 정확한 횟수로 조인다.
          */
-        verify(factory, times(7)).openConnection();
+        verify(factory, times(8)).openConnection();
         verify(writer, atLeastOnce()).write(anyList());
 
         /*
@@ -265,7 +292,7 @@ class CiRelationJobTest {
          * 직접 캡처해 FILESYSTEM 고유 테이블(view_mountpoint_v2)이 조회됐는지 확인한다.
          */
         var executedQueries = ArgumentCaptor.forClass(String.class);
-        verify(statement, times(6)).executeQuery(executedQueries.capture());
+        verify(statement, times(7)).executeQuery(executedQueries.capture());
         assertThat(executedQueries.getAllValues())
                 .as("세 번째 소스(FILESYSTEM)의 건수 쿼리가 실제로 실행됐다")
                 .anyMatch(sql -> sql.contains("view_mountpoint_v2"));
@@ -276,8 +303,11 @@ class CiRelationJobTest {
                 .as("다섯 번째 소스(DB_INSTANCE_RUNS_ON_DEVICE)의 건수 쿼리가 실제로 실행됐다")
                 .anyMatch(sql -> sql.contains("view_databaseinstance_v2"));
         assertThat(executedQueries.getAllValues())
-                .as("여섯 번째 소스(COMPUTER_USES_IP)의 건수 쿼리가 실제로 실행됐다")
+                .as("여섯 번째 소스(DEVICE_USES_IP)의 건수 쿼리가 실제로 실행됐다")
                 .anyMatch(sql -> sql.contains("view_ipaddress_device_v2"));
+        assertThat(executedQueries.getAllValues())
+                .as("일곱 번째 소스(NETWORK_CLUSTER_FEDERATES_DEVICE)의 건수 쿼리가 실제로 실행됐다")
+                .anyMatch(sql -> sql.contains("view_netport_v1"));
     }
 
     /**

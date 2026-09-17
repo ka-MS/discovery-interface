@@ -9,6 +9,7 @@ import com.itmsg.device42.dto.maximo.ci.ClassificationDefinition;
 import com.itmsg.device42.enums.ci.CiClassification;
 import com.itmsg.device42.enums.ci.CiSpec;
 import com.itmsg.device42.enums.ci.ComputerSpec;
+import com.itmsg.device42.enums.ci.ComputerSystemClusterSpec;
 import com.itmsg.device42.enums.ci.GenericComputerSystemSpec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -164,6 +165,16 @@ public class DeviceCiIntegrate implements CiIntegrationTask {
             log.warn("물리 Printer 분류가 미정이라 건너뜁니다. devicePk={}", source.devicePk());
             return null;
         }
+        if ("cluster".equals(source.type()) && Boolean.TRUE.equals(source.networkDevice())) {
+            if (Integer.valueOf(1).equals(source.networkKindCount())
+                    && "Switch".equals(source.networkKind())) {
+                return CiClassification.COMPUTER_SYSTEM_CLUSTER;
+            }
+            log.warn("네트워크 Cluster 종류를 판정할 수 없어 건너뜁니다. devicePk={}, "
+                            + "networkKind={}, networkKindCount={}",
+                    source.devicePk(), source.networkKind(), source.networkKindCount());
+            return null;
+        }
         if ("virtual".equals(source.type()) && !Boolean.TRUE.equals(source.networkDevice())) {
             return CiClassification.VIRTUAL_COMPUTER;
         }
@@ -192,7 +203,8 @@ public class DeviceCiIntegrate implements CiIntegrationTask {
                 rs.getLong("device_pk"), rs.getString("type"), rs.getString("physicalsubtype"),
                 nullableBoolean(rs, "network_device"), nullableLong(rs, "cluster_pk"),
                 rs.getString("network_kind"), nullableInteger(rs, "network_kind_count"),
-                nullableInteger(rs, "cluster_count"), rs.getString("name"), rs.getString("notes"),
+                nullableInteger(rs, "cluster_count"), rs.getString("snmp_location"),
+                rs.getString("name"), rs.getString("notes"),
                 rs.getString("serial_no"), rs.getString("uuid"), rs.getString("last_discovered"),
                 rs.getString("model"), rs.getString("manufacturer"), rs.getBigDecimal("ram"),
                 rs.getString("ram_size_type"), nullableInteger(rs, "total_cpus"),
@@ -216,6 +228,13 @@ public class DeviceCiIntegrate implements CiIntegrationTask {
                                                 ActCiUpsert parent, CiDefinitionCache definitions,
                                                 CiClassification classification) {
         List<ActCiSpecUpsert> specs = new ArrayList<>();
+        if (classification == CiClassification.COMPUTER_SYSTEM_CLUSTER) {
+            addSpec(specs, definitions, parent, ComputerSystemClusterSpec.MANAGED_SYSTEM_NAME,
+                    source.name(), null);
+            addSpec(specs, definitions, parent, ComputerSystemClusterSpec.LOCATION_TAG,
+                    source.snmpLocation(), null);
+            return List.copyOf(specs);
+        }
         addSpec(specs, definitions, parent, ComputerSpec.NAME, source.name(), null);
         addSpec(specs, definitions, parent, ComputerSpec.SERIAL_NUMBER, source.serialNo(), null);
         addSpec(specs, definitions, parent, ComputerSpec.UUID, source.uuid(), null);
@@ -331,7 +350,15 @@ public class DeviceCiIntegrate implements CiIntegrationTask {
                 GROUP BY n.second_device_fk
             )
             SELECT d.device_pk, d.type, d.physicalsubtype, d.network_device,
-                ni.cluster_pk, ni.network_kind, ni.network_kind_count, ni.cluster_count,
+                ni.cluster_pk,
+                CASE WHEN d.type = 'cluster'
+                     THEN NULLIF(TRIM(d.details->>'fw_device_type'), '')
+                     ELSE ni.network_kind END AS network_kind,
+                CASE WHEN d.type = 'cluster'
+                          AND NULLIF(TRIM(d.details->>'fw_device_type'), '') IS NOT NULL
+                     THEN 1 ELSE ni.network_kind_count END AS network_kind_count,
+                ni.cluster_count,
+                NULLIF(TRIM(d.details->>'snmp_location'), '') AS snmp_location,
                 'D42:DEVICE:' || CAST(d.device_pk AS varchar) AS source_id,
                 d.name, d.notes, d.serial_no, d.uuid, d.last_discovered,
                 h.name AS model, v.name AS manufacturer,

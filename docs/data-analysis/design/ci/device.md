@@ -1,6 +1,7 @@
 # Device 기준 CI 통합 수집 설계
 
-> 상태: 1차 Device 통합·Switch ACTCI 구현 완료, 2차 기준정보 추천 설계 완료·MAS UI 미적용 · 2026-09-16.
+> 상태: 1차 Device 통합·Switch ACTCI 구현 완료, 2차 기준정보 추천 설계 완료,
+> Network Cluster ACTCI·관계 조회 구현 완료, MAS UI 관계 규칙·실적재 미적용 · 2026-09-17.
 > 근거: [D42 두 서버 원천 조사](../../knowledge/device42/device-ci-source.md), [Maximo 분류·스펙 조사](../../knowledge/maximo/device-ci-classifications.md).
 > 실행 계획: [Device CI 통합 구현 계획](../../../superpowers/plans/2026-09-15-device-ci-integration.md).
 > 현재 구현 정본은 [Device 매핑](../../data-mapping/ci/types/device.md)이다. 이번 1차 작업은 저장소 코드와 문서만 변경했으며 Maximo 기준정보·업무 데이터는 변경하지 않았다.
@@ -10,8 +11,9 @@
 
 **Computer 수집기를 Device 수집기로 넓히고, 한 조회 결과에서 종류별 분류와 스펙을 선택하는 구성이 적합하다.**
 기존 조인에 cluster 연결 집계를 더해 Computer·VM·물리 네트워크 장비를 함께 읽을 수 있다.
-1차 지원 투영은 .68에서 36행(Computer/VM 34 + Switch 2), .35에서 72행(70 + 2)이며
-각각 장비 PK도 같은 개수다. 물리 Printer 후보까지 포함하면 37 / 73행이지만 1차 적재에서는 제외한다.
+1차 지원 투영은 .68에서 36행(Computer/VM 34 + Switch 2), .35에서 72행(70 + 2)이었다.
+Network Cluster 2개씩을 추가한 현재 Device 투영은 38 / 74행이며 각각 장비 PK도 같은 개수다.
+물리 Printer는 계속 적재에서 제외한다.
 
 사용자와 합의한 범위는 다음과 같다.
 
@@ -20,6 +22,8 @@
 - 관계는 CI 본체 적재 이후의 기존 별도 단계에서 키를 재조회한다. 본체 DTO를 관계 처리까지 쌓아두지 않는다.
 - Switch는 `second_device_fk`로 연결된 단일 cluster의 단일 `fw_device_type=Switch`일 때만
   `SYS.GENERICSWITCH`로 분류한다. Router·누락·충돌은 적재하지 않고 진단 로그로 남긴다.
+- Switch stack의 논리 객체인 cluster도 기존 `SYS.COMPUTERSYSTEMCLUSTER`로 별도 수집한다.
+  물리 Switch와 합치지 않고 기존 `FEDERATES`에 `1:N` 분류 규칙을 추가해 연결한다.
 - Printer는 기존 `SYS.PRINTER`를 본체 분류로 사용하지 않고, 물리 Printer 전용 ACTCI·CI 분류와 속성 세트를 사용한다.
 
 **조회 통합과 분류 선정은 구분해야 한다.** `network_device=true`만으로는 부족하지만,
@@ -39,7 +43,8 @@ cluster 연결의 `fw_device_type`으로 관측 표본의 Switch를 명확히 �
 | 위 조건이 Router·NULL·복수 cluster·종류 충돌 | 미판별 Network | 없음 | 1차 적재 제외, 원천 진단값과 건수 로그 |
 | `type='physical' AND physicalsubtype='Network Printer'` | Printer | `SYS.PHYSICALPRINTER` 제안 | 1차 적재 제외, MAS 기준정보 적용 후 활성화 |
 | Network Printer subtype과 network 플래그 true가 겹침 | 판정 충돌 | 없음 | Printer 제외를 우선하고 로그로 남김 |
-| cluster·Docker Container·unknown·PDU 및 나머지 | 이번 확장 대상 밖 | 없음 | 별도 관리 단위 결정 전 포함하지 않음 |
+| `type='cluster' AND network_device=true AND fw_device_type='Switch'` | Network Cluster | `SYS.COMPUTERSYSTEMCLUSTER` | 구현 완료. 논리 스택 본체로 수집하고 물리 Switch와 `FEDERATES` 관계 생성 |
+| Docker Container·unknown·PDU 및 나머지 | 이번 확장 대상 밖 | 없음 | 별도 관리 단위 결정 전 포함하지 않음 |
 
 현행 COMPUTER 조건의 물리 subtype은 Generic·Rackable·Blade·WorkStation·ThinClient·Laptop,
 가상 subtype은 Internal VM·Amazon EC2 Instance·VMWare·Hyper-V이며 network 플래그 false/NULL이다.
@@ -159,7 +164,14 @@ Switch 본체에는 `SYS.GENERICSWITCH`가 적합하다. Computer 98개 속성�
 
 물리 스위치의 포트는 직접 소속이 아니라 cluster 쪽에 있다. 대표 MAC은
 `second_device_fk=physical device_pk`인 cluster 포트의 비어 있지 않은 MAC 중 MIN을 사용한다.
-관리 IP와 전체 Network Interface는 본체 스펙으로 압축하지 않고 후속 관계 범위로 남긴다.
+관리 IP는 Cluster→IP `USES`로 직접 연결하고, 전체 Network Interface는 본체 스펙으로 압축하지 않고
+후속 관계 범위로 남긴다.
+
+cluster는 물리 Switch의 대체 레코드가 아니라 관리 IP와 포트를 소유하는 논리적 Network Cluster다.
+기존 `SYS.COMPUTERSYSTEMCLUSTER`로 별도 ACTCI를 만들고, 상위 개념 관계는
+`Network Cluster → FEDERATES → Network Device`로 표현한다. 현재 확인된 규칙은
+`SYS.COMPUTERSYSTEMCLUSTER → SYS.GENERICSWITCH` `1:N`이며 상세 설정은
+[기준정보 설계](device-reference-data.md#5-승격-범위와-관계)를 따른다.
 
 SYS.APPLIANCE.NETWORKSYSTEM는 속성이 많지만 속성 연결과 ACTCI 적용 설정이 비어 있다.
 설정 보완 없이 범용 네트워크 장비의 즉시 대체 분류로 사용하지 않는다.
@@ -187,7 +199,10 @@ Printer도 ACTCI·CI 물리 본체 분류를 신규 생성한다. 정확한 속�
 2. **1차 완료:** Device 본체 후보, cluster 집계, Switch 판정·대표 MAC·분류 전용 GENERICTYPE을 구현한다. Router·Printer·미판별 Network는 제외한다.
 3. **1차 완료:** 매핑 정본을 Device 문서로 이동하고 두 D42의 PK 유일성·Count/조회 일치와 자동 테스트를 검증한다.
 4. **2차 완료:** Switch CI 대상 분류·승격 속성과 물리 Printer ACTCI·CI 분류·속성 세트·관계 범위를 설계했다. MAS UI에는 아직 적용하지 않았다.
-5. **3차 예정:** 기준정보 적용을 확인한 뒤 Printer 분기를 활성화하고 ACTCI 적재·CI 승격·UI·재실행 멱등성을 검증한다.
+5. **코드 완료:** Network Cluster 본체 매핑과 `FEDERATES` 관계 조회를 구현했다. 양 서버의 Device
+   예상 건수는 38/74건이고 Cluster·Switch 관계는 각 2쌍이다. MAS UI 관계 규칙 등록 후 실제 적재,
+   재실행 멱등성과 UI 토폴로지 검증이 남아 있다.
+6. **3차 예정:** 기준정보 적용을 확인한 뒤 Printer 분기를 활성화하고 ACTCI 적재·CI 승격·UI·재실행 멱등성을 검증한다.
 
 관계 확대는 후속 작업이다. 기존 OS→Computer·Computer→Disk·Computer→Filesystem 흐름을 유지하고,
 Device 간 연결·Interface·IP는 관계 원천을 재조회하여 별도 설계한다.
@@ -201,6 +216,8 @@ Device 간 연결·Interface·IP는 관계 원천을 재조회하여 별도 설�
 - 양 서버에서 36 / 72행, Switch 각 2대, 장비 PK 중복 0, cluster·종류 단일성과 대표 MAC 확인.
 - H2 Db2 모드 자동 테스트로 기존 Computer·VM과 Switch·제외 분기를 검증.
 - Switch CI 18개와 Printer ACTCI·CI 13개 속성, 본체 1:1 승격 범위, MAS UI 등록·검증·롤백 기준 설계.
+- `SYS.COMPUTERSYSTEMCLUSTER` 본체 수집과 Cluster→Switch `FEDERATES` 관계 조회 구현. 현재 Device
+  예상 38 / 74행, 관계 각 2쌍이며 실제 Maximo 적재는 UI 규칙 등록 후 검증한다.
 
 제품 Java와 문서는 변경했지만 Maximo 타겟 데이터·기준정보는 변경하지 않았다. 조회 SQL 여섯 파일은
 [탐색 쿼리 목록](../../exploration-queries/README.md)에 등록하며 원본 결과는 로컬 작업 폴더에만 보관한다.

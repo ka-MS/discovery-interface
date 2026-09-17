@@ -67,14 +67,15 @@ IPINTERFACE를 만들 때 키를 IP 기준으로 잡으면 공유 IP의 인터�
 
 `RELATION.*` 102개가 CDM 계열이고, 접두어 없는 28개는 Maximo 자체 자산 관계 목록이다
 (`AFFECTS`, `BACKED UP BY`, `INCLUDES`, `SPLITS FROM` 등 선형 자산용이 섞여 있다).
-그중 규칙이 등록된 것은 둘뿐이다.
+그중 규칙이 등록된 것은 둘뿐이며, `FEDERATES`는 관계 정의만 있고 규칙은 없다.
 
 | RELATIONNUM | 규칙 | 등록 분류쌍 |
 | --- | ---: | --- |
-| `USES` | 2 | `SYS.COMPUTERSYSTEM`·`SYS.VIRTUALCOMPUTERSYSTEM` → `NET.IPADDRESS`, `N:N` |
+| `USES` | 3 | `SYS.COMPUTERSYSTEM`·`SYS.VIRTUALCOMPUTERSYSTEM`·`SYS.COMPUTERSYSTEMCLUSTER` → `NET.IPADDRESS`, `N:N` |
 | `VIRTUALIZES` | 2 | Host → VM, `1:N` |
+| `FEDERATES` | 0 | 관계 정의만 존재: `UNIDIRECTIONAL`, `USEWITH=CI`, 분류 미지정, 가져옴 해제 |
 
-둘 다 이 프로젝트에서 등록한 로컬 확장이다. CDM 쪽 대응(`RELATION.VIRTUALIZES`는
+`USES`와 `VIRTUALIZES` 두 관계는 이 프로젝트에서 등록한 로컬 확장이다. CDM 쪽 대응(`RELATION.VIRTUALIZES`는
 Computer→Computer `1:1`, IP는 IPINTERFACE 경유)이 카디널리티나 원천 때문에 맞지 않아
 선택했다. 표준 이탈이므로 IBM 디스커버리를 병행 도입할 때 재검토 대상이다.
 
@@ -96,6 +97,8 @@ Maximo에는 Computer-Switch 직접 규칙이 없다. `NET.NETWORKCONNECTION`을
 | ITMSG_L3_SW1 - Switch 1 | physical | 0 | 0 |
 | ITMSG_L2_SW1 - Switch 1 | physical | 0 | 0 |
 
-수치는 `.68 / .35` 순이다. 사업 범위의 네트워크 행에 "Network Interface 정보"가 명시돼 있으므로
-스위치 인터페이스 수집은 요구사항이다. 그러려면 스위치 CI를 물리 멤버로 둘지 cluster로 둘지
-먼저 정해야 한다. [ISSUE-11](../../open-issues.md)에서 관리한다.
+수치는 `.68 / .35` 순이다. 각 서버에서 cluster→물리 Switch 쌍은 2개이고 현재 cluster당 멤버는
+1대다. Maximo에는 `SYS.COMPUTERSYSTEMCLUSTER` 분류가 있고, imported CDM
+`RELATION.FEDERATES`에는 이 분류에서 `SYS.GENERICSWITCH`로 가는 `N:1`, `SWAPPED=1` 규칙이 있다.
+별도로 접두어 없는 `FEDERATES` 관계 정의가 있으나 규칙은 0건이다. 어떤 정의·방향을 사용할지는
+[CI 관계 설계](../../design/ci/relations.md)에서 결정한다.

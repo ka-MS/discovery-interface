@@ -30,6 +30,7 @@ class DeviceCiIntegrateTest {
                     .equals(CiClassification.VIRTUAL_COMPUTER.classificationId())
                     ? COMPUTER_CLASS_STRUCTURE_ID : "VM";
     private static final String SWITCH_CLASS_STRUCTURE_ID = "SWITCH";
+    private static final String CLUSTER_CLASS_STRUCTURE_ID = "CLUSTER";
     private JdbcTemplate jdbc;
     private DeviceCiIntegrate integration;
     private CiDefinitionLoader definitionLoader;
@@ -55,6 +56,8 @@ class DeviceCiIntegrateTest {
         classStructures.put(CiClassification.COMPUTER.classificationId(), COMPUTER_CLASS_STRUCTURE_ID);
         classStructures.putIfAbsent(CiClassification.VIRTUAL_COMPUTER.classificationId(), VIRTUAL_CLASS_STRUCTURE_ID);
         classStructures.putIfAbsent(CiClassification.GENERIC_SWITCH.classificationId(), SWITCH_CLASS_STRUCTURE_ID);
+        classStructures.putIfAbsent(
+                CiClassification.COMPUTER_SYSTEM_CLUSTER.classificationId(), CLUSTER_CLASS_STRUCTURE_ID);
         classStructures.forEach((classificationId, classStructureId) -> {
             jdbc.update("INSERT INTO MAXIMO.CLASSSTRUCTURE VALUES (?,?)", classStructureId, classificationId);
             jdbc.update("INSERT INTO MAXIMO.CLASSUSEWITH VALUES (?,'ACTCI')", classStructureId);
@@ -70,6 +73,9 @@ class DeviceCiIntegrateTest {
                     attributeId, attribute, NUMBER.contains(suffix) ? "NUMERIC" : "ALN");
         }
         for (String classId : classStructures.values()) {
+            if (CLUSTER_CLASS_STRUCTURE_ID.equals(classId)) {
+                continue;
+            }
             for (String suffix : attributes) {
                 String attribute = "COMPUTERSYSTEM_" + suffix;
                 long id = templateId++;
@@ -97,11 +103,25 @@ class DeviceCiIntegrateTest {
                     (CLASSSPECID,OBJECTNAME,SEQUENCE,MANDATORY,USEINSPEC,CLASSSTRUCTUREID,ASSETATTRID)
                 VALUES (1900,'ACTCI',1900,0,1,?,'GENERICCOMPUTERSYSTEM_GENERICTYPE')
                 """, SWITCH_CLASS_STRUCTURE_ID);
+        seedClusterSpec(1901, "COMPUTERSYSTEMCLUSTER_MANAGEDSYSTEMNAME", 1);
+        seedClusterSpec(1902, "COMPUTERSYSTEMCLUSTER_LOCATIONTAG", 2);
+    }
+
+    private void seedClusterSpec(long id, String attribute, int sequence) {
+        jdbc.update("INSERT INTO MAXIMO.ASSETATTRIBUTE (ASSETATTRIBUTEID,ASSETATTRID,DATATYPE) VALUES (?,?,'ALN')",
+                id, attribute);
+        jdbc.update("INSERT INTO MAXIMO.CLASSSPEC (CLASSSTRUCTUREID,CLASSSPECID,ASSETATTRID,ASSETATTRIBUTEID) VALUES (?,?,?,?)",
+                CLUSTER_CLASS_STRUCTURE_ID, id, attribute, id);
+        jdbc.update("""
+                INSERT INTO MAXIMO.CLASSSPECUSEWITH
+                    (CLASSSPECID,OBJECTNAME,SEQUENCE,MANDATORY,USEINSPEC,CLASSSTRUCTUREID,ASSETATTRID)
+                VALUES (?,'ACTCI',?,0,1,?,?)
+                """, id, sequence, CLUSTER_CLASS_STRUCTURE_ID, attribute);
     }
 
     private DeviceSource source(long id, String type, String name, BigDecimal ram) {
         return new DeviceSource(id, type, "physical".equals(type) ? "Generic" : null, false,
-                null, null, null, null, name, "description", "serial", "uuid",
+                null, null, null, null, null, name, "description", "serial", "uuid",
                 "2026-09-14 00:00:00.123456+00", "model", "manufacturer", ram, "GB",
                 2, 12, new BigDecimal("2.40"), "GHz", "Xeon", "x86_64",
                 "001122334455", "vm-internal-id", "BIOS vendor", "1.2", "11/12/2021");
@@ -111,7 +131,7 @@ class DeviceCiIntegrateTest {
                                       Integer clusterCount) {
         DeviceSource source = source(id, "physical", "Switch", null);
         return new DeviceSource(source.devicePk(), source.type(), "Rackable", true,
-                11L, networkKind, kindCount, clusterCount, source.name(), source.notes(),
+                11L, networkKind, kindCount, clusterCount, source.snmpLocation(), source.name(), source.notes(),
                 source.serialNo(), source.uuid(), source.lastDiscovered(), source.model(),
                 source.manufacturer(), source.ram(), source.ramUnit(), source.totalCpus(),
                 source.corePerCpu(), source.cpuSpeed(), source.cpuSpeedUnit(), source.cpuType(),
@@ -119,10 +139,19 @@ class DeviceCiIntegrateTest {
                 source.biosVersion(), source.biosReleaseDate());
     }
 
+    private DeviceSource clusterSource(long id, String networkKind, String location) {
+        DeviceSource source = source(id, "cluster", "Cluster", null);
+        return new DeviceSource(source.devicePk(), source.type(), null, true,
+                null, networkKind, networkKind == null ? 0 : 1, null, location,
+                source.name(), source.notes(), null, null, source.lastDiscovered(), null,
+                null, null, null, null, null, null, null, null, null, null,
+                null, null, null, null);
+    }
+
     private DeviceSource withPhysicalSubtype(DeviceSource source, String physicalSubtype) {
         return new DeviceSource(source.devicePk(), source.type(), physicalSubtype,
                 source.networkDevice(), source.clusterPk(), source.networkKind(), source.networkKindCount(),
-                source.clusterCount(), source.name(), source.notes(), source.serialNo(), source.uuid(),
+                source.clusterCount(), source.snmpLocation(), source.name(), source.notes(), source.serialNo(), source.uuid(),
                 source.lastDiscovered(), source.model(), source.manufacturer(), source.ram(), source.ramUnit(),
                 source.totalCpus(), source.corePerCpu(), source.cpuSpeed(), source.cpuSpeedUnit(),
                 source.cpuType(), source.architecture(), source.primaryMac(), source.vmId(),
@@ -181,6 +210,36 @@ class DeviceCiIntegrateTest {
                 SELECT COUNT(*) FROM MAXIMO.ACTCISPEC
                 WHERE ACTCINUM='D42:DEVICE:9' AND ASSETATTRID='COMPUTERSYSTEM_VMID'
                 """, Integer.class)).isZero();
+    }
+
+    @Test
+    void mapsSwitchClustersWithOnlyClusterSpecificSpecs() {
+        persist(clusterSource(11, "Switch", "DC-1"), definitionLoader.load());
+
+        assertThat(jdbc.queryForObject(
+                "SELECT CLASSSTRUCTUREID FROM MAXIMO.ACTCI WHERE ACTCINUM='D42:DEVICE:11'",
+                String.class)).isEqualTo(CLUSTER_CLASS_STRUCTURE_ID);
+        assertThat(jdbc.queryForMap("""
+                SELECT ALNVALUE FROM MAXIMO.ACTCISPEC
+                WHERE ACTCINUM='D42:DEVICE:11'
+                  AND ASSETATTRID='COMPUTERSYSTEMCLUSTER_MANAGEDSYSTEMNAME'
+                """).get("ALNVALUE")).isEqualTo("Cluster");
+        assertThat(jdbc.queryForObject("""
+                SELECT ALNVALUE FROM MAXIMO.ACTCISPEC
+                WHERE ACTCINUM='D42:DEVICE:11'
+                  AND ASSETATTRID='COMPUTERSYSTEMCLUSTER_LOCATIONTAG'
+                """, String.class)).isEqualTo("DC-1");
+        assertThat(jdbc.queryForList(
+                "SELECT ASSETATTRID FROM MAXIMO.ACTCISPEC WHERE ACTCINUM='D42:DEVICE:11'",
+                String.class)).containsExactlyInAnyOrder(
+                        "COMPUTERSYSTEMCLUSTER_MANAGEDSYSTEMNAME",
+                        "COMPUTERSYSTEMCLUSTER_LOCATIONTAG");
+    }
+
+    @Test
+    void skipsNonSwitchNetworkClusters() {
+        assertThat(integration.mapData(
+                List.of(clusterSource(11, "Router", null)), definitionLoader.load())).isEmpty();
     }
 
     @Test
@@ -524,7 +583,7 @@ class DeviceCiIntegrateTest {
                                           String ramUnit, String speedUnit) {
         return new DeviceSource(source.devicePk(), source.type(), source.physicalSubtype(),
                 source.networkDevice(), source.clusterPk(), source.networkKind(), source.networkKindCount(),
-                source.clusterCount(), source.name(), source.notes(), source.serialNo(), source.uuid(),
+                source.clusterCount(), source.snmpLocation(), source.name(), source.notes(), source.serialNo(), source.uuid(),
                 lastDiscovered, source.model(), source.manufacturer(), source.ram(), ramUnit,
                 source.totalCpus(), source.corePerCpu(), source.cpuSpeed(), speedUnit, source.cpuType(),
                 source.architecture(), source.primaryMac(), source.vmId(), source.biosManufacturer(),
