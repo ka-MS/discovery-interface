@@ -262,6 +262,25 @@ Device 본체·스펙의 현재 대응은 [Device 매핑](data-mapping/ci/types/
 빈 속성 행 생성 여부, 섹션, 기본값·필수 여부·표시 순서의 적용 방식도 결정한다.
 compatibility_level의 일반 분류 속성 대응은 미정이며, DB 제품 버전으로 간주하지 않는다.
 
+### 네트워크 인터페이스와 스위치 CI 단위 — 2026-09-17
+
+관측은 [네트워크 CI 모델](knowledge/maximo/network-ci-model.md)에 있다.
+
+- **스위치 CI 단위.** 현재 ACTCI로 올리는 스위치는 물리 멤버인데 netport가 0개다.
+  포트 33·28개는 전부 스택(`cluster`) 객체에 달려 있고 그건 수집하지 않는다.
+  **IP도 같다.** `view_ipaddress_device_v2` 기준 IP를 가진 네트워크 장비는 cluster 2대(각 1건)뿐이고
+  물리 멤버는 0건이다. 그래서 IP 관계 필터를 `CiSourceFilter.DEVICE`로 넓혀도 추가되는 쌍이 0건이며
+  `cluster`는 그 필터에도 포함되지 않는다. 필터 확장은 이 항목이 정해진 뒤에 의미가 생긴다.
+  사업 범위의 네트워크 행에 "Network Interface 정보"가 명시돼 있으므로 인터페이스를 채우려면
+  스위치 CI를 cluster로 옮길지, 물리 멤버에 스택의 포트를 붙일지 먼저 정해야 한다.
+- **인터페이스 CI 도입 시점.** `NET.L2INTERFACE`는 netport와 속성이 그대로 대응한다.
+  서버 NIC는 사업 범위 서버 행에 없으므로 네트워크 장비 작업에서 도입하고, 그때 서버 쪽 적용을
+  다시 판단한다.
+- **Computer-IP 표준 경로.** 지금은 접두어 없는 `USES`로 직접 연결했다. 표준은
+  `NET.IPINTERFACE` 경유이며 원천에 그 계층이 생기거나 IBM 디스커버리를 병행하면 이관을 검토한다.
+- **서버-스위치 물리 연결.** 원천이 `.68` 5건·`.35` 2건이고 상대 포트가 전부 `Vlan1`이라
+  MAC 학습 기반 연관으로 보인다. `NET.NETWORKCONNECTION` 중간 CI 도입 여부는 미결이다.
+
 ### Device 적재 전 확인 — 2026-09-15
 
 본체·스펙 대응 및 SQL은 [Device 매핑](data-mapping/ci/types/device.md), 관계 구성안은 [수집 설계](design/ci/computer.md)에 둔다.
