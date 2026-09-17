@@ -1,0 +1,116 @@
+# DB Instance 분류·스펙·관계 정의
+
+> 관측 2026-09-16 · Maximo BLUDB · 읽기 전용 메타데이터 조회.
+> 재조회: [DB 분류·속성·관계](../../exploration-queries/maximo/db-app-device-classifications.sql)
+> 의 `db-engine-classes`·`db-engine-ci-specs`·`db-engine-spec-union`·`db-engine-device-rule-flags`·
+> `db-instance-database-rules`·`db-engine-promotion` 블록.
+> 이 문서는 설정의 관측 사실이다. D42 대응과 수집 추천안은
+> [Database CI 수집 설계](../../design/ci/databaseinstance.md)에 둔다.
+
+## 1. 분류와 계층
+
+| 계열 | 분류 | CLASSSTRUCTUREID | 적용 | CLASSSPEC 수 |
+| --- | --- | --- | --- | ---: |
+| ACTCI | APP.DB.MSSQL.SQLSERVER | CCI10114 | ACTCI | 48 |
+| ACTCI | APP.DB.DB2.DB2INSTANCE | CCI10954 | ACTCI | 52 |
+| ACTCI | APP.DB.ORACLE.ORACLEINSTANCE | CCI10153 | ACTCI | 46 |
+| ACTCI | APP.DB.GENERICDATABASESERVER | CCI11020 | ACTCI | 43 |
+| ACTCI | APP.DB.DATABASESERVER | CCI10162 | ACTCI | 42 |
+| CI | CI.SQLSERVER | CCI00146 | CI | 14 |
+| CI | CI.DB2INSTANCE | CCI00145 | CI | 10 |
+| CI | CI.ORACLEINSTANCE | CCI00139 | CI | 11 |
+| CI | CI.DATABASESERVER | CCI00069 | CI | 8 |
+
+CI 쪽 세 엔진 분류는 모두 `CI.DATABASESERVER`(CCI00069)의 자식이다.
+ACTCI 쪽은 `APP.DB.MSSQL.SQLSERVER`·`APP.DB.ORACLE.ORACLEINSTANCE`·`APP.DB.GENERICDATABASESERVER`·
+`APP.DB.DATABASESERVER`가 `ACTUALCIROOTCLASS` 직하이고, `APP.DB.DB2.DB2INSTANCE`만
+`APP.DB.DB2.DB2SYSTEM`(CCI10953)의 자식이다. PostgreSQL 전용 분류는 CI·ACTCI 양쪽에 없다.
+
+## 2. CI 분류가 제공하는 속성 — 합집합 19개
+
+네 CI 분류의 CLASSSPEC 합집합이다. SECTION은 모두 공란, MANDATORY=0이다.
+
+| 구분 | 속성 | 자료형 |
+| --- | --- | --- |
+| 네 분류 공통 8개 | APPSERVER_NAME · APPSERVER_PRODUCTNAME · APPSERVER_PRODUCTVERSION · APPSERVER_VENDORNAME · APPSERVER_KEYNAME · APPSERVER_EXECUTABLENAME · DATABASESERVER_HOME | ALN |
+| | APPSERVER_STATUS | NUMERIC |
+| CI.SQLSERVER 전용 6개 | SQLSERVER_DEFAULTDOMAIN · SQLSERVER_LANGUAGE · SQLSERVER_PIPENAME · SQLSERVER_RUNASUSER · SQLSERVER_SORTORDER | ALN |
+| | SQLSERVER_CONCURRENTLIMIT | NUMERIC |
+| CI.DB2INSTANCE 전용 2개 | DB2SERVER_NODENAME | ALN |
+| | DB2SERVER_PORT | NUMERIC |
+| CI.ORACLEINSTANCE 전용 3개 | ORACLEINSTANCE_HOSTNAME · ORACLEINSTANCE_SID | ALN |
+| | ORACLEINSTANCE_PORT | NUMERIC |
+
+`CI.DATABASESERVER`가 가진 8개는 세 엔진 분류가 모두 그대로 가진다. 즉 합집합은
+공통 8개 + 엔진 전용 11개이고, 엔진 전용은 해당 엔진 분류에만 있다.
+`APPSERVER_VERSIONSTRING`은 CI 쪽 네 분류 모두에 **없다**.
+
+## 3. ACTCI 대조 — 합집합 19개 전부 대응 분류에 존재
+
+`db-engine-spec-union` 결과로 ASSETATTRID 단위 대조했다.
+
+- 공통 8개는 ACTCI 다섯 분류(엔진 4 + 기존 범용) 전부에 있다.
+- 엔진 전용 11개는 같은 엔진의 ACTCI 분류에만 있다. `SQLSERVER_*`는
+  `APP.DB.MSSQL.SQLSERVER`에만, `DB2SERVER_*`는 `APP.DB.DB2.DB2INSTANCE`에만,
+  `ORACLEINSTANCE_*`는 `APP.DB.ORACLE.ORACLEINSTANCE`에만 있다.
+- **ACTCI 수집을 위해 새로 만들어야 하는 속성은 없다.**
+
+ACTCI 쪽에만 있고 CI 쪽에 없는 속성 중 이름이 의미를 갖는 것들이다.
+
+| 속성 | 보유 ACTCI 분류 | 비고 |
+| --- | --- | --- |
+| APPSERVER_VERSIONSTRING | 다섯 분류 전부 | 버전 원문용. CI에 없어 승격되지 않는다 |
+| APPSERVER_MAJORVERSION · APPSERVER_RELEASE · APPSERVER_MODIFIER · APPSERVER_LEVEL | 다섯 분류 전부 | NUMERIC. 버전 분해값 |
+| APPSERVER_BUILDLEVEL · APPSERVER_SERVICEPACK | 다섯 분류 전부 | ALN |
+| GENERICDATABASESERVER_GENERICTYPE | APP.DB.GENERICDATABASESERVER 만 | 범용 분류의 실제 유형 문자열 |
+| DB2INSTANCE_BITSIZE · DB2SERVER_COMMENT · DB2SERVER_LEVELID · DB2SERVER_PRODUCTID · DB2SERVER_PROTOCOL · DB2SERVER_PROTOCOLPARAMS · DB2SERVER_PTF · DB2SERVER_TYPE | APP.DB.DB2.DB2INSTANCE 만 | CI에 있는 DB2SERVER_NODENAME·DB2SERVER_PORT는 제외한 8개 |
+| ORACLEINSTANCE_ORACLEINSTANCESTATUS | APP.DB.ORACLE.ORACLEINSTANCE 만 | NUMERIC |
+| MODELOBJECT_* 14개 · APPSERVER_CIROLE · APPSERVER_LIFECYCLESTATE 등 | 다섯 분류 전부 | TADDM 모델 관리값 |
+
+`ACTCISPEC`의 값 컬럼 길이는 `ALNVALUE` 254, `NUMVALUE` DECIMAL(30,5)다.
+
+## 4. 관계 규칙
+
+`RELATION.RUNSON` 1:1, `CONTAINMENT=0`, `SWAPPED=0` 규칙이 다섯 ACTCI 분류 각각에
+`SYS.COMPUTERSYSTEM`·`SYS.VIRTUALCOMPUTERSYSTEM` 두 대상으로 모두 있다.
+`REVRELATIONSHIP`만 `APP.DB.ORACLE.ORACLEINSTANCE`가 1이고 나머지 넷은 0이다.
+이 값은 도착 분류가 출발 분류의 상위인지를 나타내는 설정 원문이며 적재 방향과 무관하다.
+`ActCiRelationWriter`는 `RELATIONRULES` 행의 존재만 확인하고 `ACTCIRELATION.SWAPPED`는 0으로 쓴다.
+이미 적재한 OS→Computer 규칙도 `REVRELATIONSHIP=1`·규칙 `SWAPPED=1`이며 정상 적재·연결됐다.
+
+`ACTCIRELATION`에 `RELATION.RUNSON` 행이 1건 있다. `ACTCIRELATIONID=5001`,
+`APP.DB.DATABASESERVER → SYS.COMPUTERSYSTEM`, MAXADMIN이 2026-09-11에 UI로 만든 샘플이다.
+
+Instance → Database 방향은 규칙이 없다. 다섯 ACTCI 분류 → `APP.DB.DATABASE`의
+`RELATIONRULES`는 RELATIONNUM 무관하게 **0건**이다. `RELATION.CONTAINS` 코드가 존재해도
+분류쌍 규칙이 없으면 MERGE 가드가 전건 거부한다. MAS UI 등록 전에는 적재할 수 없다.
+
+## 5. 두 범용 분류 대조 — DATABASESERVER / GENERICDATABASESERVER
+
+전용 분류가 없는 엔진을 어디로 보낼지 정하려고 둘을 직접 대조했다.
+
+| 항목 | APP.DB.DATABASESERVER | APP.DB.GENERICDATABASESERVER |
+| --- | --- | --- |
+| CLASSSTRUCTUREID | CCI10162 | CCI11020 |
+| PARENT · 자식 | ACTUALCIROOTCLASS · 없음 | 동일 |
+| CLASSSPEC | 42 | 43 |
+| RELATIONRULES | OUT 9종 · IN 9종 | 모든 RELATIONNUM과 건수가 동일 |
+| CITEMPLATE | 0건 | 0건 |
+
+관계 규칙은 `RELATION.RUNSON` 56, `USES` 51, `MEMBEROF` 40, `DEPLOYEDTO` 41, `CONTAINS` 16 등
+출발·도착 양방향의 모든 RELATIONNUM과 건수가 1:1로 같다. CLASSSPEC 차집합도 한 개뿐이며
+`GENERICDATABASESERVER_GENERICTYPE`(ALN)이 범용 쪽에만 있다. 43 대 42의 차이가 이것이다.
+
+CI 쪽에는 GENERIC에 대응하는 분류가 없다. 둘 중 무엇을 쓰든 승격 대상은 `CI.DATABASESERVER`다.
+
+## 6. 승격 기준정보
+
+네 엔진 조합의 `CITEMPLATE` 본체 매핑은 모두 0건이다.
+
+- `APP.DB.MSSQL.SQLSERVER → CI.SQLSERVER`
+- `APP.DB.DB2.DB2INSTANCE → CI.DB2INSTANCE`
+- `APP.DB.ORACLE.ORACLEINSTANCE → CI.ORACLEINSTANCE`
+- `APP.DB.DATABASESERVER → CI.DATABASESERVER`
+
+Actual CI 적재와 RUNSON 관계는 현재 설정으로 가능하고, Authorized CI 승격은
+MAS UI에서 승격 범위와 전달 속성을 등록한 뒤에 가능하다.
