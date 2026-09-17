@@ -102,7 +102,8 @@ class FilesystemCiIntegrateTest {
         verify(statement).executeQuery(sql.capture());
         assertThat(sql.getValue())
                 .contains("m.label")
-                .contains("'overlay'").contains("'devtmpfs'").contains("'squashfs'").contains("'efivarfs'")
+                .contains("'overlay'").contains("'squashfs'").contains("'efivarfs'")
+                .doesNotContain("'devtmpfs'")
                 .contains("NOT IN");
     }
 
