@@ -1,5 +1,8 @@
-package com.itmsg.device42.integration.ci;
+package com.itmsg.device42.integration.d42maximo.ci.os;
 
+import com.itmsg.device42.integration.ci.CiSpecMapper;
+import com.itmsg.device42.integration.ci.ActCiWriter;
+import com.itmsg.device42.integration.ci.CiDefinitionLoader;
 import com.itmsg.device42.config.Device42ConnectionFactory;
 import com.itmsg.device42.dto.device42.ci.OsSource;
 import com.itmsg.device42.enums.ci.CiClassification;
@@ -19,12 +22,13 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
-class OsCiIntegrateTest {
+class OsCiImportTest {
     private static final List<String> ATTRIBUTES = List.of(
             "OSNAME", "OSVERSION", "KERNELVERSION", "KERNELARCHITECTURE", "NAME");
 
     private JdbcTemplate jdbc;
-    private OsCiIntegrate integration;
+    private OsCiMapper mapper;
+    private ActCiWriter writer;
     private CiDefinitionLoader definitionLoader;
 
     @BeforeEach
@@ -34,8 +38,8 @@ class OsCiIntegrateTest {
         new ResourceDatabasePopulator(new ClassPathResource("ci/schema.sql")).execute(dataSource);
         jdbc = new JdbcTemplate(dataSource);
         definitionLoader = new CiDefinitionLoader(jdbc);
-        integration = new OsCiIntegrate(mock(Device42ConnectionFactory.class), new ActCiWriter(jdbc),
-                new CiSpecMapper());
+        mapper = new OsCiMapper(new CiSpecMapper());
+        writer = new ActCiWriter(jdbc);
         seedDefinitions();
     }
 
@@ -95,7 +99,7 @@ class OsCiIntegrateTest {
     void missingClassificationSkipsEveryOs() {
         jdbc.update("DELETE FROM MAXIMO.CLASSUSEWITH WHERE CLASSSTRUCTUREID='OSC'");
 
-        var mapped = integration.mapData(List.of(source(7, 100, "RHEL")), definitionLoader.load());
+        var mapped = mapper.mapData(List.of(source(7, 100, "RHEL")), definitionLoader.load());
 
         assertThat(mapped).isEmpty();
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM MAXIMO.ACTCI", Integer.class)).isZero();
@@ -106,7 +110,7 @@ class OsCiIntegrateTest {
         var bad = new OsSource(7, 100, "RHEL", "8.10", "4.18", "64-bit", "not-a-time");
         var good = source(8, 101, "Ubuntu 24.04");
 
-        var mapped = integration.mapData(List.of(bad, good), definitionLoader.load());
+        var mapped = mapper.mapData(List.of(bad, good), definitionLoader.load());
 
         assertThat(mapped).hasSize(1);
         assertThat(mapped.getFirst().actCi().actCiNum()).isEqualTo("D42:DEVICEOS:8");
@@ -114,10 +118,9 @@ class OsCiIntegrateTest {
 
     @Test
     void readsEveryOffsetUntilTotalCount() {
-        int batchSize = OsCiIntegrate.DEFAULT_BATCH_SIZE;
+        int batchSize = OsCiImport.DEFAULT_BATCH_SIZE;
         List<Long> offsets = new ArrayList<>();
-        var task = new OsCiIntegrate(mock(Device42ConnectionFactory.class), new ActCiWriter(jdbc),
-                new CiSpecMapper()) {
+        var query = new OsCiQuery(mock(Device42ConnectionFactory.class)) {
             @Override public long getTotalCount() {
                 return batchSize * 2L + 1;
             }
@@ -128,7 +131,7 @@ class OsCiIntegrateTest {
             }
         };
 
-        task.integrate(definitionLoader.load());
+        new OsCiImport(query, mapper, writer).integrate(definitionLoader.load());
 
         assertThat(offsets).containsExactly(0L, (long) batchSize, batchSize * 2L);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM MAXIMO.ACTCI", Integer.class)).isEqualTo(3);
@@ -140,7 +143,7 @@ class OsCiIntegrateTest {
     }
 
     private void persist(OsSource source) {
-        integration.putData(integration.mapData(List.of(source), definitionLoader.load()));
+        writer.write(mapper.mapData(List.of(source), definitionLoader.load()));
     }
 
     private String text(String attributeId) {
