@@ -14,7 +14,7 @@
 
 - [x] 지침/참조 문서 확인, 새 브랜치 생성, 설계·진행 기록 작성
 - [x] 기준 테스트 확인
-- [ ] CPU Asset·OS CI 시범 전환과 검증
+- [x] CPU Asset·OS CI 시범 전환과 검증
 - [ ] 실행 코어·CLI·접속 기술 분리
 - [ ] Asset 전체 이전
 - [ ] CI·관계·정의 스냅샷 전체 이전
@@ -33,8 +33,8 @@
 
 ## 다음 행동
 
-기준 테스트 결과 확인 후 CPU·OS의 조회/매핑/저장 경계를 추출하고 관련 기존 테스트를
-새 경계에서 동일한 기대값으로 실행한다. 자세한 구조 기준은 설계 문서를 따른다.
+전체 흐름의 추출은 완료했다. 공통 실행·기술·정의 모델의 최종 소유권을 이전하고,
+조립/의존 경계를 검증한다. 아직 전체 목표 완료가 아니다.
 
 ## CPU·OS 시범 전환
 
@@ -45,3 +45,13 @@
   콜백/범용 상태 객체를 도입하지 않았다.
 - `./gradlew test --tests '*CpuImportTest' --tests '*OsCiImportTest' --tests '*DiscoveryInterfaceApplicationTests' --rerun-tasks` 성공.
 - 현재 기존 Task 인터페이스와 DTO 패키지는 나머지 이전을 위한 중간 상태다. 전체 이전에서 제거한다.
+
+## 전체 흐름 추출
+
+- Asset 나머지 10개, CI 나머지 5개, Conversion 8개, Software 2개의 조회·매핑·저장을 분리했다.
+- Conversion의 단순 변환은 Import 내부 메서드로 유지해 불필요한 Mapper 클래스 8개를 만들지 않았다.
+- FilesystemSelection과 SoftwareIdentity를 추출해 실행 클래스 간 공유 규칙 호출을 없앴다.
+- `./gradlew test --tests '*asset*' --tests '*DiscoveryInterfaceApplicationTests'` 성공.
+- `./gradlew test --tests '*ci*' --tests '*DiscoveryInterfaceApplicationTests'` 성공.
+- `./gradlew test` 성공 (compileJava/compileTestJava/test 실제 실행).
+- CPU 페이징/오류 흐름과 PageLoop 테스트 추가 검증도 성공했다.

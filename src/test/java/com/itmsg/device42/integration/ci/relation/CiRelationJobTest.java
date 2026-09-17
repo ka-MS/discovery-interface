@@ -2,7 +2,7 @@ package com.itmsg.device42.integration.ci.relation;
 
 import com.itmsg.device42.config.Device42ConnectionFactory;
 import com.itmsg.device42.dto.maximo.ci.ActCiRelationUpsert;
-import com.itmsg.device42.integration.ci.FilesystemCiIntegrate;
+import com.itmsg.device42.integration.d42maximo.ci.FilesystemSelection;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -57,7 +57,7 @@ class CiRelationJobTest {
         assertThat(CiRelationSource.COMPUTER_CONTAINS_FILESYSTEM.countQuery())
                 .contains("ANY(m.device_fks)")
                 .doesNotContain("EXISTS");
-        for (String excluded : FilesystemCiIntegrate.EXCLUDED_TYPES) {
+        for (String excluded : FilesystemSelection.EXCLUDED_TYPES) {
             assertThat(page).as("제외 타입 %s", excluded).contains("'" + excluded + "'");
         }
     }

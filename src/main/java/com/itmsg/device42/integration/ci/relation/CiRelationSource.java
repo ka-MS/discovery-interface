@@ -1,7 +1,7 @@
 package com.itmsg.device42.integration.ci.relation;
 
 import com.itmsg.device42.integration.ci.CiSourceFilter;
-import com.itmsg.device42.integration.ci.FilesystemCiIntegrate;
+import com.itmsg.device42.integration.d42maximo.ci.FilesystemSelection;
 
 /**
  * 관계 하나의 정의. 관계를 늘릴 때 늘어나는 것은 이 enum의 상수 하나뿐이다.
@@ -118,7 +118,7 @@ public enum CiRelationSource {
                 SELECT COUNT(*)
                 FROM view_mountpoint_v2 m
                 JOIN view_device_v2 d ON d.device_pk = ANY(m.device_fks)
-                WHERE (m.fstype_name IS NULL OR m.fstype_name NOT IN (""" + FilesystemCiIntegrate.EXCLUDED_TYPES_SQL + """
+                WHERE (m.fstype_name IS NULL OR m.fstype_name NOT IN (""" + FilesystemSelection.EXCLUDED_TYPES_SQL + """
                 ))
                 AND
                 """ + CiSourceFilter.COMPUTER;
@@ -134,7 +134,7 @@ public enum CiRelationSource {
                        'D42:MOUNTPOINT:' || CAST(m.mountpoint_pk AS varchar) AS targetci
                 FROM view_mountpoint_v2 m
                 JOIN computer c ON c.device_pk = ANY(m.device_fks)
-                WHERE (m.fstype_name IS NULL OR m.fstype_name NOT IN (""" + FilesystemCiIntegrate.EXCLUDED_TYPES_SQL + """
+                WHERE (m.fstype_name IS NULL OR m.fstype_name NOT IN (""" + FilesystemSelection.EXCLUDED_TYPES_SQL + """
                 ))
                 ORDER BY sourceci, targetci
                 LIMIT %d OFFSET %d
