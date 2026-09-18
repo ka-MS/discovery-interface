@@ -50,6 +50,11 @@ Spring 설정 경로를 사용한 테스트로 검증한다. 테스트 전용 �
 - 카탈로그의 기본값 적용은 DISTINCT/ORDER BY보다 앞서 있어, 제거하면 건수와 페이지가 달라진다.
   기준정보의 보충 이름 행도 UNION의 중복 제거·COUNT에 포함된다. 이런 경우 연계부가 값 정책을
   제공하고 SQL이 연산을 수행하도록 전달한다. 값 선택은 원천 소유가 아니며 사후 필터로 바꾸지 않는다.
+  카탈로그의 반환 모델에는 동치 그룹 대표값 NULL을 사용하고 최종 UNKNOWN은 Mapper가 생성한다.
+- 타겟 테이블 이름이 붙은 조회는 DeviceQuery/SoftwareCatalogQuery/InstalledSoftwareQuery 및
+  ManufacturerNamesQuery/OperatingSystemNamesQuery/ProcessorModelsQuery/AdapterModelsQuery로 바꿨다.
+  기준/변형의 동일 조회는 공유하되 여덟 Import 작업과 실행 순서는 보존한다.
+- Printer MAC의 UPPER 표현은 Mapper로 옮기고 SQL UPPER와의 결과 동등성을 H2로 검증했다.
 - 기존 CI 본체가 읽지 않던 Device source_id/system_type/is_virtual 투영은 제거했다.
   사용 중인 타겟 식별자는 전부 Pipeline에서 생성한다.
 - 관계 PK는 CAST(... AS varchar)를 유지하고 출발/도착 PK 문자열로 정렬한다.

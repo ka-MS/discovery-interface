@@ -15,8 +15,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `knowledge/` — 관측 사실. 수치는 스냅샷이며 상단에 관측 시점과 재조회 쿼리를 명시한다.
 - `design/` — 수집 구성안·대조표·선택 이유. 검토안과 결정된 내용을 구분하며, CI 유형별 설계는 `design/ci/<유형>.md`에 둔다.
 - `data-mapping/` — 테이블 단위 매핑 정본. 문서 한 장이 해당 연계의 Query·매핑과 타겟 Writer에 대응한다.
-  조회·원천 모델·복잡한 Mapper·Import는 `integration/d42maximo`의 기능 패키지에,
-  저장 SQL·타겟 DTO는 `maximo`에 둔다. 단순 변환은 Import 메서드로 유지한다.
+  조회·원천 모델은 `source/device42`, 수집 정책·Mapper·Import·Job 조립은 `pipeline/d42maximo`,
+  저장 SQL·타겟 DTO는 `target/maximo`에 둔다. 단순 변환은 Import 메서드로 유지한다.
   CI는 예외로 Target별 공통 규약과 CI 유형별 원천 매핑을 분리한다. 형식은 데이터 분석 README를 따른다.
 - `exploration-queries/` — 조사·검색용 재사용 쿼리. 실제 매핑 SQL은 매핑 문서 본문에 둔다.
 
@@ -29,8 +29,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## 에이전트 규칙
 
 구조와 의존 규칙은 [연계 구조 설계](docs/refactoring/integration-structure-design.md)를 따른다.
-`runtime`은 도메인을 모르고, `device42`와 `maximo`는 연계 구현을 역참조하지 않는다.
+`runtime`은 도메인을 모르고, `source/device42`와 `target/maximo`는 연계 구현을 역참조하지 않는다.
 CLI 명령과 실제 Job 조립은 분리하며 새 수집 흐름을 추가해도 공통 실행 코어를 수정하지 않는다.
+타겟은 `integration.target`으로 하나만 선택하며 생략 시 maximo다. 미등록 타겟은 오류,
+미등록 CLI 작업은 기존처럼 무시한다. Query는 원천 모델을 반환하고 타겟 식별자·관계 코드는
+Pipeline에서 생성한다. 조회 범위는 연계 정책으로 주입하고 COUNT/정렬/페이징 의미를 보존한다.
 
 1. 코딩 전에 생각하기
 

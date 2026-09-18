@@ -12,7 +12,7 @@
 - [관계 설계](../../data-analysis/design/ci/relations.md) — 실행 위치·구조·정의 계약·세 관계 대조
 - [ACTCIRELATION 공통 매핑](../../data-analysis/data-mapping/ci/actcirelation.md) — 컬럼 매핑·MERGE 정본
 - [OS 관계 매핑](../../data-analysis/data-mapping/ci/types/os.md#6-관계-매핑--2026-09-15)
-- [Computer 관계 매핑](../../data-analysis/data-mapping/ci/types/computer.md#7-관계-매핑--2026-09-15)
+- [Device 관계 매핑](../../data-analysis/data-mapping/ci/types/device.md#7-관계-매핑--2026-09-15)
 - [OS–Computer 승격 샘플 검증](../../data-analysis/knowledge/maximo/computer-ci-relations.md#oscomputer-승격-샘플-검증)
 
 ## Global Constraints

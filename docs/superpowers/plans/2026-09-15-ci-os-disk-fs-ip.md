@@ -600,7 +600,7 @@ EOF
 
 - [x] **Step 2: 문서 작성**
 
-[types/computer.md](../../data-analysis/data-mapping/ci/types/computer.md) 형식을 따른다. README의 CI 매핑 예외 절이 정본이다.
+[types/device.md](../../data-analysis/data-mapping/ci/types/device.md) 형식을 따른다. README의 CI 매핑 예외 절이 정본이다.
 
 - 상단: Target, 관측 스탬프, 구현 상태, 실행 준비 링크
 - 1절 대상과 식별자

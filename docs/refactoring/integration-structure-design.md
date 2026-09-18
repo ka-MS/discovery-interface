@@ -1,155 +1,142 @@
-# 연계 구조 리팩토링 설계
+# 연계 구조 설계
 
-## 목표와 범위
+## 현재 목표와 범위
 
-현재 Device42 → Maximo CLI의 동작을 보존하면서 작은 실행 코어, 연계별 조회·매핑,
-독립된 타겟 저장으로 분리한다. 단일 Gradle 모듈과 `com.itmsg.device42` 루트는 유지한다.
-새 기능, Spring Batch, 의존성 업그레이드, 운영 DB 적재는 범위 밖이다.
+Device42는 고정 원천이며 설정으로 한 타겟의 연계 조립부를 선택한다. 실제 운영 타겟은 Maximo 하나다.
+기존 Maximo 수집·변환·저장·실패 의미를 유지하고 타겟 선택만 추가한다.
+단일 Gradle 모듈과 `com.itmsg.device42` 루트를 유지한다.
+
+이전 구조 리팩터링의 완료 이력은 [이전 진행 기록](integration-structure-progress.md)에 보존한다.
+이번 결정 상세는 [타겟 교체 설계](target-pluggable-design.md),
+검증·기준 커밋·단계 이력은 [이번 진행 기록](target-pluggable-progress.md)에 있다.
 
 ## 책임과 의존 방향
 
-| 패키지 | 책임 | 허용 의존 |
+| 패키지 | 책임 | 허용 내부 의존 |
 | --- | --- | --- |
-| `runtime` | 작업 순차 실행, 기존 페이지 범위 반복 | JDK, 로깅 |
-| `device42` | 연결과 DOQL/JDBC 실행 기술 | JDK, Spring |
-| `maximo` | 타겟 DTO, Writer, MERGE, 정의 로딩·스냅샷 | JDK, Spring |
-| `integration/d42maximo` | 수집 SQL·반환 모델·매핑·식별자·Job 조립 | 위 세 영역 |
-| `cli` | 기존 인자에서 Job 실행 | runtime |
+| runtime | IntegrationJob, TaskSequence, PageLoop, TargetModule 계약 | runtime |
+| source.device42 | 접속·DoqlClient, D42 조회 SQL·원천 모델·조건의 SQL 표현·연결 사실 | source.device42 |
+| target.maximo | 타겟 DTO·Writer·MERGE SQL, CI 정의 조회·스냅샷 | target.maximo |
+| pipeline.d42maximo | 수집 정책, Mapper·식별자, Import·Job, 준비·원천 조회·타겟 조립 | runtime, source, target, 자체 pipeline |
+| cli | 타겟 ID 검증과 선택된 Job 맵에서 기존 인자 실행 | runtime |
 
-하위 기술/타겟 영역에서 연계로 역참조하지 않는다. 기능별 코드는 같은 패키지에
-모으며, 공통 조회 모델이나 범용 Map 컨텍스트를 만들지 않는다. 인터페이스/상속은
-현재 공통 실행 계약에 필요한 만큼만 사용한다.
+Source/Target은 Pipeline을 역참조하지 않는다. Source에는 Maximo DTO·관계 코드·식별자 상수가 없다.
+타겟으로 번역하는 Mapper는 Pipeline에 둔다. 원천 모델은 D42에 충실하며 범용 중립 모델을 만들지 않는다.
+기술적 상속·범용 컨텍스트·매핑 DSL·JobPlan 프레임워크는 도입하지 않는다.
 
-## 이전 대응
+## 타겟 선택과 조립
 
-| 기존 | 새 소유자 |
-| --- | --- |
-| IntegrationJob / JobRunner | runtime / cli |
-| 영역별 Job와 Task 루프 | 연계별 Job + runtime TaskSequence |
-| Device42ConnectionFactory / Device42DatabaseConfig | device42 |
-| MaximoDatabaseConfig / dto.maximo | maximo |
-| Asset·Conversion·Software Integrate의 putData와 MERGE | maximo 영역별 Writer |
-| 각 Integrate의 조회와 원천 DTO | 연계의 기능별 Query·반환 모델 |
-| 각 Integrate의 변환 | 연계의 기능별 Mapper 또는 작은 메서드 |
-| CI Writer·DefinitionLoader/Cache | maximo.ci (정의 ID 목록은 호출자가 전달) |
-| CI enum·SpecMapper·수집 조건 | integration.d42maximo.ci |
-| 관계 enum과 원천 SQL | 연계의 관계 정의 (공통 관계 실행 유지) |
-| 실행 클래스에 있던 공유 식별자·제외 조건 | 연계별 작은 규칙 클래스 |
+- 설정 키는 `integration.target`, 생략 시 `maximo`다. 환경변수 `INTEGRATION_TARGET`으로도 지정할 수 있다.
+- Application은 Pipeline 아래 `TargetModule` 구현 설정만 탐색한다. 각 모듈은 조건부 활성화한다.
+- `MaximoTargetModule`은 선택됐을 때만 Maximo 컴포넌트, D42 접근, `MaximoQueries`, DataSource 설정을 가져온다.
+- 전역 DataSource 자동 설정은 제외한다. 따라서 다른 타겟은 Maximo 접속정보·Bean·DataSource를 요구하지 않는다.
+- `TargetModule.id()`와 `jobs()`만 공통 계약이다. Job 맵 자체가 지원 작업 목록이다.
+- `JobRunner`는 활성 모듈이 정확히 하나이고 설정 ID와 같은지 확인한다. 미등록 타겟은 작업 전에 오류다.
+- 선택된 Job 맵에서만 CLI 인자를 실행한다. 기존 명령 순서·중복 실행·미등록 인자 무시를 유지한다.
+- 각 타겟이 같은 다섯 명령을 제공해야 하는 것은 아니다. CLI는 Maximo 작업 종류를 모른다.
 
-### 전체 실행 흐름 대응
+## 원천 조회와 수집 정책
 
-새 기능 경로는 `integration/d42maximo/` 아래다. `X*`는 XImport·XQuery·XMapper를 뜻하며,
-Conversion과 NetDevice는 단순 변환을 Import 내부에 둔다. Writer 경로는 `maximo/` 아래다.
-원천 모델은 각 기능 폴더에, 타겟 DTO는 Writer와 같은 영역에 있다.
+`MaximoSourcePolicy`가 실제 수집 값을 선택하고 `MaximoQueries`가 원천 Query 생성자에 전달한다.
+Query에는 Maximo 기본 수집 정책이 없다. `DeviceSelection`과 `FilesystemFilter`는 D42 필드 조건을 SQL로 표현한다.
+조건은 COUNT와 PAGE에 동일하게 적용하며 Mapper 사후 필터로 옮기지 않는다.
+D42 PK/FK 조인·배열 전개·원천 속성 해석은 Source가 소유한다.
 
-| 기존 실행 클래스 | 새 기능/클래스 | 저장 |
-| --- | --- | --- |
-| DeployedAssetIntegrate | asset/device/DeployedAsset* | asset/DeployedAssetWriter |
-| DpaComputerIntegrate | asset/computer/Computer* | asset/DpaComputerWriter |
-| DpaNetDeviceIntegrate | asset/netdevice/NetDeviceImport・Query | asset/DpaNetDeviceWriter |
-| DpaNetPrinterIntegrate | asset/netprinter/NetPrinter* | asset/DpaNetPrinterWriter |
-| DpaCpuIntegrate | asset/cpu/Cpu* | asset/DpaCpuWriter |
-| DpaDiskIntegrate | asset/disk/Disk* | asset/DpaDiskWriter |
-| DpaNetAdapterIntegrate | asset/netadapter/NetAdapter* | asset/DpaNetAdapterWriter |
-| DpaMediaAdapterIntegrate | asset/mediaadapter/MediaAdapter* | asset/DpaMediaAdapterWriter |
-| DpaTcpIpIntegrate | asset/tcpip/TcpIp* | asset/DpaTcpIpWriter |
-| DpaLogicalDriveIntegrate | asset/logicaldrive/LogicalDrive* | asset/DpaLogicalDriveWriter |
-| DpaOsIntegrate | asset/os/Os* | asset/DpaOsWriter |
-| DatabaseInstanceCiIntegrate | ci/databaseinstance/DatabaseInstanceCi* | ci/ActCiWriter |
-| DeviceCiIntegrate | ci/device/DeviceCi* | ci/ActCiWriter |
-| DiskCiIntegrate | ci/disk/DiskCi* | ci/ActCiWriter |
-| FilesystemCiIntegrate | ci/filesystem/FilesystemCi* | ci/ActCiWriter |
-| IpCiIntegrate | ci/ip/IpCi* | ci/ActCiWriter |
-| OsCiIntegrate | ci/os/OsCi* | ci/ActCiWriter |
-| CiRelationJob | ci/relation/CiRelationJob・CiRelationQuery・CiRelationSource | ci/ActCiRelationWriter |
-| DpamManufacturerIntegrate | conversion/manufacturer/DpamManufacturerImport・Query | conversion/DpamManufacturerWriter |
-| DpamManuVariantIntegrate | conversion/manufacturer/DpamManuVariantImport・Query | conversion/DpamManuVariantWriter |
-| DpamOsIntegrate | conversion/os/DpamOsImport・Query | conversion/DpamOsWriter |
-| DpamOsVariantIntegrate | conversion/os/DpamOsVariantImport・Query | conversion/DpamOsVariantWriter |
-| DpamProcessorIntegrate | conversion/processor/DpamProcessorImport・Query | conversion/DpamProcessorWriter |
-| DpamProcVariantIntegrate | conversion/processor/DpamProcVariantImport・Query | conversion/DpamProcVariantWriter |
-| DpamAdapterIntegrate | conversion/adapter/DpamAdapterImport・Query | conversion/DpamAdapterWriter |
-| DpamAdptVariantIntegrate | conversion/adapter/DpamAdptVariantImport・Query | conversion/DpamAdptVariantWriter |
-| TloamSoftwareIntegrate | software/catalog/TloamSoftware* | software/TloamSoftwareWriter |
-| DpaSoftwareIntegrate | software/installed/DpaSoftware* | software/DpaSoftwareWriter |
+기준정보의 같은 원천 조회를 타겟의 기준/변형 두 Import가 공유한다. 여덟 작업은 모두 남고 순서·실행 횟수도 같다.
+카탈로그의 누락값 동치 그룹과 기준정보 보충 이름은 연계 정책으로 전달한다.
+이들은 DISTINCT/UNION/정렬/COUNT에 영향을 주므로 SQL에서 처리해야 기존 페이지를 보존할 수 있다.
+카탈로그 Query는 누락 동치 그룹을 NULL로 반환하고 최종 UNKNOWN 값은 Mapper가 생성한다.
+Printer MAC 대문자 표현도 Mapper가 생성한다.
 
-영역별 Job은 해당 영역의 루트에 둔다. 기존 네 Task 인터페이스는 제거하고 구체적인 Import를
-메서드 참조/람다로 NamedTask에 조립한다. CI는 run의 지역 스냅샷을 각 람다에 전달한다.
-새 흐름의 순서·선행 관계는 연계 Job이 결정하며 코어에 등록 코드를 추가하지 않는다.
+## CI 관계와 식별자
 
-## 보존할 동작
+- `Device42Relation`: 기존 일곱 D42 연결 사실과 SQL. 정책은 Selection으로 전달한다.
+- `RelationSource`: 출발·도착 원천 PK 문자열만 반환한다.
+- `CiRelationSource`: 연결 사실과 Maximo 관계 코드의 대응, 기존 순서를 유지한다.
+- `CiRelationMapper`: 원천 끝점을 타겟 식별자로 변환한다.
+- `MaximoCiIdentity`: 여섯 CI 본체 Mapper와 관계 Mapper가 공유하는 식별자 규칙이다.
+- PK는 CAST(... AS varchar)로 정렬한다. 각 조회의 고정 접두어를 제거해도 기존 문자열 정렬과 같은 순서다.
+- 파일시스템 관계의 배열 모든 쌍, 중복, 방향, 일곱 코드, 관계별 실패 격리를 보존한다.
+- 관계별 별도 Job/Writer 클래스는 만들지 않는다.
 
-- 기존 CLI 이름, 인자 순서, 알 수 없는 이름 무시, CI 관계 단독/중복 호출 의미.
-- 기존 작업 순서, 작업 실패 후 계속 실행, CI 공통 준비 실패 전파, 본체 실패 후 관계 실행.
-- 각 조회의 COUNT, 정렬, LIMIT/OFFSET, 빈 페이지 이후에도 count 기준 반복.
-- SQL 의미와 바인딩 순서·자료형, 식별자·MERGE 키·시퀀스·중복/관계 처리.
-- NULL, 단위, 시간대, 페이지별 변경 시각 생성과 건별 변환/저장 실패 범위.
-- 본체 성공/스펙 실패의 부분 적재 및 현재 auto-commit 의미. 트랜잭션을 추가하지 않는다.
-- 기존 조회/매핑/적재 집계. 적재 건수만으로 새 상태나 exit code를 정의하지 않는다.
+## 기존 연계 경로 대응
 
-## 설계 결정
+각 Import는 `pipeline.d42maximo`, Query는 `source.device42`, Writer는 `target.maximo` 아래다.
+원천 모델은 Query의 기능 패키지, 타겟 DTO는 Writer 패키지, Mapper는 Import의 기능 패키지에 둔다.
 
-- 연계 전용 SQL과 원천 모델은 integration에 둔다. D42 문법을 사용해도 수집 범위는 연계 정책이다.
-- 페이지 반복과 작업 순차 실행만 추출한다. JobPlan DSL·의존성 DAG·운영 기능은 만들지 않는다.
-- 기존 배치 단위 매핑과 오류 경계를 유지한다. 간단한 변환에 전용 인터페이스를 만들지 않는다.
-- CI 정의는 매 실행 생성한 읽기 전용 값이며 작업 객체에 실행 상태를 보관하지 않는다.
-- SQL text block은 소유 클래스 가까이에 유지한다. SQL 리소스 로더 도입은 하지 않는다.
+| 기존과 같은 실행 흐름 | 기능 패키지 | 원천 조회 | 타겟 저장 |
+| --- | --- | --- | --- |
+| ComputerImport | asset.computer | ComputerQuery | DpaComputerWriter |
+| CpuImport | asset.cpu | CpuQuery | DpaCpuWriter |
+| DeployedAssetImport | asset.device | DeviceQuery | DeployedAssetWriter |
+| DiskImport | asset.disk | DiskQuery | DpaDiskWriter |
+| LogicalDriveImport | asset.logicaldrive | LogicalDriveQuery | DpaLogicalDriveWriter |
+| MediaAdapterImport | asset.mediaadapter | MediaAdapterQuery | DpaMediaAdapterWriter |
+| NetAdapterImport | asset.netadapter | NetAdapterQuery | DpaNetAdapterWriter |
+| NetDeviceImport | asset.netdevice | NetDeviceQuery | DpaNetDeviceWriter |
+| NetPrinterImport | asset.netprinter | NetPrinterQuery | DpaNetPrinterWriter |
+| OsImport | asset.os | OsQuery | DpaOsWriter |
+| TcpIpImport | asset.tcpip | TcpIpQuery | DpaTcpIpWriter |
+| DatabaseInstanceCiImport | ci.databaseinstance | DatabaseInstanceCiQuery | ActCiWriter |
+| DeviceCiImport | ci.device | DeviceCiQuery | ActCiWriter |
+| DiskCiImport | ci.disk | DiskCiQuery | ActCiWriter |
+| FilesystemCiImport | ci.filesystem | FilesystemCiQuery | ActCiWriter |
+| IpCiImport | ci.ip | IpCiQuery | ActCiWriter |
+| OsCiImport | ci.os | OsCiQuery | ActCiWriter |
+| DpamAdapterImport | conversion.adapter | AdapterModelsQuery | DpamAdapterWriter |
+| DpamAdptVariantImport | conversion.adapter | AdapterModelsQuery | DpamAdptVariantWriter |
+| DpamManufacturerImport | conversion.manufacturer | ManufacturerNamesQuery | DpamManufacturerWriter |
+| DpamManuVariantImport | conversion.manufacturer | ManufacturerNamesQuery | DpamManuVariantWriter |
+| DpamOsImport | conversion.os | OperatingSystemNamesQuery | DpamOsWriter |
+| DpamOsVariantImport | conversion.os | OperatingSystemNamesQuery | DpamOsVariantWriter |
+| DpamProcessorImport | conversion.processor | ProcessorModelsQuery | DpamProcessorWriter |
+| DpamProcVariantImport | conversion.processor | ProcessorModelsQuery | DpamProcVariantWriter |
+| TloamSoftwareImport | software.catalog | SoftwareCatalogQuery | TloamSoftwareWriter |
+| DpaSoftwareImport | software.installed | InstalledSoftwareQuery | DpaSoftwareWriter |
+| CiRelationJob | ci.relation | CiRelationQuery + Device42Relation | ActCiRelationWriter |
 
-### 구현에서 확정한 경계
+기존 `device42` 기술 클래스는 `source.device42`, `maximo`는 `target.maximo`로 이동했다.
+`integration.d42maximo`의 Query/원천 모델은 Source로, 나머지 Mapper/Import/Job은 Pipeline으로 이동했다.
+단순 변환은 Import 메서드로 유지한다. 미사용 ViewDeviceV2는 원천에 보존하고 임의로 제거하지 않았다.
 
-- `DoqlClient`는 연결·Statement·ResultSet의 수명만 관리한다. 기존 Statement/PreparedStatement
-  선택을 유지하기 위해 query/preparedQuery 두 메서드를 둔다. SQL·건별 변환·예외 메시지는 Query의 책임이다.
-  기존 접속 팩토리의 재시도를 그대로 사용하며 별도 재시도·예외 래핑을 추가하지 않는다.
-- `PageLoop`는 lazy Iterable의 offset/limit만 제공한다. Import의 지역 집계·페이지별 변경 시각·예외 경계를
-  보존하기 위해 공통 결과 객체나 callback 파이프라인을 만들지 않았다.
-- `TaskSequence`는 기존 Job의 Exception 격리만 공통화한다. Error는 삼키지 않는다.
-  결과에 사용되지 않던 failures 목록은 제거했으며 상태/exit code 정책을 새로 만들지 않았다.
-- `maximo/ci/definition`의 로더는 분류 ID 목록을 받고, 스냅샷은 문자열 ID로 분류를 찾는다.
-  `CiClassification`·스펙 enum·CiSpecMapper·SourceTimestamp는 연계의 `ci/mapping`에 둔다.
-  시간대 처리와 추가 속성 판정 규칙은 그대로다.
-- `ci/selection`의 CiSourceFilter·FilesystemSelection과 `software/mapping/SoftwareIdentity`는
-  공유 규칙만 소유한다. Job이 있는 부모 패키지에 두지 않아 세부 패키지 사이에도 순환이 없다.
-- Conversion은 네 원천군 manufacturer/os/processor/adapter별로 기준·변형 조회와 원천 모델을 모았다.
-  변환을 위한 인터페이스·Mapper bean 8개는 추가하지 않았다.
-- NetDevice도 단순 복사와 페이지 단위 시각 생성만 하므로 별도 Mapper를 두지 않았다.
-  나머지 Asset 매핑은 단위/기본값/분류/식별자 등의 독립 규칙을 검증하는 경계로 남겼다.
-- 관계는 기존 일곱 enum 정의와 한 Query/Job을 유지한다. 별도 관계 Mapper나 관계별 클래스는 없다.
-- 로그의 작업 이름은 기존 이름을 유지하고 logger 카테고리는 새 책임 클래스 이름을 따른다.
-- 기존 미사용 ViewDeviceV2 모델과 접속 검증 주석 등은 이번 변경과 무관하므로 제거/활성화하지 않았다.
+## 보존한 실행 의미
 
-### 기존 실행·실패 경계
-
-| 단계 | 보존한 동작 |
+| 단계 | 동작 |
 | --- | --- |
 | CLI | asset/ci/ci-relation/conversion/software, 입력 순서·중복 실행, 미등록 인자 무시 |
-| CI 준비 | 매 실행 한 번 조회, 실패 시 본체/관계 모두 미실행·호출자에게 전파 |
-| 본체 작업 | 작업 예외는 다음 작업으로 진행; CI 관계 단계는 계속 실행 |
-| 페이지 | COUNT 기반 범위; 빈 페이지도 다음 offset 진행; 조회 예외는 현재 작업 중단 |
-| 행 변환 | 기존 유형별 catch 위치 유지; Device 등의 건별 오류는 다음 행 진행 |
-| Writer | 기존 건별 executeUpdate·예외 처리; 본체 실패 시 스펙 건너뜀, 스펙 실패 시 본체 유지 |
-| 관계 | 정의별 실패 격리; ci-relation 단독 실행은 CI 정의를 조회하지 않음 |
+| CI 준비 | 매 실행 한 번 정의 로딩, 실패 시 본체/관계 미실행 및 호출자에게 전파 |
+| 본체 작업 | 작업 예외 후 다음 작업 계속; 본체 실패 여부와 무관하게 관계 단계 실행 |
+| 페이지 | COUNT 기반 범위, 빈 페이지도 다음 offset 진행, 조회 예외는 현재 작업 중단 |
+| 행 변환 | 기존 유형별 catch 위치 유지 |
+| Writer | 기존 바인딩·자료형·MERGE·건별 실행 유지; 본체 실패 시 스펙 생략, 스펙 실패 시 본체 유지 |
+| 관계 | 정의별 실패 격리; 단독 ci-relation은 CI 정의를 조회하지 않음 |
 
-Asset/Conversion/Software 순서는 기존 @Order와 일치한다. CI의 기존 미지정 순서는
-기준 커밋의 Spring scanner에서 확인한 DatabaseInstance→Device→Disk→Filesystem→IP→OS로 명시했다.
+Asset/Conversion/Software 순서는 기존과 같다. CI는 DatabaseInstance→Device→Disk→Filesystem→IP→OS→관계다.
+NULL·단위·시간대·페이지별 변경 시각, retry·auto-commit·부분 적재·로그 집계 의미를 유지한다.
+트랜잭션·재시도·새 상태/exit code 정책을 추가하지 않는다.
 
-### 확장 시 변경 위치
+## 새 타겟 추가 절차
 
-새 D42→Maximo 수집 유형은 해당 기능의 Query·모델·필요한 매핑과 연계 Job 조립에 추가한다.
-새 Maximo 테이블이 필요할 때만 maximo 영역에 DTO/Writer를 추가한다.
-새 타겟은 그 타겟 저장 영역과 별도의 `integration/d42<target>` 조립에 추가한다.
-runtime·기존 Maximo Writer·기존 연계 SQL을 수정할 필요가 없으며, 지금 가상의 타겟 구현은 만들지 않았다.
+1. `target.<name>`에 실제 대상의 DTO·Writer·필요한 설정을 구현한다.
+2. `pipeline.d42<name>`에 기존 D42 원천 모델을 받는 Mapper와 해당 타겟 작업을 조립한다.
+3. 해당 Pipeline 안에 `TargetModule`을 구현한 조건부 Configuration을 추가한다.
+   `integration.target=<name>`일 때만 활성화하고 자기 컴포넌트·접속·필요한 Query를 가져온다.
+4. 설정을 바꾸고 그 모듈이 제공하는 작업 이름을 기존 CLI 인자로 전달한다.
+
+기존 조회로 충분하다면 CLI/runtime/Maximo 구현 변경이 없다.
+새 D42 데이터가 필요하면 Source 조회를 확장하는 것은 정상적인 확장이다.
+등록하지 않은 시스템을 설정 한 줄만으로 자동 지원한다는 뜻은 아니다.
+테스트 전용 `pipeline.d42test.AlternativeTarget`이 동일한 탐색·설정 경로의 예다. 운영 JAR에는 포함하지 않는다.
 
 ## 검증과 완료 기준
 
-1. CPU Asset·OS CI 시범 전환 후 모든 Asset/CI/관계/Conversion/Software 경로를 이전한다.
-2. 기존 테스트의 검증 의미를 유지하고 오류·페이징·조립·패키지 경계 테스트로 보강한다.
-3. 기준 커밋과 SQL·바인딩·매핑·실행 동작을 대조한다.
-4. 최종 전체 테스트를 실제 실행하고 빌드를 확인한다. H2/Mock은 실제 DB 검증을 대신하지 않는다.
-5. 임시 어댑터·옛 중복 경로·금지 의존·패키지 순환이 없어야 한다.
-6. 매핑 문서의 구현 참조, README, CLAUDE.md를 최종 구조와 일치시킨다.
-7. 진행 기록과 로컬 커밋, 최종 리뷰를 완료한다. push/merge/PR은 하지 않는다.
+- 기존 테스트 의미 유지, 전체 test/bootJar 실제 실행.
+- `SourceSqlParityTest`: 기준 커밋의 27개 조회 경로와 7개 관계 COUNT/PAGE 동결 SQL 대조.
+- `SelectionEquivalenceTest`: 장비 조건 10,800 조합 및 파일시스템 조건 동등성.
+- `RelationMappingEquivalenceTest`: 일곱 관계의 코드·식별자·정렬·중복·NULL·페이지 결과.
+- `ProjectionEquivalenceTest`: 카탈로그 기본값 동치 그룹·COUNT·정렬·페이지 및 Printer MAC 표현.
+- `TargetSelectionTest`: 기본/명시/잘못된 타겟과 실제 모듈 탐색을 통한 대체 타겟의 원천 재사용·비선택 타겟 비활성화.
+- `DependencyBoundaryTest`, `MappingDocumentationTest`: 금지 의존·패키지 순환·구현 링크와 경로 누락 검사.
+- `python3 scripts/refactoring/check_target_baseline.py --artifact`: 기존 본문·테스트 보존과 JAR 경로 대조.
 
-지속 회귀 검사는 DependencyBoundaryTest·JobCompositionTest·CLI/DoqlClient/TaskSequence/PageLoop 테스트와
-이전한 기존 H2/Mock 테스트가 담당한다. 일회성 이전 대조는 `scripts/refactoring/check_baseline.py`로
-기준 Git 객체의 SQL·바인딩·매핑·실행 본문, 모델/규칙/설정, 기존 테스트 이름을 검사한다.
-구조 치환만 정규화하며 SQL 리터럴·JDBC 실행 방식은 비교 대상이다. 소스 대조는 실제 DB 실행 검증을 대신하지 않는다.
+이 검증들은 H2/Mockito 및 소스·산출물 검사다. 실제 DOQL/DB2 엔진·운영 적재는 이번 작업에서 수행하지 않는다.
