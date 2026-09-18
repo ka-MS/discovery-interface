@@ -4,6 +4,8 @@
 
 > 관측 2026-09-16 · Device42 192.168.2.68 / 192.168.1.35 · Maximo BLUDB
 
+> SQL의 LIMIT/OFFSET은 예시 페이지 값이다. 본체·관계 조회는 Source, 타겟 식별자·값 생성은 Pipeline Mapper가 소유한다.
+
 ## 1. 범위·분류
 
 DB Instance는 `database_type`에 따라 엔진별 분류로 라우팅하고, 전용 분류가 없는 엔진은
@@ -50,6 +52,25 @@ Application Component 자체의 CI 적재 여부는 [ISSUE-8](../../../open-issu
 전체 컬럼의 의미·관측 형식·NULL은 [원천 구조](../../../knowledge/device42/database-model.md)에 있다.
 
 ## 2. 원천 조회
+
+현재 배치의 본체 조회 SQL이다. 아래 뒤쪽의 넓은 조사용 조회와 구분한다.
+
+```sql
+SELECT i.databaseinstance_pk,
+    NULLIF(TRIM(i.dbinstance_name), '') AS dbinstance_name,
+    NULLIF(TRIM(i.database_type), '') AS database_type,
+    NULLIF(TRIM(r.identifier), '') AS resource_identifier,
+    NULLIF(TRIM(CAST(r.details AS JSONB)->>'version'), '') AS version_text,
+    r.notes AS source_description,
+    r.last_changed,
+    NULLIF(TRIM(CAST(a.json AS JSONB)->'products'->0->>'install_path'), '') AS install_path
+FROM view_databaseinstance_v2 i
+LEFT JOIN view_resource_v2 r ON r.resource_pk = i.databaseinstance_pk
+LEFT JOIN view_appcomp_v1 a ON a.appcomp_pk = i.appcomp_fk
+ORDER BY i.databaseinstance_pk
+LIMIT 1000 OFFSET 0
+```
+
 
 Device42 원천 조회 SQL이다. 별칭은 i=DB Instance, r=Resource, a=Application Component, h=Device다.
 미결 속성과 장치 연결의 조사용 값도 반환하며, 모든 반환 컬럼이 적재 대상으로 확정된 것은 아니다.
@@ -330,6 +351,31 @@ Instance→Database 방향은 위 SQL의 TARGET을 `APP.DB.DATABASE`로 바꾸�
 `APP.DB.GENERICDATABASESERVER`를 넣어도 마찬가지다.
 RELATIONNUM을 걸지 않아도 0건이다. `RELATION.CONTAINS` 코드가 존재해도 분류쌍 규칙이 없으면
 MERGE 가드가 전건 거부하므로, MAS UI 등록 전에는 이 관계를 적재 대상으로 표시하지 않는다.
+
+### 현재 관계 배치의 원천 조회
+
+아래 조회는 원천 PK만 반환한다. Mapper가 Instance → Device의 식별자와 `RELATION.RUNSON`을 생성한다.
+
+```sql
+WITH computer AS (
+    SELECT d.device_pk
+    FROM view_device_v2 d
+    WHERE
+d.type IN ('physical', 'virtual')
+AND (d.network_device = false OR d.network_device IS NULL)
+AND (
+    (d.type = 'physical' AND d.physicalsubtype IN ('Generic', 'Rackable', 'Blade', 'WorkStation', 'ThinClient', 'Laptop'))
+    OR (d.type = 'virtual' AND d.virtualsubtype IN ('Internal VM', 'Amazon EC2 Instance', 'VMWare', 'Hyper-V'))
+)
+)
+SELECT CAST(i.databaseinstance_pk AS varchar) AS source_pk,
+       CAST(c.device_pk AS varchar) AS target_pk
+FROM view_databaseinstance_v2 i
+JOIN view_appcomp_v1 a ON a.appcomp_pk = i.appcomp_fk
+JOIN computer c ON c.device_pk = a.device_fk
+ORDER BY source_pk, target_pk
+LIMIT 1000 OFFSET 0
+```
 
 ## 6. 미결
 

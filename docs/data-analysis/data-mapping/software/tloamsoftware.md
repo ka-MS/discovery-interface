@@ -2,9 +2,11 @@
 
 소프트웨어 카탈로그
 
-> Target: MAXIMO.TLOAMSOFTWARE · 구현: [TloamSoftwareImport](../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/software/catalog/TloamSoftwareImport.java) · [TloamSoftwareQuery](../../../../src/main/java/com/itmsg/device42/source/device42/software/catalog/TloamSoftwareQuery.java) · [TloamSoftwareMapper](../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/software/catalog/TloamSoftwareMapper.java) · [TloamSoftwareWriter](../../../../src/main/java/com/itmsg/device42/target/maximo/software/TloamSoftwareWriter.java)
+> Target: MAXIMO.TLOAMSOFTWARE · 구현: [TloamSoftwareImport](../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/software/catalog/TloamSoftwareImport.java) · [SoftwareCatalogQuery](../../../../src/main/java/com/itmsg/device42/source/device42/software/catalog/SoftwareCatalogQuery.java) · [TloamSoftwareMapper](../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/software/catalog/TloamSoftwareMapper.java) · [TloamSoftwareWriter](../../../../src/main/java/com/itmsg/device42/target/maximo/software/TloamSoftwareWriter.java)
 > 관측 2026-08-28 · Device42 192.168.1.35 · 192.168.2.68 / Maximo BLUDB
 > 재조회 `../../exploration-queries/device42/dpa-software-mapping.sql` · `../../exploration-queries/maximo/dpa-view-conversion-requirements.sql`
+
+> SQL의 LIMIT/OFFSET은 예시 페이지 값이다. 본체·관계 조회는 Source, 타겟 식별자·값 생성은 Pipeline Mapper가 소유한다.
 
 ## 1. 관계
 
@@ -116,7 +118,15 @@ Device42는 `RELEASE` 원천이 없으므로 `VERSION`만 사용한다. 이름·
 
 ## 6. 조회 쿼리
 
+누락 이름·제조사와 실제 `UNKNOWN` 값은 기존처럼 같은 카탈로그 그룹으로 계산한다.
+내부 그룹 키의 기본값은 연계 정책에서 전달하며 COUNT·정렬·페이지를 보존한다.
+외부 투영은 해당 동치 그룹을 NULL로 반환하고 최종 `UNKNOWN` 문자열은 Mapper가 생성한다.
+
 ```sql
+SELECT NULLIF(catalog.software_name, 'UNKNOWN') AS software_name,
+    catalog.version,
+    NULLIF(catalog.manufacturer, 'UNKNOWN') AS manufacturer
+FROM (
 SELECT DISTINCT
     COALESCE(NULLIF(TRIM(s.name), ''), 'UNKNOWN') AS software_name,
     NULLIF(TRIM(u.version), '') AS version,
@@ -125,11 +135,14 @@ FROM view_softwareinuse_v1 u
 JOIN view_device_v2 d ON d.device_pk = u.device_fk
 LEFT JOIN view_software_v1 s ON s.software_pk = u.software_fk
 LEFT JOIN view_vendor_v1 v ON v.vendor_pk = s.vendor_fk
-WHERE d.type IN ('virtual', 'physical')
-  AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)
-  AND (d.network_device = false OR d.network_device IS NULL)
-  AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer', 'PDU'))
-ORDER BY software_name, version, manufacturer
+WHERE
+d.type IN ('virtual', 'physical')
+AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)
+AND (d.network_device = false OR d.network_device IS NULL)
+AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer', 'PDU'))
+) catalog
+ORDER BY catalog.software_name, catalog.version, catalog.manufacturer
+LIMIT 1000 OFFSET 0
 ```
 
 ## 7. 적재 순서

@@ -7,7 +7,8 @@ import com.itmsg.device42.source.device42.ci.relation.Device42Relation;
 import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -32,11 +33,12 @@ class SourceSqlParityTest {
             context.register(MaximoQueries.class);
             context.refresh();
             int checked = 0;
-            for (var method : MaximoQueries.class.getDeclaredMethods()) {
-                var type = method.getReturnType();
-                if (type.getSimpleName().equals("CiRelationQuery")) continue;
+            for (var baseline : BaselineSql.class.getDeclaredClasses()) {
+                if (!baseline.getSimpleName().endsWith("Query")) continue;
+                String currentName = currentName(baseline.getSimpleName());
+                var type = Arrays.stream(MaximoQueries.class.getDeclaredMethods()).map(m -> m.getReturnType())
+                        .filter(c -> c.getSimpleName().equals(currentName)).findFirst().orElseThrow();
                 var query = context.getBean(type);
-                var baseline = Class.forName(BaselineSql.class.getName() + "$" + type.getSimpleName());
                 executed.clear();
                 type.getMethod("getTotalCount").invoke(query);
                 type.getMethod("getData", long.class, int.class).invoke(query, 20L, 10);
@@ -52,10 +54,20 @@ class SourceSqlParityTest {
                             .replace("WHERE network_device = true", "WHERE d.network_device = true")
                             .replace("AND type = 'physical'", "AND d.type = 'physical'");
                 }
+                if (type.getSimpleName().equals("NetPrinterQuery")) {
+                    page = page.replace("UPPER(n.hwaddress)", "n.hwaddress");
+                }
+                if (type.getSimpleName().equals("SoftwareCatalogQuery")) {
+                    page = "SELECT NULLIF(catalog.software_name, 'UNKNOWN') AS software_name, catalog.version, "
+                            + "NULLIF(catalog.manufacturer, 'UNKNOWN') AS manufacturer FROM ("
+                            + BaselineSql.TloamSoftwareQuery.CATALOG_SOURCE_QUERY
+                            + ") catalog ORDER BY catalog.software_name, catalog.version, catalog.manufacturer LIMIT 10 OFFSET 20";
+                }
                 assertThat(executed).as(type.getName()).hasSize(2);
                 assertThat(canonical(executed.get(0))).as("%s COUNT", type.getSimpleName()).isEqualTo(canonical(count));
                 assertThat(canonical(executed.get(1))).as("%s PAGE", type.getSimpleName()).isEqualTo(canonical(page));
                 assertThat(executed).allSatisfy(sql -> assertThat(sql).doesNotContain("{{", "D42:", "RELATION."));
+                saveSql(type.getSimpleName(), executed.get(0), executed.get(1));
                 checked++;
             }
             assertThat(checked).isEqualTo(27);
@@ -63,7 +75,7 @@ class SourceSqlParityTest {
     }
 
     @Test
-    void everyRelationPreservesJoinsFiltersMultiplicityAndTextualPkOrdering() {
+    void everyRelationPreservesJoinsFiltersMultiplicityAndTextualPkOrdering() throws Exception {
         var baseline = BaselineSql.CiRelationSource.values();
         var current = Device42Relation.values();
         assertThat(current).hasSameSizeAs(baseline);
@@ -75,7 +87,16 @@ class SourceSqlParityTest {
                     .replace("sourceci", "source_pk").replace("targetci", "target_pk");
             assertThat(canonical(current[i].pageQuery(MaximoSourcePolicy.RELATIONS, 20, 10)))
                     .as("%s page", current[i]).isEqualTo(canonical(expected));
+            saveSql(current[i].name(), current[i].countQuery(MaximoSourcePolicy.RELATIONS),
+                    current[i].pageQuery(MaximoSourcePolicy.RELATIONS, 20, 10));
         }
+    }
+
+    private static void saveSql(String name, String count, String page) throws Exception {
+        Path output = Path.of("build/refactoring/current-sql");
+        Files.createDirectories(output);
+        Files.writeString(output.resolve(name + "-count.sql"), count);
+        Files.writeString(output.resolve(name + "-page.sql"), page);
     }
 
     private static String field(Class<?> type, String... names) throws Exception {
@@ -85,6 +106,19 @@ class SourceSqlParityTest {
             } catch (NoSuchFieldException ignored) { }
         }
         throw new AssertionError("기준 SQL 없음: " + type);
+    }
+
+    private static String currentName(String baseline) {
+        return switch (baseline) {
+            case "DpamManufacturerQuery", "DpamManuVariantQuery" -> "ManufacturerNamesQuery";
+            case "DpamOsQuery", "DpamOsVariantQuery" -> "OperatingSystemNamesQuery";
+            case "DpamProcessorQuery", "DpamProcVariantQuery" -> "ProcessorModelsQuery";
+            case "DpamAdapterQuery", "DpamAdptVariantQuery" -> "AdapterModelsQuery";
+            case "TloamSoftwareQuery" -> "SoftwareCatalogQuery";
+            case "DpaSoftwareQuery" -> "InstalledSoftwareQuery";
+            case "DeployedAssetQuery" -> "DeviceQuery";
+            default -> baseline;
+        };
     }
 
     private static String compact(String sql) {

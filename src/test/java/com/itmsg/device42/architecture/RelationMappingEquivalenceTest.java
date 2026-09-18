@@ -7,7 +7,6 @@ import com.itmsg.device42.source.device42.ci.relation.RelationSource;
 import com.itmsg.device42.target.maximo.ci.ActCiRelationUpsert;
 import java.sql.DriverManager;
 import java.util.ArrayList;
-import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.SingleConnectionDataSource;

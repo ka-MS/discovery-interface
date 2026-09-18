@@ -7,14 +7,14 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class DpamManuVariantQuery {
+public class ManufacturerNamesQuery {
 
     private final DoqlClient doql;
     private final DeviceSelection selection;
     private final DeviceSelection parentSelection;
     private final String supplementalName;
 
-    public DpamManuVariantQuery(DeviceSelection selection, DeviceSelection parentSelection, String supplementalName, DoqlClient doql) {
+    public ManufacturerNamesQuery(DeviceSelection selection, DeviceSelection parentSelection, String supplementalName, DoqlClient doql) {
         this.doql = doql;
         this.selection = selection;
         this.parentSelection = parentSelection;
@@ -32,7 +32,7 @@ public class DpamManuVariantQuery {
                 return 0L;
             });
         } catch (SQLException e) {
-            throw new IllegalStateException("제조업체 변환 변형 건수 조회에 실패했습니다.", e);
+            throw new IllegalStateException("제조업체 변환 대상 건수 조회에 실패했습니다.", e);
         }
     }
 
@@ -52,7 +52,7 @@ public class DpamManuVariantQuery {
             });
         } catch (SQLException e) {
             throw new IllegalStateException(
-                    "제조업체 변환 변형 원천 조회에 실패했습니다. offset=" + offset + ", limit=" + limit,
+                    "제조업체 변환 대상 원천 조회에 실패했습니다. offset=" + offset + ", limit=" + limit,
                     e
             );
         }

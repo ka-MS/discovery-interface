@@ -2,8 +2,10 @@
 
 배치된 자산 컴퓨터 애플리케이션
 
-> Target: MAXIMO.DPASOFTWARE · ASSETCLASS: COMPUTER · 구현: [DpaSoftwareImport](../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/software/installed/DpaSoftwareImport.java) · [DpaSoftwareQuery](../../../../src/main/java/com/itmsg/device42/source/device42/software/installed/DpaSoftwareQuery.java) · [DpaSoftwareMapper](../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/software/installed/DpaSoftwareMapper.java) · [DpaSoftwareWriter](../../../../src/main/java/com/itmsg/device42/target/maximo/software/DpaSoftwareWriter.java)
+> Target: MAXIMO.DPASOFTWARE · ASSETCLASS: COMPUTER · 구현: [DpaSoftwareImport](../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/software/installed/DpaSoftwareImport.java) · [InstalledSoftwareQuery](../../../../src/main/java/com/itmsg/device42/source/device42/software/installed/InstalledSoftwareQuery.java) · [DpaSoftwareMapper](../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/software/installed/DpaSoftwareMapper.java) · [DpaSoftwareWriter](../../../../src/main/java/com/itmsg/device42/target/maximo/software/DpaSoftwareWriter.java)
 > 관측 2026-08-27 · Device42 192.168.1.35 · 192.168.2.68 / Maximo BLUDB
+
+> SQL의 LIMIT/OFFSET은 예시 페이지 값이다. 본체·관계 조회는 Source, 타겟 식별자·값 생성은 Pipeline Mapper가 소유한다.
 
 ## 1. 관계
 
@@ -101,11 +103,13 @@ FROM view_softwareinuse_v1 u
 JOIN view_device_v2 d ON d.device_pk = u.device_fk
 LEFT JOIN view_software_v1 s ON s.software_pk = u.software_fk
 LEFT JOIN view_vendor_v1 v ON v.vendor_pk = s.vendor_fk
-WHERE d.type IN ('virtual', 'physical')
-  AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)
-  AND (d.network_device = false OR d.network_device IS NULL)
-  AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer', 'PDU'))
+WHERE
+d.type IN ('virtual', 'physical')
+AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)
+AND (d.network_device = false OR d.network_device IS NULL)
+AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer', 'PDU'))
 ORDER BY u.device_fk, s.name, u.version, u.softwareinuse_pk
+LIMIT 1000 OFFSET 0
 ```
 
 ## 6. 미결

@@ -72,7 +72,7 @@ public class NetPrinterQuery {
                 d.device_pk,
                 d.ram,
                 d.ram_size_type,
-                (SELECT UPPER(n.hwaddress)
+                (SELECT n.hwaddress
                  FROM view_netport_v1 n
                  WHERE n.device_fk = d.device_pk AND n.hwaddress <> ''
                  LIMIT 1) AS hwaddress,

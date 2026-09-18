@@ -1,4 +1,4 @@
-package com.itmsg.device42.pipeline.d42maximo.asset.device;
+package com.itmsg.device42.source.device42.asset.device;
 
 import java.sql.Date;
 

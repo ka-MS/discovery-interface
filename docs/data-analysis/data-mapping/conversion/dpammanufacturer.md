@@ -2,9 +2,11 @@
 
 제조업체 변환 대상
 
-> Target: MAXIMO.DPAMMANUFACTURER · 구현: [DpamManufacturerImport](../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/conversion/manufacturer/DpamManufacturerImport.java) · [DpamManufacturerQuery](../../../../src/main/java/com/itmsg/device42/source/device42/conversion/manufacturer/DpamManufacturerQuery.java) · [DpamManufacturerWriter](../../../../src/main/java/com/itmsg/device42/target/maximo/conversion/DpamManufacturerWriter.java)
+> Target: MAXIMO.DPAMMANUFACTURER · 구현: [DpamManufacturerImport](../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/conversion/manufacturer/DpamManufacturerImport.java) · [ManufacturerNamesQuery](../../../../src/main/java/com/itmsg/device42/source/device42/conversion/manufacturer/ManufacturerNamesQuery.java) · [DpamManufacturerWriter](../../../../src/main/java/com/itmsg/device42/target/maximo/conversion/DpamManufacturerWriter.java)
 > 관측 2026-08-28 · Device42 192.168.1.35 · 192.168.2.68 / Maximo BLUDB
 > 재조회 `../../exploration-queries/maximo/dpa-view-conversion-requirements.sql`
+
+> SQL의 LIMIT/OFFSET은 예시 페이지 값이다. 본체·관계 조회는 Source, 타겟 식별자·값 생성은 Pipeline Mapper가 소유한다.
 
 ## 1. 관계
 
@@ -79,18 +81,18 @@ WITH target AS (
     SELECT d.device_pk, d.hardware_fk
     FROM view_device_v2 d
     WHERE
-      d.type IN ('virtual', 'physical')
-      AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)
-      AND (d.physicalsubtype IS NULL OR d.physicalsubtype <> 'PDU')
+d.type IN ('virtual', 'physical')
+AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)
+AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('PDU'))
 ),
 computer AS (
     SELECT d.device_pk
     FROM view_device_v2 d
     WHERE
-      d.type IN ('virtual', 'physical')
-      AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)
-      AND (d.network_device = false OR d.network_device IS NULL)
-      AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer', 'PDU'))
+d.type IN ('virtual', 'physical')
+AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)
+AND (d.network_device = false OR d.network_device IS NULL)
+AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer', 'PDU'))
 ),
 names AS (
     SELECT v.name FROM target t
@@ -122,6 +124,7 @@ filtered AS (
     SELECT name FROM names WHERE name IS NOT NULL AND name <> ''
 )
 SELECT name FROM filtered ORDER BY name
+LIMIT 1000 OFFSET 0
 ```
 
 관측 `.35` 15종, `.68` 55종이다.

@@ -11,6 +11,8 @@
 후속 확정된 `USES` 경로와 전체 장비–IP 쌍 조회·검증 상태의 정본은 [ACTCIRELATION](../actcirelation.md)이다.
 IP 본체의 대표 장비 한 건을 관계 입력으로 사용하지 않는다.
 
+> SQL의 LIMIT/OFFSET은 예시 페이지 값이다. 본체·관계 조회는 Source, 타겟 식별자·값 생성은 Pipeline Mapper가 소유한다.
+
 ## 1. 대상과 식별자
 
 | 항목 | 값 |
@@ -44,7 +46,7 @@ SELECT DISTINCT ON (i.ipaddress_pk)
 FROM view_ipaddress_v2 i
 JOIN view_device_v2 d ON d.device_pk = ANY(i.device_fks)
 ORDER BY i.ipaddress_pk, d.device_pk
-LIMIT %d OFFSET %d
+LIMIT 1000 OFFSET 0
 ```
 
 2026-09-15 두 서버에서 실행해 통과를 확인했다.

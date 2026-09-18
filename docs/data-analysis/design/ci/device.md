@@ -72,7 +72,7 @@ CiIntegrationJob
 - 종류별 분류 선택과 스펙 메서드는 DeviceCiMapper 안에 둔다. 별도 전략 프레임워크는 도입하지 않는다.
 - `ComputerSpec`의 공통 하드웨어 속성은 재사용할 수 있다. 새 분류 전용 속성이 실제로 확정되면 필요한 enum 항목만 추가한다.
 - `CiClassification`에는 확정된 분류만 추가한다. 정의 캐시의 템플릿·자료형·단위 검증과 누락 스펙 처리 방식을 유지한다.
-- **`CiSourceFilter.COMPUTER`를 전역 확대하지 않는다.** OS·Disk·Filesystem·기존 관계가 참조하므로 Device 전용 후보 조건을 별도로 둔다. 자식 CI 수집 범위 확대는 개별 매핑에서 판단한다.
+- **`MaximoSourcePolicy.CI_COMPUTER`를 전역 확대하지 않는다.** OS·Disk·Filesystem·기존 관계가 참조하므로 Device 전용 후보 조건을 별도로 둔다. 자식 CI 수집 범위 확대는 개별 매핑에서 판단한다.
 - ACTCINUM은 `D42:DEVICE:<device_pk>`를 유지한다. 분류명을 키에 넣어 동일 장비를 새 CI로 만들지 않는다. 기존 키의 분류가 바뀌면 ACTCI와 재매핑된 ACTCISPEC의 분류·템플릿 참조를 갱신한다.
 - 기존 Computer 수집기와 새 Device 수집기를 동시에 빈으로 등록하지 않는다. 같은 장비를 중복 처리하게 된다.
 

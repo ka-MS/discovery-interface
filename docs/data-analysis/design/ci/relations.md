@@ -23,7 +23,7 @@
 | OS_INSTALLED_ON_COMPUTER | OS → Computer | RELATION.INSTALLEDON | 2026-09-15 자동 적재 63건(물리 5·가상 58 분류쌍 모두 관측), 기존 수동 샘플 `ACTCIRELATIONID=6001` 유지·재실행 ID 동일 확인(멱등성) |
 | HOST_VIRTUALIZES_VM | Host Computer → VM | VIRTUALIZES | 코드·원천 검증 완료. `.68` 3건, `.35` 55건. 2026-09-16 실제 관계 연결 검증 완료 |
 | DB_INSTANCE_RUNS_ON_DEVICE | DB Instance → Device(Computer) | RELATION.RUNSON | 2026-09-16 구현 완료. 분류쌍 규칙·원천 경로 확인. `.68` 0건(미해결 1), `.35` 3건. 실제 적재 검증 전 |
-| DEVICE_USES_IP | Device(Computer/VM/Network Cluster) → IP | USES | `CiSourceFilter.DEVICE`와 `view_ipaddress_device_v2` 직접 쌍 사용. `N:N` 규칙 3개 등록. 원천 `.68` 53건, `.35` 120건이며 Cluster 각 2건. Cluster 포함 실적재는 미검증 |
+| DEVICE_USES_IP | Device(Computer/VM/Network Cluster) → IP | USES | `MaximoSourcePolicy.CI_DEVICE`와 `view_ipaddress_device_v2` 직접 쌍 사용. `N:N` 규칙 3개 등록. 원천 `.68` 53건, `.35` 120건이며 Cluster 각 2건. Cluster 포함 실적재는 미검증 |
 | NETWORK_CLUSTER_FEDERATES_DEVICE | Network Cluster → Network Device | FEDERATES | 코드 구현·자동 테스트 완료. 기존 관계 정의를 재사용하고 `SYS.COMPUTERSYSTEMCLUSTER → SYS.GENERICSWITCH` `1:N` 규칙을 추가해야 한다. 원천은 양 서버 각 2쌍이며 규칙 등록·실적재는 미완료 |
 
 Computer는 물리·가상 두 분류를 허용한다.
@@ -145,23 +145,25 @@ Cluster→Interface는 Interface CI 도입 시 별도로 설계한다.
 
 관계마다 클래스를 만들지 않는다. 도메인별 `OsRelationSource` 같은 클래스로 이름만 바꿔도
 조회·페이징·매핑 루프가 그 안에서 반복되면 같은 문제다.
-**관계를 하나 더 붙일 때 늘어나는 것은 enum 상수 하나여야 한다.**
+원천 연결 사실과 타겟 관계 코드는 구분한다. 새 관계는 필요한 원천 정의와 타겟 매핑만 추가하며 실행 루프는 공유한다.
 
 | 파일 | 역할 | 관계가 늘면 |
 | --- | --- | --- |
-| `integration/d42maximo/ci/relation/CiRelationSource` | 상수 하나 = relationnum + 건수 SQL + 페이지 SQL | **상수 추가** |
-| `integration/d42maximo/ci/relation/CiRelationJob` | `values()` 순회 · PageLoop · 집계 | 변경 없음 |
-| `integration/d42maximo/ci/relation/CiRelationQuery` | 정의별 SQL 실행 · 관계 DTO 변환 | 변경 없음 |
-| `maximo/ci/ActCiRelationWriter` | 공통 MERGE · 건별 오류 격리 | 변경 없음 |
-| `maximo/ci/ActCiRelationUpsert` | sourceCiNum · targetCiNum · relationNum | 변경 없음 |
+| `source/device42/ci/relation/Device42Relation` | 원천 끝점 종류 + 건수 SQL + 페이지 SQL | 새 원천 연결이면 정의 추가 |
+| `source/device42/ci/relation/CiRelationQuery` | 원천 SQL 실행 · PK 쌍 반환 | 변경 없음 |
+| `pipeline/d42maximo/ci/relation/CiRelationSource` | 원천 연결 정의와 relationnum 대응 | 매핑 추가 |
+| `pipeline/d42maximo/ci/relation/CiRelationMapper` | 공통 식별자 규칙으로 타겟 DTO 생성 | 변경 없음 |
+| `pipeline/d42maximo/ci/relation/CiRelationJob` | `values()` 순회 · PageLoop · 집계 | 변경 없음 |
+| `target/maximo/ci/ActCiRelationWriter` | 공통 MERGE · 건별 오류 격리 | 변경 없음 |
+| `target/maximo/ci/ActCiRelationUpsert` | sourceCiNum · targetCiNum · relationNum | 변경 없음 |
 
-enum 하나로 합친 이유는 관계 하나에 상수가 둘이 되는 것을 막기 위해서다.
-relationnum과 조회 SQL은 관계마다 1:1이라 `CiRelationRule`을 따로 둘 이유가 없다.
+이전에는 Maximo 전용 enum 하나에 SQL과 relationnum을 합쳤다. 타겟 교체 구조에서는
+D42 연결 사실을 재사용하기 위해 분리한다. 관계별 실행 클래스나 범용 규칙 엔진은 만들지 않는다.
 허용 분류 집합은 넣지 않는다. MERGE가 실제 ACTCI 행과 RELATIONRULES로 검사한다.
 
-enum은 D42 수집 SQL을 담으므로 연계의 관계 패키지에 둔다.
-분류·스펙 선택 enum은 `integration/d42maximo/ci/mapping`,
-공유 수집 조건은 `integration/d42maximo/ci/selection`에 둔다.
+원천 연결 enum은 Source의 관계 패키지에 둔다.
+분류·스펙 선택 enum은 `pipeline/d42maximo/ci/mapping`,
+공유 수집 정책은 `pipeline/d42maximo/selection/MaximoSourcePolicy`에 둔다.
 Maximo는 타겟 DTO·저장 SQL·정의 조회만 소유한다.
 
 `CiRelationJob`은 `CiDefinitionCache`를 받지 않는다. 관계 저장에 분류·속성 정의가
@@ -201,7 +203,7 @@ Host→VM 관계도 VM 행의 `virtual_host_device_fk`를 읽어서 만든다.
 문서 정본은 기존 규약대로 출발 유형 문서가 소유하므로 SQL을 양쪽에 복사하지 않는다.
 
 수집 범위 필터는 각 페이지 SQL의 CTE 안에 둔다. `DEVICE_USES_IP`는 Cluster까지 포함하도록
-`CiSourceFilter.DEVICE`를 쓰고, Computer 자식 관계는 `CiSourceFilter.COMPUTER`를 유지한다.
+`MaximoSourcePolicy.CI_DEVICE`를 쓰고, Computer 자식 관계는 `MaximoSourcePolicy.CI_COMPUTER`를 유지한다.
 정렬은 두 SQL 모두 `sourceci,targetci`다. DOQL은 ORDER BY 없는 OFFSET의 순서를 보장하지 않는다.
 전체 ACTCI를 메모리에 올려 이름으로 찾지 않는다. 양 끝은 원천의 확인된 연결 키로 만든다.
 본체 task가 관계 후보를 누적해 넘기지 않는다. 관계 단계가 연결 키만 다시 읽는다.

@@ -7,6 +7,8 @@
 
 공통 컬럼 정의는 [ACTCI](../actci.md), [ACTCISPEC](../actcispec.md)가 소유한다.
 
+> SQL의 LIMIT/OFFSET은 예시 페이지 값이다. 본체·관계 조회는 Source, 타겟 식별자·값 생성은 Pipeline Mapper가 소유한다.
+
 ## 1. 대상과 식별자
 
 | 항목 | 값 |
@@ -29,18 +31,15 @@ Computer 수집 필터와 같은 조건으로 부모를 좁힌 뒤 `device_fk`�
 WITH computer AS (
     SELECT d.device_pk, d.last_discovered
     FROM view_device_v2 d
-    WHERE d.type IN ('physical', 'virtual')
-      AND (d.network_device = false OR d.network_device IS NULL)
-      AND (
-          (d.type = 'physical' AND d.physicalsubtype IN
-              ('Generic', 'Rackable', 'Blade', 'WorkStation', 'ThinClient', 'Laptop'))
-          OR
-          (d.type = 'virtual' AND d.virtualsubtype IN
-              ('Internal VM', 'Amazon EC2 Instance', 'VMWare', 'Hyper-V'))
-      )
+    WHERE
+d.type IN ('physical', 'virtual')
+AND (d.network_device = false OR d.network_device IS NULL)
+AND (
+    (d.type = 'physical' AND d.physicalsubtype IN ('Generic', 'Rackable', 'Blade', 'WorkStation', 'ThinClient', 'Laptop'))
+    OR (d.type = 'virtual' AND d.virtualsubtype IN ('Internal VM', 'Amazon EC2 Instance', 'VMWare', 'Hyper-V'))
+)
 )
 SELECT o.deviceos_pk, o.device_fk,
-    'D42:DEVICEOS:' || CAST(o.deviceos_pk AS varchar) AS source_id,
     NULLIF(TRIM(o.os_name), '') AS os_name,
     NULLIF(TRIM(o.os_version), '') AS os_version,
     NULLIF(TRIM(o.os_version_no), '') AS os_version_no,
@@ -49,7 +48,7 @@ SELECT o.deviceos_pk, o.device_fk,
 FROM view_deviceos_v1 o
 JOIN computer c ON c.device_pk = o.device_fk
 ORDER BY o.deviceos_pk
-LIMIT %d OFFSET %d
+LIMIT 1000 OFFSET 0
 ```
 
 2026-09-15 두 서버에서 실행해 통과를 확인했다.
@@ -117,18 +116,25 @@ CI 및 관계 생성을 확인했다. [검증 결과](../../../knowledge/maximo/
 가상 Computer의 자식 승격은 별도 범위 설정·검증이 필요하다.
 RUNSON은 실행 의미를 추가하므로 단순 device_fk 연결로 함께 생성하지 않는다.
 
-아래 SQL은 두 서버에서 실행 확인했으며 관계 단계의 OS 조회 정의가 그대로 쓴다.
+연결 의미의 기존 운영 검증 이력은 위와 같다. 아래는 타겟 표현을 분리한 현재 원천 조회이며 이번 리팩터링에서는 운영 DB에 재실행하지 않았다.
 본체 조회 결과를 재사용하지 않는다.
 
 ```sql
-WITH computer AS (SELECT d.* FROM view_device_v2 d WHERE d.type IN ('physical','virtual')
-AND (d.network_device=false OR d.network_device IS NULL)
-AND ((d.type='physical' AND d.physicalsubtype IN ('Generic','Rackable','Blade','WorkStation','ThinClient','Laptop'))
-OR (d.type='virtual' AND d.virtualsubtype IN ('Internal VM','Amazon EC2 Instance','VMWare','Hyper-V'))))
-SELECT DISTINCT 'D42:DEVICEOS:' || CAST(o.deviceos_pk AS varchar) AS sourceci,
-       'D42:DEVICE:' || CAST(c.device_pk AS varchar) AS targetci,
-       'RELATION.INSTALLEDON' AS relationnum
+WITH computer AS (
+    SELECT d.device_pk
+    FROM view_device_v2 d
+    WHERE
+d.type IN ('physical', 'virtual')
+AND (d.network_device = false OR d.network_device IS NULL)
+AND (
+    (d.type = 'physical' AND d.physicalsubtype IN ('Generic', 'Rackable', 'Blade', 'WorkStation', 'ThinClient', 'Laptop'))
+    OR (d.type = 'virtual' AND d.virtualsubtype IN ('Internal VM', 'Amazon EC2 Instance', 'VMWare', 'Hyper-V'))
+)
+)
+SELECT CAST(o.deviceos_pk AS varchar) AS source_pk,
+       CAST(c.device_pk AS varchar) AS target_pk
 FROM view_deviceos_v1 o
-JOIN computer c ON c.device_pk=o.device_fk
-ORDER BY sourceci,targetci;
+JOIN computer c ON c.device_pk = o.device_fk
+ORDER BY source_pk, target_pk
+LIMIT 1000 OFFSET 0
 ```

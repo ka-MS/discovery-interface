@@ -7,6 +7,8 @@
 > 관측 2026-08-27 · Device42 **양쪽 서버** 192.168.2.68 / 192.168.1.35 · Maximo BLUDB
 > 원천 건수는 서버별로 병기한다. 표기는 `.68 / .35` 순이다.
 
+> SQL의 LIMIT/OFFSET은 예시 페이지 값이다. 본체·관계 조회는 Source, 타겟 식별자·값 생성은 Pipeline Mapper가 소유한다.
+
 ## 1. 관계
 
 - 부모: MAXIMO.DEPLOYEDASSET (NODEID)
@@ -68,21 +70,23 @@ SELECT
     p.device_fk,
     p.slot,
     p.description,
-    pm.name        AS model_name,
+    pm.name AS model_name,
     pm.cores,
     pm.speed,
     pm.speed_unit,
-    v.name         AS vendor_name
+    v.name AS vendor_name
 FROM view_part_v1 p
 JOIN view_partmodel_v1 pm ON pm.partmodel_pk = p.partmodel_fk
 JOIN view_device_v2 d ON d.device_pk = p.device_fk
 LEFT JOIN view_vendor_v1 v ON v.vendor_pk = pm.vendor_fk
 WHERE pm.type_name = 'CPU'
-  AND d.type IN ('virtual', 'physical')
-  AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)
-  AND (d.network_device = false OR d.network_device IS NULL)
-  AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer', 'PDU'))
+  AND
+d.type IN ('virtual', 'physical')
+AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)
+AND (d.network_device = false OR d.network_device IS NULL)
+AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer', 'PDU'))
 ORDER BY p.device_fk, p.slot, p.part_pk
+LIMIT 1000 OFFSET 0
 ```
 
 ## 6. 미결

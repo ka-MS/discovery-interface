@@ -1,6 +1,6 @@
 package com.itmsg.device42.pipeline.d42maximo.conversion.os;
 
-import com.itmsg.device42.source.device42.conversion.os.DpamOsVariantQuery;
+import com.itmsg.device42.source.device42.conversion.os.OperatingSystemNamesQuery;
 import com.itmsg.device42.source.device42.conversion.os.OperatingSystemNameSource;
 
 import com.itmsg.device42.target.maximo.conversion.DpamOsVariantUpsert;
@@ -19,10 +19,10 @@ public class DpamOsVariantImport {
 
     private static final int DEFAULT_BATCH_SIZE = 1000;
 
-    private final DpamOsVariantQuery query;
+    private final OperatingSystemNamesQuery query;
     private final DpamOsVariantWriter writer;
 
-    public DpamOsVariantImport(DpamOsVariantQuery query, DpamOsVariantWriter writer) {
+    public DpamOsVariantImport(OperatingSystemNamesQuery query, DpamOsVariantWriter writer) {
         this.query = query;
         this.writer = writer;
     }

@@ -5,6 +5,8 @@
 > Target: MAXIMO.DPATCPIP · ASSETCLASS: COMPUTER · 구현: [TcpIpImport](../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/asset/tcpip/TcpIpImport.java) · [TcpIpQuery](../../../../src/main/java/com/itmsg/device42/source/device42/asset/tcpip/TcpIpQuery.java) · [TcpIpMapper](../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/asset/tcpip/TcpIpMapper.java) · [DpaTcpIpWriter](../../../../src/main/java/com/itmsg/device42/target/maximo/asset/DpaTcpIpWriter.java)
 > 관측 2026-08-31, 설계 갱신 2026-09-17 · Device42 192.168.1.35 · 192.168.2.68 / Maximo BLUDB
 
+> SQL의 LIMIT/OFFSET은 예시 페이지 값이다. 본체·관계 조회는 Source, 타겟 식별자·값 생성은 Pipeline Mapper가 소유한다.
+
 ## 1. 관계
 
 - 부모: MAXIMO.DEPLOYEDASSET (NODEID)
@@ -120,11 +122,13 @@ SELECT
 FROM view_ipaddress_v2 i
 JOIN view_device_v2 d ON d.device_pk = ANY(i.device_fks)
 LEFT JOIN view_subnet_v1 b ON b.subnet_pk = i.subnet_fk
-WHERE d.type IN ('virtual', 'physical')
-  AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)
-  AND (d.network_device = false OR d.network_device IS NULL)
-  AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer', 'PDU'))
+WHERE
+d.type IN ('virtual', 'physical')
+AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)
+AND (d.network_device = false OR d.network_device IS NULL)
+AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer', 'PDU'))
 ORDER BY i.ipaddress_pk, d.device_pk
+LIMIT 1000 OFFSET 0
 ```
 
 ## 6. 미결

@@ -1,6 +1,6 @@
 package com.itmsg.device42.pipeline.d42maximo.software.installed;
 
-import com.itmsg.device42.source.device42.software.installed.DpaSoftwareQuery;
+import com.itmsg.device42.source.device42.software.installed.InstalledSoftwareQuery;
 import com.itmsg.device42.source.device42.software.installed.InstalledSoftwareSource;
 
 import com.itmsg.device42.target.maximo.software.DpaSoftwareUpsert;
@@ -18,11 +18,11 @@ public class DpaSoftwareImport {
 
     private static final int DEFAULT_BATCH_SIZE = 1000;
 
-    private final DpaSoftwareQuery query;
+    private final InstalledSoftwareQuery query;
     private final DpaSoftwareMapper mapper;
     private final DpaSoftwareWriter writer;
 
-    public DpaSoftwareImport(DpaSoftwareQuery query, DpaSoftwareMapper mapper, DpaSoftwareWriter writer) {
+    public DpaSoftwareImport(InstalledSoftwareQuery query, DpaSoftwareMapper mapper, DpaSoftwareWriter writer) {
         this.query = query;
         this.mapper = mapper;
         this.writer = writer;

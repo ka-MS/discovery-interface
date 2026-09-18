@@ -10,12 +10,12 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-public class DeployedAssetQuery {
+public class DeviceQuery {
 
     private final DoqlClient doql;
     private final DeviceSelection selection;
 
-    public DeployedAssetQuery(DeviceSelection selection, DoqlClient doql) {
+    public DeviceQuery(DeviceSelection selection, DoqlClient doql) {
         this.doql = doql;
         this.selection = selection;
     }

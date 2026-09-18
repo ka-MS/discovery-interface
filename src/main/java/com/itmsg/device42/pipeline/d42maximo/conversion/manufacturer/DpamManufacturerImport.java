@@ -1,6 +1,6 @@
 package com.itmsg.device42.pipeline.d42maximo.conversion.manufacturer;
 
-import com.itmsg.device42.source.device42.conversion.manufacturer.DpamManufacturerQuery;
+import com.itmsg.device42.source.device42.conversion.manufacturer.ManufacturerNamesQuery;
 import com.itmsg.device42.source.device42.conversion.manufacturer.ManufacturerSource;
 
 import com.itmsg.device42.target.maximo.conversion.DpamManufacturerUpsert;
@@ -19,10 +19,10 @@ public class DpamManufacturerImport {
 
     private static final int DEFAULT_BATCH_SIZE = 1000;
 
-    private final DpamManufacturerQuery query;
+    private final ManufacturerNamesQuery query;
     private final DpamManufacturerWriter writer;
 
-    public DpamManufacturerImport(DpamManufacturerQuery query, DpamManufacturerWriter writer) {
+    public DpamManufacturerImport(ManufacturerNamesQuery query, DpamManufacturerWriter writer) {
         this.query = query;
         this.writer = writer;
     }

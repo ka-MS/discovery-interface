@@ -2,6 +2,10 @@
 
 Device42(원천)와 Maximo(타겟) 사이의 매핑 작업 문서다.
 
+구현 경계는 `source/device42`(조회·원천 모델), `pipeline/d42maximo`(수집 정책·매핑·조립),
+`target/maximo`(DTO·Writer)다. 관계 조회는 원천 PK를 반환하며 타겟 식별자·코드는 Mapper가 만든다.
+현재 구조와 확장 절차는 [연계 구조 설계](../refactoring/integration-structure-design.md)를 따른다.
+
 ## 읽는 순서
 
 수집 범위는 [사업 추진 범위](../requirements/business-scope.md)를 먼저 확인한다. 원문에 명시된 수집 항목과 독립 CI 대상 여부를 구분한 뒤 아래 문서를 읽는다.

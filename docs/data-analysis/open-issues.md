@@ -278,7 +278,7 @@ compatibility_level의 일반 분류 속성 대응은 미정이며, DB 제품 �
   `Network Cluster → FEDERATES → Network Device`로 연결한다. 현재 구현 분류쌍은
   `SYS.COMPUTERSYSTEMCLUSTER → SYS.GENERICSWITCH` `1:N`이다.
   **IP도 같다.** `view_ipaddress_device_v2` 기준 IP를 가진 네트워크 장비는 cluster 2대(각 1건)뿐이고
-  물리 멤버는 0건이다. `DEVICE_USES_IP`가 `CiSourceFilter.DEVICE`를 사용하고
+  물리 멤버는 0건이다. `DEVICE_USES_IP`가 `MaximoSourcePolicy.CI_DEVICE`를 사용하고
   `SYS.COMPUTERSYSTEMCLUSTER → NET.IPADDRESS` `USES` `N:N` 규칙도 등록해 Cluster→IP 직접 관계로
   결정했다. Interface CI 도입은 이 직접 관계와 별도로 판단한다.
 - **인터페이스 CI 도입 시점.** `NET.L2INTERFACE`는 netport와 속성이 그대로 대응한다.

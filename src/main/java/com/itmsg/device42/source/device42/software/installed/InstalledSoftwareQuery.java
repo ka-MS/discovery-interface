@@ -10,12 +10,12 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-public class DpaSoftwareQuery {
+public class InstalledSoftwareQuery {
 
     private final DoqlClient doql;
     private final DeviceSelection selection;
 
-    public DpaSoftwareQuery(DeviceSelection selection, DoqlClient doql) {
+    public InstalledSoftwareQuery(DeviceSelection selection, DoqlClient doql) {
         this.doql = doql;
         this.selection = selection;
     }

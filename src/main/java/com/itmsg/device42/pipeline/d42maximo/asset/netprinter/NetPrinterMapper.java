@@ -8,6 +8,7 @@ import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -21,7 +22,7 @@ public class NetPrinterMapper {
             mappedData.add(new DpaNetPrinterUpsert(
                     source.devicePk().longValue(),
                     roundCurrentRam(source.currentRam()),
-                    source.macAddress(),
+                    source.macAddress() == null ? null : source.macAddress().toUpperCase(Locale.ROOT),
                     source.networkAddress(),
                     source.trayCount(),
                     source.ramUnit(),

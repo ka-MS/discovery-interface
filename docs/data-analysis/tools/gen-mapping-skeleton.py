@@ -68,14 +68,14 @@ def type_label(row):
 
 def build(table, desc, columns):
     _package, impl, assetclass = TABLES[table]
-    implementation = f"maximo/{_package}/{impl}.java" if impl else "없음 (원천 없음)"
+    implementation = f"target/maximo/{_package}/{impl}.java" if impl else "없음 (원천 없음)"
     lines = [
         f"# {table}",
         "",
         desc or "(설명 없음)",
         "",
         f"> Target: MAXIMO.{table} · ASSETCLASS: {assetclass} · 저장: {implementation}",
-        "> 조회·매핑 구현 참조는 해당 integration/d42maximo 기능 패키지에서 확인해 추가한다.",
+        "> 조회는 source/device42, 매핑·조립은 pipeline/d42maximo 기능 패키지에서 확인해 참조를 추가한다.",
         "",
         "## 1. 관계",
         "",

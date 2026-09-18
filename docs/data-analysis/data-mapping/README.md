@@ -1,26 +1,26 @@
 # 데이터 매핑
 
 기본은 테이블 단위이며 문서 한 장이 해당 연계의 조회·매핑과 타겟 Writer에 대응한다.
-Query·원천 모델·복잡한 Mapper·Import는 기능별로 모으고, 저장 SQL·DTO는 maximo에서 소유한다.
+Query·원천 모델은 source/device42, Mapper·Import·수집 정책은 pipeline/d42maximo, 저장 SQL·DTO는 target/maximo가 소유한다.
 CI는 [문서 예외 규칙](../README.md#ci-매핑-문서-예외)에 따라 공통 Target 규약과 유형별 매핑을 분리한다.
 
 | 문서 | 구현 |
 | --- | --- |
-| `asset/deployedasset.md` | `integration/d42maximo/asset/device/` · `maximo/asset/DeployedAssetWriter.java` |
-| `asset/dpacomputer.md` | `integration/d42maximo/asset/computer/` · `maximo/asset/DpaComputerWriter.java` |
-| `asset/dpaos.md` | `integration/d42maximo/asset/os/` · `maximo/asset/DpaOsWriter.java` |
-| `asset/dpacpu.md` | `integration/d42maximo/asset/cpu/` · `maximo/asset/DpaCpuWriter.java` |
-| `asset/dpadisk.md` | `integration/d42maximo/asset/disk/` · `maximo/asset/DpaDiskWriter.java` |
-| `asset/dpalogicaldrive.md` | `integration/d42maximo/asset/logicaldrive/` · `maximo/asset/DpaLogicalDriveWriter.java` |
-| `asset/dpanetadapter.md` | `integration/d42maximo/asset/netadapter/` · `maximo/asset/DpaNetAdapterWriter.java` |
-| `asset/dpatcpip.md` | `integration/d42maximo/asset/tcpip/` · `maximo/asset/DpaTcpIpWriter.java` |
-| `asset/dpamediaadapter.md` | `integration/d42maximo/asset/mediaadapter/` · `maximo/asset/DpaMediaAdapterWriter.java` |
+| `asset/deployedasset.md` | `source/device42/asset/device/` · `pipeline/d42maximo/asset/device/` · `target/maximo/asset/DeployedAssetWriter.java` |
+| `asset/dpacomputer.md` | `source/device42/asset/computer/` · `pipeline/d42maximo/asset/computer/` · `target/maximo/asset/DpaComputerWriter.java` |
+| `asset/dpaos.md` | `source/device42/asset/os/` · `pipeline/d42maximo/asset/os/` · `target/maximo/asset/DpaOsWriter.java` |
+| `asset/dpacpu.md` | `source/device42/asset/cpu/` · `pipeline/d42maximo/asset/cpu/` · `target/maximo/asset/DpaCpuWriter.java` |
+| `asset/dpadisk.md` | `source/device42/asset/disk/` · `pipeline/d42maximo/asset/disk/` · `target/maximo/asset/DpaDiskWriter.java` |
+| `asset/dpalogicaldrive.md` | `source/device42/asset/logicaldrive/` · `pipeline/d42maximo/asset/logicaldrive/` · `target/maximo/asset/DpaLogicalDriveWriter.java` |
+| `asset/dpanetadapter.md` | `source/device42/asset/netadapter/` · `pipeline/d42maximo/asset/netadapter/` · `target/maximo/asset/DpaNetAdapterWriter.java` |
+| `asset/dpatcpip.md` | `source/device42/asset/tcpip/` · `pipeline/d42maximo/asset/tcpip/` · `target/maximo/asset/DpaTcpIpWriter.java` |
+| `asset/dpamediaadapter.md` | `source/device42/asset/mediaadapter/` · `pipeline/d42maximo/asset/mediaadapter/` · `target/maximo/asset/DpaMediaAdapterWriter.java` |
 | `asset/dpadisplay.md` | 미구현 (원천 없음) |
 | `asset/dpaswsuite.md` | 미구현 (원천 없음) |
-| `asset/dpanetdevice.md` | `integration/d42maximo/asset/netdevice/` · `maximo/asset/DpaNetDeviceWriter.java` |
-| `asset/dpanetprinter.md` | `integration/d42maximo/asset/netprinter/` · `maximo/asset/DpaNetPrinterWriter.java` |
-| `software/tloamsoftware.md` | `integration/d42maximo/software/catalog/` · `maximo/software/TloamSoftwareWriter.java` |
-| `software/dpasoftware.md` | `integration/d42maximo/software/installed/` · `maximo/software/DpaSoftwareWriter.java` |
+| `asset/dpanetdevice.md` | `source/device42/asset/netdevice/` · `pipeline/d42maximo/asset/netdevice/` · `target/maximo/asset/DpaNetDeviceWriter.java` |
+| `asset/dpanetprinter.md` | `source/device42/asset/netprinter/` · `pipeline/d42maximo/asset/netprinter/` · `target/maximo/asset/DpaNetPrinterWriter.java` |
+| `software/tloamsoftware.md` | `source/device42/software/catalog/` · `pipeline/d42maximo/software/catalog/` · `target/maximo/software/TloamSoftwareWriter.java` |
+| `software/dpasoftware.md` | `source/device42/software/installed/` · `pipeline/d42maximo/software/installed/` · `target/maximo/software/DpaSoftwareWriter.java` |
 
 CI는 [ci/README.md](ci/README.md)에서 시작한다. `ACTCI`, `ACTCISPEC`,
 `ACTCIRELATION`의 Target 구조와 분류·속성 템플릿 조사는 완료했다.

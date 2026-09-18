@@ -1,6 +1,6 @@
 package com.itmsg.device42.pipeline.d42maximo.asset.device;
 
-import com.itmsg.device42.source.device42.asset.device.DeployedAssetQuery;
+import com.itmsg.device42.source.device42.asset.device.DeviceQuery;
 import com.itmsg.device42.source.device42.asset.device.DeviceSource;
 
 import com.itmsg.device42.target.maximo.asset.DeployedAssetUpsert;
@@ -18,11 +18,11 @@ public class DeployedAssetImport {
 
     private static final int DEFAULT_BATCH_SIZE = 1000;
 
-    private final DeployedAssetQuery query;
+    private final DeviceQuery query;
     private final DeployedAssetMapper mapper;
     private final DeployedAssetWriter writer;
 
-    public DeployedAssetImport(DeployedAssetQuery query, DeployedAssetMapper mapper, DeployedAssetWriter writer) {
+    public DeployedAssetImport(DeviceQuery query, DeployedAssetMapper mapper, DeployedAssetWriter writer) {
         this.query = query;
         this.mapper = mapper;
         this.writer = writer;

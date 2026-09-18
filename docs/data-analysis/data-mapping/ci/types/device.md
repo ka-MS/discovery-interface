@@ -5,6 +5,8 @@
 > 구현: [DeviceCiImport](../../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/ci/device/DeviceCiImport.java) · [DeviceCiQuery](../../../../../src/main/java/com/itmsg/device42/source/device42/ci/device/DeviceCiQuery.java) · [DeviceCiMapper](../../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/ci/device/DeviceCiMapper.java) · [ActCiWriter](../../../../../src/main/java/com/itmsg/device42/target/maximo/ci/ActCiWriter.java) · 상태: Computer·VM·Switch·Network Cluster 수집과 ACTCI·ACTCISPEC 저장 및 자동 테스트 완료. 실제 Maximo Cluster 적재·관계·CI 승격·UI 검증은 미완료.
 > 실행 방법·추가 속성 등록·현재 처리 동작은 [실행 준비](device-run.md)를 따른다. 미대응 항목은 아래 표에 구분한다.
 
+> SQL의 LIMIT/OFFSET은 예시 페이지 값이다. 본체·관계 조회는 Source, 타겟 식별자·값 생성은 Pipeline Mapper가 소유한다.
+
 ## 1. 대상과 식별자
 
 물리 Computer, VM, 판정 가능한 물리 Switch와 논리 Network Cluster를 장비당 하나의 ACTCI로 수집한다.
@@ -170,25 +172,17 @@ SECTION·LINKEDTOATTRIBUTE·LINKEDTOSECTION은 NULL, 단위는 속성 정의를 
 Count SQL:
 
 ```sql
-SELECT COUNT(*)
-FROM view_device_v2 d
-WHERE (
-    d.type IN ('physical', 'virtual')
-    AND (d.network_device = false OR d.network_device IS NULL)
-    AND (
-        (d.type = 'physical' AND d.physicalsubtype IN
-            ('Generic', 'Rackable', 'Blade', 'WorkStation', 'ThinClient', 'Laptop'))
-        OR
-        (d.type = 'virtual' AND d.virtualsubtype IN
-            ('Internal VM', 'Amazon EC2 Instance', 'VMWare', 'Hyper-V'))
-    )
+SELECT COUNT(*) FROM view_device_v2 d WHERE
+(d.type IN ('physical', 'virtual')
+AND (d.network_device = false OR d.network_device IS NULL)
+AND (
+    (d.type = 'physical' AND d.physicalsubtype IN ('Generic', 'Rackable', 'Blade', 'WorkStation', 'ThinClient', 'Laptop'))
+    OR (d.type = 'virtual' AND d.virtualsubtype IN ('Internal VM', 'Amazon EC2 Instance', 'VMWare', 'Hyper-V'))
+)
 )
 OR (d.type = 'physical' AND d.network_device = true)
-OR (
-    d.type = 'cluster'
-    AND d.network_device = true
-    AND NULLIF(TRIM(d.details->>'fw_device_type'), '') = 'Switch'
-);
+OR (d.type = 'cluster' AND d.network_device = true
+AND NULLIF(TRIM(d.details->>'fw_device_type'), '') = 'Switch')
 ```
 
 페이지 SQL:
@@ -197,23 +191,17 @@ OR (
 WITH device AS (
     SELECT d.*
     FROM view_device_v2 d
-    WHERE (
-        d.type IN ('physical', 'virtual')
-        AND (d.network_device = false OR d.network_device IS NULL)
-        AND (
-            (d.type = 'physical' AND d.physicalsubtype IN
-                ('Generic', 'Rackable', 'Blade', 'WorkStation', 'ThinClient', 'Laptop'))
-            OR
-            (d.type = 'virtual' AND d.virtualsubtype IN
-                ('Internal VM', 'Amazon EC2 Instance', 'VMWare', 'Hyper-V'))
-        )
-    )
-    OR (d.type = 'physical' AND d.network_device = true)
-    OR (
-        d.type = 'cluster'
-        AND d.network_device = true
-        AND NULLIF(TRIM(d.details->>'fw_device_type'), '') = 'Switch'
-    )
+    WHERE
+(d.type IN ('physical', 'virtual')
+AND (d.network_device = false OR d.network_device IS NULL)
+AND (
+    (d.type = 'physical' AND d.physicalsubtype IN ('Generic', 'Rackable', 'Blade', 'WorkStation', 'ThinClient', 'Laptop'))
+    OR (d.type = 'virtual' AND d.virtualsubtype IN ('Internal VM', 'Amazon EC2 Instance', 'VMWare', 'Hyper-V'))
+)
+)
+OR (d.type = 'physical' AND d.network_device = true)
+OR (d.type = 'cluster' AND d.network_device = true
+AND NULLIF(TRIM(d.details->>'fw_device_type'), '') = 'Switch')
 ), cpu AS (
     SELECT p.device_fk,
         COUNT(DISTINCT NULLIF(TRIM(pm.name), '')) AS model_count,
@@ -256,7 +244,6 @@ SELECT d.device_pk, d.type, d.physicalsubtype, d.network_device,
          THEN 1 ELSE ni.network_kind_count END AS network_kind_count,
     ni.cluster_count,
     NULLIF(TRIM(d.details->>'snmp_location'), '') AS snmp_location,
-    'D42:DEVICE:' || CAST(d.device_pk AS varchar) AS source_id,
     d.name, d.notes, d.serial_no, d.uuid, d.last_discovered,
     h.name AS model, v.name AS manufacturer,
     d.ram, d.ram_size_type, d.total_cpus, d.core_per_cpu,
@@ -266,8 +253,6 @@ SELECT d.device_pk, d.type, d.physicalsubtype, d.network_device,
     CASE WHEN cpu.arch_count = 1 THEN cpu.architecture END AS architecture,
     CASE WHEN d.network_device = true THEN ni.network_mac
          WHEN pp.default_port_count = 1 THEN pp.primary_mac END AS primary_mac,
-    'ComputerSystem' AS system_type,
-    CASE d.type WHEN 'virtual' THEN 'true' ELSE 'false' END AS is_virtual,
     CASE WHEN d.type = 'virtual' THEN d.vm_manager_int_id END AS vm_id,
     b.name AS bios_manufacturer, d.bios_version, d.bios_release_date,
     cpu.model_count, cpu.arch_count, pp.default_port_count
@@ -279,7 +264,7 @@ LEFT JOIN cpu ON cpu.device_fk = d.device_pk
 LEFT JOIN primary_port pp ON pp.device_fk = d.device_pk
 LEFT JOIN network_info ni ON ni.physical_pk = d.device_pk
 ORDER BY d.device_pk
-LIMIT ? OFFSET ?;
+LIMIT 1000 OFFSET 0
 ```
 
 ### Maximo 공통 캐시 조회
@@ -385,47 +370,73 @@ CARDINALITY=1:N이다.
 관계의 방향이 Computer 출발이어도 원천 연결 키를 아는 쪽, 즉 Disk·Filesystem 도메인의
 조회 정의가 소유한다. 이 문서는 매핑 정본이고 조회 책임은 코드 쪽 기준이다.
 
-아래 SELECT는 두 D42 서버에서 실행 검증했으며 관계 단계의 조회 정의가 그대로 쓴다.
+연결 의미의 기존 운영 검증 이력은 위와 같다. 아래는 타겟 표현을 분리한 현재 원천 조회이며 이번 리팩터링에서는 운영 DB에 재실행하지 않았다.
 관계 쌍에는 본체 전용 DISTINCT ON을 적용하지 않는다.
 
 ```sql
-WITH computer AS (SELECT d.* FROM view_device_v2 d WHERE d.type IN ('physical','virtual')
-AND (d.network_device=false OR d.network_device IS NULL)
-AND ((d.type='physical' AND d.physicalsubtype IN ('Generic','Rackable','Blade','WorkStation','ThinClient','Laptop'))
-OR (d.type='virtual' AND d.virtualsubtype IN ('Internal VM','Amazon EC2 Instance','VMWare','Hyper-V'))))
-SELECT DISTINCT 'D42:DEVICE:' || CAST(c.device_pk AS varchar) AS sourceci,
-       'D42:PART:' || CAST(p.part_pk AS varchar) AS targetci,
-       'RELATION.CONTAINS' AS relationnum
+WITH computer AS (
+    SELECT d.device_pk
+    FROM view_device_v2 d
+    WHERE
+d.type IN ('physical', 'virtual')
+AND (d.network_device = false OR d.network_device IS NULL)
+AND (
+    (d.type = 'physical' AND d.physicalsubtype IN ('Generic', 'Rackable', 'Blade', 'WorkStation', 'ThinClient', 'Laptop'))
+    OR (d.type = 'virtual' AND d.virtualsubtype IN ('Internal VM', 'Amazon EC2 Instance', 'VMWare', 'Hyper-V'))
+)
+)
+SELECT CAST(c.device_pk AS varchar) AS source_pk,
+       CAST(p.part_pk AS varchar) AS target_pk
 FROM view_part_v1 p
-JOIN view_partmodel_v1 pm ON pm.partmodel_pk=p.partmodel_fk
-JOIN computer c ON c.device_pk=p.device_fk
-WHERE pm.type_name='Hard Disk'
-UNION ALL
-SELECT DISTINCT 'D42:DEVICE:' || CAST(c.device_pk AS varchar),
-       'D42:MOUNTPOINT:' || CAST(m.mountpoint_pk AS varchar),
-       'RELATION.CONTAINS'
+JOIN view_partmodel_v1 pm ON pm.partmodel_pk = p.partmodel_fk
+JOIN computer c ON c.device_pk = p.device_fk
+WHERE pm.type_name = 'Hard Disk'
+ORDER BY source_pk, target_pk
+LIMIT 1000 OFFSET 0;
+
+WITH computer AS (
+    SELECT d.device_pk
+    FROM view_device_v2 d
+    WHERE
+d.type IN ('physical', 'virtual')
+AND (d.network_device = false OR d.network_device IS NULL)
+AND (
+    (d.type = 'physical' AND d.physicalsubtype IN ('Generic', 'Rackable', 'Blade', 'WorkStation', 'ThinClient', 'Laptop'))
+    OR (d.type = 'virtual' AND d.virtualsubtype IN ('Internal VM', 'Amazon EC2 Instance', 'VMWare', 'Hyper-V'))
+)
+)
+SELECT CAST(c.device_pk AS varchar) AS source_pk,
+       CAST(m.mountpoint_pk AS varchar) AS target_pk
 FROM view_mountpoint_v2 m
-JOIN computer c ON c.device_pk=ANY(m.device_fks)
-WHERE (m.fstype_name IS NULL OR m.fstype_name NOT IN ('overlay','squashfs','efivarfs'))
-ORDER BY sourceci,targetci;
+JOIN computer c ON c.device_pk = ANY(m.device_fks)
+WHERE (m.fstype_name IS NULL OR m.fstype_name NOT IN ('overlay', 'squashfs', 'efivarfs'))
+ORDER BY source_pk, target_pk
+LIMIT 1000 OFFSET 0;
 ```
 
 VM–호스트는 `virtual_host_device_fk`로 양 끝이 확인된다. 원천 FK는 VM → Host를 가리키지만
 ACTCIRELATION은 기준정보와 토폴로지 의미에 맞춰 Host → VM으로 저장한다.
 
 ```sql
-WITH computer AS (SELECT d.device_pk,d.type,d.virtual_host_device_fk FROM view_device_v2 d
-WHERE d.type IN ('physical','virtual')
-AND (d.network_device=false OR d.network_device IS NULL)
-AND ((d.type='physical' AND d.physicalsubtype IN ('Generic','Rackable','Blade','WorkStation','ThinClient','Laptop'))
-OR (d.type='virtual' AND d.virtualsubtype IN ('Internal VM','Amazon EC2 Instance','VMWare','Hyper-V'))))
-SELECT 'D42:DEVICE:' || CAST(host.device_pk AS varchar) AS sourceci,
-       'D42:DEVICE:' || CAST(vm.device_pk AS varchar) AS targetci,
-       'VIRTUALIZES' AS relationnum
+WITH computer AS (
+    SELECT d.device_pk, d.type, d.virtual_host_device_fk
+    FROM view_device_v2 d
+    WHERE
+d.type IN ('physical', 'virtual')
+AND (d.network_device = false OR d.network_device IS NULL)
+AND (
+    (d.type = 'physical' AND d.physicalsubtype IN ('Generic', 'Rackable', 'Blade', 'WorkStation', 'ThinClient', 'Laptop'))
+    OR (d.type = 'virtual' AND d.virtualsubtype IN ('Internal VM', 'Amazon EC2 Instance', 'VMWare', 'Hyper-V'))
+)
+)
+SELECT CAST(host.device_pk AS varchar) AS source_pk,
+       CAST(vm.device_pk AS varchar) AS target_pk
 FROM computer vm
-JOIN computer host ON host.device_pk=vm.virtual_host_device_fk
-WHERE vm.type='virtual' AND host.device_pk<>vm.device_pk
-ORDER BY sourceci,targetci;
+JOIN computer host ON host.device_pk = vm.virtual_host_device_fk
+WHERE vm.type = 'virtual'
+  AND host.device_pk <> vm.device_pk
+ORDER BY source_pk, target_pk
+LIMIT 1000 OFFSET 0
 ```
 
 2026-09-16 제품 SQL과 같은 조회를 실행해 `.68` 3건, `.35` 55건을 확인했다.
@@ -452,33 +463,27 @@ ORDER BY sourceci,targetci;
 WITH device AS (
     SELECT d.device_pk
     FROM view_device_v2 d
-    WHERE (
-        d.type IN ('physical','virtual')
-        AND (d.network_device=false OR d.network_device IS NULL)
-        AND (
-            (d.type='physical' AND d.physicalsubtype IN
-                ('Generic','Rackable','Blade','WorkStation','ThinClient','Laptop'))
-            OR
-            (d.type='virtual' AND d.virtualsubtype IN
-                ('Internal VM','Amazon EC2 Instance','VMWare','Hyper-V'))
-        )
-    )
-    OR (d.type='physical' AND d.network_device=true)
-    OR (
-        d.type='cluster'
-        AND d.network_device=true
-        AND NULLIF(TRIM(d.details->>'fw_device_type'), '')='Switch'
-    )
+    WHERE
+(d.type IN ('physical', 'virtual')
+AND (d.network_device = false OR d.network_device IS NULL)
+AND (
+    (d.type = 'physical' AND d.physicalsubtype IN ('Generic', 'Rackable', 'Blade', 'WorkStation', 'ThinClient', 'Laptop'))
+    OR (d.type = 'virtual' AND d.virtualsubtype IN ('Internal VM', 'Amazon EC2 Instance', 'VMWare', 'Hyper-V'))
 )
-SELECT 'D42:DEVICE:' || CAST(d.device_pk AS varchar) AS sourceci,
-       'D42:IPADDRESS:' || CAST(x.ipaddress_fk AS varchar) AS targetci,
-       'USES' AS relationnum
+)
+OR (d.type = 'physical' AND d.network_device = true)
+OR (d.type = 'cluster' AND d.network_device = true
+AND NULLIF(TRIM(d.details->>'fw_device_type'), '') = 'Switch')
+)
+SELECT CAST(d.device_pk AS varchar) AS source_pk,
+       CAST(x.ipaddress_fk AS varchar) AS target_pk
 FROM view_ipaddress_device_v2 x
-JOIN device d ON d.device_pk=x.device_fk
-ORDER BY sourceci,targetci;
+JOIN device d ON d.device_pk = x.device_fk
+ORDER BY source_pk, target_pk
+LIMIT 1000 OFFSET 0
 ```
 
-`CiSourceFilter.DEVICE`로 확장한 2026-09-17 실행 결과는 `.68` 53쌍(IP 52 · Device 35),
+`MaximoSourcePolicy.CI_DEVICE`로 확장한 2026-09-17 실행 결과는 `.68` 53쌍(IP 52 · Device 35),
 `.35` 120쌍(IP 99 · Device 66)이다. 두 서버 모두 Cluster 관계가 2쌍씩 추가됐고 물리 Switch의
 직접 IP 관계는 0쌍이다. 쌍이 IP 수보다 많은 것은 공유 IP 때문이다.
 
@@ -523,14 +528,14 @@ WITH network_info AS (
       AND c.type = 'cluster' AND c.network_device = true
     GROUP BY n.second_device_fk
 )
-SELECT 'D42:DEVICE:' || CAST(cluster_pk AS varchar) AS sourceci,
-       'D42:DEVICE:' || CAST(physical_pk AS varchar) AS targetci,
-       'FEDERATES' AS relationnum
+SELECT CAST(cluster_pk AS varchar) AS source_pk,
+       CAST(physical_pk AS varchar) AS target_pk
 FROM network_info
 WHERE cluster_count = 1
   AND network_kind_count = 1
   AND network_kind = 'Switch'
-ORDER BY sourceci,targetci;
+ORDER BY source_pk, target_pk
+LIMIT 1000 OFFSET 0
 ```
 
 제품 조회 정의와 같은 조건에서 `.68` 2쌍, `.35` 2쌍이다. 코드의 건수·페이지 조회와 포트 중복 제거,

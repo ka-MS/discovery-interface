@@ -4,7 +4,6 @@ import com.itmsg.device42.pipeline.d42maximo.selection.MaximoSourcePolicy;
 import com.itmsg.device42.source.device42.selection.DeviceSelection;
 import com.itmsg.device42.source.device42.selection.FilesystemFilter;
 import java.sql.DriverManager;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.Test;

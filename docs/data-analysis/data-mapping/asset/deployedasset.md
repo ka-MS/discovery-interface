@@ -2,10 +2,12 @@
 
 배치된 자산
 
-> Target: MAXIMO.DEPLOYEDASSET · ASSETCLASS: COMPUTER, NETDEVICE, NETPRINTER · 구현: [DeployedAssetImport](../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/asset/device/DeployedAssetImport.java) · [DeployedAssetQuery](../../../../src/main/java/com/itmsg/device42/source/device42/asset/device/DeployedAssetQuery.java) · [DeployedAssetMapper](../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/asset/device/DeployedAssetMapper.java) · [DeployedAssetWriter](../../../../src/main/java/com/itmsg/device42/target/maximo/asset/DeployedAssetWriter.java)
+> Target: MAXIMO.DEPLOYEDASSET · ASSETCLASS: COMPUTER, NETDEVICE, NETPRINTER · 구현: [DeployedAssetImport](../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/asset/device/DeployedAssetImport.java) · [DeviceQuery](../../../../src/main/java/com/itmsg/device42/source/device42/asset/device/DeviceQuery.java) · [DeployedAssetMapper](../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/asset/device/DeployedAssetMapper.java) · [DeployedAssetWriter](../../../../src/main/java/com/itmsg/device42/target/maximo/asset/DeployedAssetWriter.java)
 
 > 관측 2026-08-27 · Device42 **양쪽 서버** 192.168.2.68 / 192.168.1.35 · Maximo BLUDB
 > 원천 건수는 서버별로 병기한다. 표기는 `.68 / .35` 순이다.
+
+> SQL의 LIMIT/OFFSET은 예시 페이지 값이다. 본체·관계 조회는 Source, 타겟 식별자·값 생성은 Pipeline Mapper가 소유한다.
 
 ## 1. 관계
 
@@ -31,7 +33,7 @@ MERGE 키는 `NODEID` 다. `NODEID = device_pk` 이므로 재실행해도 멱등
 | 컨테이너 제외 | `d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15` | Docker Container 는 자산으로 관리하지 않는다 |
 | PDU 제외 | `d.physicalsubtype IS NULL OR d.physicalsubtype <> 'PDU'` | 대응 ASSETCLASS 와 DPA 테이블이 없다 |
 
-근거: `DeployedAssetQuery.java` `DEVICE_FILTER`.
+근거: `DeviceQuery.java` `DEVICE_FILTER`.
 
 ## 4. 컬럼 매핑
 
@@ -83,17 +85,30 @@ MERGE 키는 `NODEID` 다. `NODEID = device_pk` 이므로 재실행해도 멱등
 
 ```sql
 SELECT
-    d.device_pk, d.name, d.type, d.notes, d.serial_no, d.asset_no, d.uuid,
-    d.network_device, d.physicalsubtype, d.in_service, d.last_discovered,
+    d.device_pk,
+    d.name,
+    d.type,
+    d.notes,
+    d.serial_no,
+    d.asset_no,
+    d.uuid,
+    d.network_device,
+    d.physicalsubtype,
     h.name AS hardware_name,
-    v.name AS vendor_name
+    v.name AS vendor_name,
+    d.in_service,
+    d.last_discovered
 FROM view_device_v2 d
-LEFT JOIN view_hardware_v2 h ON d.hardware_fk = h.hardware_pk
-LEFT JOIN view_vendor_v1 v ON h.vendor_fk = v.vendor_pk
-WHERE d.type IN ('virtual', 'physical')
-  AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)
-  AND (d.physicalsubtype IS NULL OR d.physicalsubtype <> 'PDU')
+LEFT JOIN view_hardware_v2 h
+    ON d.hardware_fk = h.hardware_pk
+LEFT JOIN view_vendor_v1 v
+    ON h.vendor_fk = v.vendor_pk
+WHERE
+d.type IN ('virtual', 'physical')
+AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)
+AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('PDU'))
 ORDER BY d.device_pk
+LIMIT 1000 OFFSET 0
 ```
 
 `ram`, `ram_size_type`, `total_cpus`, `core_per_cpu`, `bios_version`, `bios_release_date` 도 함께 조회되지만 이 테이블에는 적재되지 않는다. DPACOMPUTER 가 같은 값을 별도 조회로 다시 가져간다.

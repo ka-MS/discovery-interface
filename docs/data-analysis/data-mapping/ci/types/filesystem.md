@@ -7,6 +7,8 @@
 
 공통 컬럼 정의는 [ACTCI](../actci.md), [ACTCISPEC](../actcispec.md)가 소유한다.
 
+> SQL의 LIMIT/OFFSET은 예시 페이지 값이다. 본체·관계 조회는 Source, 타겟 식별자·값 생성은 Pipeline Mapper가 소유한다.
+
 ## 1. 대상과 식별자
 
 | 항목 | 값 |
@@ -33,28 +35,25 @@
 WITH computer AS (
     SELECT d.device_pk, d.last_discovered
     FROM view_device_v2 d
-    WHERE d.type IN ('physical', 'virtual')
-      AND (d.network_device = false OR d.network_device IS NULL)
-      AND (
-          (d.type = 'physical' AND d.physicalsubtype IN
-              ('Generic', 'Rackable', 'Blade', 'WorkStation', 'ThinClient', 'Laptop'))
-          OR
-          (d.type = 'virtual' AND d.virtualsubtype IN
-              ('Internal VM', 'Amazon EC2 Instance', 'VMWare', 'Hyper-V'))
-      )
+    WHERE
+d.type IN ('physical', 'virtual')
+AND (d.network_device = false OR d.network_device IS NULL)
+AND (
+    (d.type = 'physical' AND d.physicalsubtype IN ('Generic', 'Rackable', 'Blade', 'WorkStation', 'ThinClient', 'Laptop'))
+    OR (d.type = 'virtual' AND d.virtualsubtype IN ('Internal VM', 'Amazon EC2 Instance', 'VMWare', 'Hyper-V'))
+)
 )
 SELECT DISTINCT ON (m.mountpoint_pk)
     m.mountpoint_pk, c.device_pk AS device_fk,
-    'D42:MOUNTPOINT:' || CAST(m.mountpoint_pk AS varchar) AS source_id,
     NULLIF(TRIM(m.mountpoint), '') AS mountpoint,
     NULLIF(TRIM(m.fstype_name), '') AS fstype_name,
-    NULLIF(TRIM(m.filesystem), '') AS filesystem,
     NULLIF(TRIM(m.label), '') AS label,
     m.capacity, m.free_capacity, c.last_discovered
 FROM view_mountpoint_v2 m
 JOIN computer c ON c.device_pk = ANY(m.device_fks)
+WHERE (m.fstype_name IS NULL OR m.fstype_name NOT IN ('overlay', 'squashfs', 'efivarfs'))
 ORDER BY m.mountpoint_pk, c.device_pk
-LIMIT %d OFFSET %d
+LIMIT 1000 OFFSET 0
 ```
 
 2026-09-15 두 서버에서 실행해 통과를 확인했다. 제외 적용 후 69 / 60건이다.
@@ -91,7 +90,7 @@ CI 기준 네 개에 `MODELOBJECT_LABEL`을 더한 다섯 개다. 선택 근거�
 
 | 항목 | 상태 |
 | --- | --- |
-| 컨테이너·가상 파일시스템 | **확정.** `FilesystemSelection.EXCLUDED_TYPES` 상수로 `overlay`·`squashfs`·`efivarfs`를 원천 조회에서 제외한다. `.68` 78건, `.35` 70건(2026-09-17). `devtmpfs`는 2026-09-17 수집 대상으로 되돌렸다 — 경로가 `/dev`로 고정돼 재기동 시 원천 PK가 바뀌는 문제가 없다 |
+| 컨테이너·가상 파일시스템 | **확정.** `MaximoSourcePolicy.CI_FILESYSTEM` 상수로 `overlay`·`squashfs`·`efivarfs`를 원천 조회에서 제외한다. `.68` 78건, `.35` 70건(2026-09-17). `devtmpfs`는 2026-09-17 수집 대상으로 되돌렸다 — 경로가 `/dev`로 고정돼 재기동 시 원천 PK가 바뀌는 문제가 없다 |
 | 마운트 경로 길이 | 컨테이너 경로가 약 130자다. ACTCINAME 192자·ALNVALUE 254자 한계에 근접. 절단·생략 규칙 필요. ISSUE-11 |
 | 용량 단위 | **확정.** `MEASUREUNITID='MBYTE'`를 지정한다 |
 | `m.filesystem` | 93 / 133건 보유하나 대응 속성 없음. 추가 등록 필요. 이번 범위 제외 추천 |

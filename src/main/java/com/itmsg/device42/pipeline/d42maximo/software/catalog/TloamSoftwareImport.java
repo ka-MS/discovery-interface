@@ -1,7 +1,7 @@
 package com.itmsg.device42.pipeline.d42maximo.software.catalog;
 
 import com.itmsg.device42.source.device42.software.catalog.SoftwareProductSource;
-import com.itmsg.device42.source.device42.software.catalog.TloamSoftwareQuery;
+import com.itmsg.device42.source.device42.software.catalog.SoftwareCatalogQuery;
 
 import com.itmsg.device42.target.maximo.software.TloamSoftwareUpsert;
 import com.itmsg.device42.target.maximo.software.TloamSoftwareWriter;
@@ -18,11 +18,11 @@ public class TloamSoftwareImport {
 
     private static final int DEFAULT_BATCH_SIZE = 1000;
 
-    private final TloamSoftwareQuery query;
+    private final SoftwareCatalogQuery query;
     private final TloamSoftwareMapper mapper;
     private final TloamSoftwareWriter writer;
 
-    public TloamSoftwareImport(TloamSoftwareQuery query, TloamSoftwareMapper mapper, TloamSoftwareWriter writer) {
+    public TloamSoftwareImport(SoftwareCatalogQuery query, TloamSoftwareMapper mapper, TloamSoftwareWriter writer) {
         this.query = query;
         this.mapper = mapper;
         this.writer = writer;

@@ -7,6 +7,8 @@
 > 관측 2026-08-27 · Device42 **양쪽 서버** 192.168.2.68 / 192.168.1.35 · Maximo BLUDB
 > 원천 건수는 `.68 / .35` 순으로 병기한다.
 
+> SQL의 LIMIT/OFFSET은 예시 페이지 값이다. 본체·관계 조회는 Source, 타겟 식별자·값 생성은 Pipeline Mapper가 소유한다.
+
 ## 1. 관계
 
 - 부모: MAXIMO.DEPLOYEDASSET (NODEID)
@@ -61,14 +63,15 @@
 ```sql
 WITH target AS (
     SELECT device_pk, os_version
-    FROM view_device_v2
-    WHERE network_device = true
-      AND type = 'physical'
+    FROM view_device_v2 d
+    WHERE d.type IN ('physical')
+AND d.network_device = true
+
 ),
 link AS (
     SELECT second_device_fk AS physical_pk,
-           device_fk        AS cluster_pk,
-           MIN(hwaddress)   AS mac
+           device_fk AS cluster_pk,
+           MIN(hwaddress) AS mac
     FROM view_netport_v1
     WHERE second_device_fk IS NOT NULL
       AND hwaddress IS NOT NULL
@@ -84,6 +87,7 @@ SELECT t.device_pk,
 FROM target t
 LEFT JOIN link l ON l.physical_pk = t.device_pk
 ORDER BY t.device_pk
+LIMIT 1000 OFFSET 0
 ```
 
 ### 전제

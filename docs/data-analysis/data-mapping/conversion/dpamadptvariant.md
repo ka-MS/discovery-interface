@@ -2,9 +2,11 @@
 
 어댑터 변환 변형
 
-> Target: MAXIMO.DPAMADPTVARIANT · 구현: [DpamAdptVariantImport](../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/conversion/adapter/DpamAdptVariantImport.java) · [DpamAdptVariantQuery](../../../../src/main/java/com/itmsg/device42/source/device42/conversion/adapter/DpamAdptVariantQuery.java) · [DpamAdptVariantWriter](../../../../src/main/java/com/itmsg/device42/target/maximo/conversion/DpamAdptVariantWriter.java)
+> Target: MAXIMO.DPAMADPTVARIANT · 구현: [DpamAdptVariantImport](../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/conversion/adapter/DpamAdptVariantImport.java) · [AdapterModelsQuery](../../../../src/main/java/com/itmsg/device42/source/device42/conversion/adapter/AdapterModelsQuery.java) · [DpamAdptVariantWriter](../../../../src/main/java/com/itmsg/device42/target/maximo/conversion/DpamAdptVariantWriter.java)
 > 관측 2026-08-28 · Device42 192.168.1.35 · 192.168.2.68 / Maximo BLUDB
 > 재조회 `../../exploration-queries/maximo/dpa-view-conversion-requirements.sql`
+
+> SQL의 LIMIT/OFFSET은 예시 페이지 값이다. 본체·관계 조회는 Source, 타겟 식별자·값 생성은 Pipeline Mapper가 소유한다.
 
 ## 1. 관계
 
@@ -79,17 +81,18 @@ WITH gpu AS (
     JOIN view_device_v2 d ON d.device_pk = p.device_fk
     WHERE pm.type_name = 'GPU'
       AND
-      d.type IN ('virtual', 'physical')
-      AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)
-      AND (d.network_device = false OR d.network_device IS NULL)
-      AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer', 'PDU'))
+d.type IN ('virtual', 'physical')
+AND (d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15)
+AND (d.network_device = false OR d.network_device IS NULL)
+AND (d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer', 'PDU'))
+
       AND pm.name IS NOT NULL
       AND pm.name <> ''
 )
 SELECT name FROM gpu
 UNION
 SELECT 'UNKNOWN'
-ORDER BY name
+LIMIT 1000 OFFSET 0
 ```
 
 관측 `.35` 2종, `.68` 6종이다.

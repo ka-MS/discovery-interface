@@ -7,6 +7,8 @@
 
 공통 컬럼 정의는 [ACTCI](../actci.md), [ACTCISPEC](../actcispec.md)가 소유한다.
 
+> SQL의 LIMIT/OFFSET은 예시 페이지 값이다. 본체·관계 조회는 Source, 타겟 식별자·값 생성은 Pipeline Mapper가 소유한다.
+
 ## 1. 대상과 식별자
 
 | 항목 | 값 |
@@ -26,30 +28,26 @@
 WITH computer AS (
     SELECT d.device_pk, d.last_discovered
     FROM view_device_v2 d
-    WHERE d.type IN ('physical', 'virtual')
-      AND (d.network_device = false OR d.network_device IS NULL)
-      AND (
-          (d.type = 'physical' AND d.physicalsubtype IN
-              ('Generic', 'Rackable', 'Blade', 'WorkStation', 'ThinClient', 'Laptop'))
-          OR
-          (d.type = 'virtual' AND d.virtualsubtype IN
-              ('Internal VM', 'Amazon EC2 Instance', 'VMWare', 'Hyper-V'))
-      )
+    WHERE
+d.type IN ('physical', 'virtual')
+AND (d.network_device = false OR d.network_device IS NULL)
+AND (
+    (d.type = 'physical' AND d.physicalsubtype IN ('Generic', 'Rackable', 'Blade', 'WorkStation', 'ThinClient', 'Laptop'))
+    OR (d.type = 'virtual' AND d.virtualsubtype IN ('Internal VM', 'Amazon EC2 Instance', 'VMWare', 'Hyper-V'))
+)
 )
 SELECT p.part_pk, p.device_fk,
-    'D42:PART:' || CAST(p.part_pk AS varchar) AS source_id,
     NULLIF(TRIM(pm.name), '') AS model,
     NULLIF(TRIM(p.serial_no), '') AS serial_no,
     NULLIF(TRIM(p.description), '') AS description,
     pm.hdsize, NULLIF(TRIM(pm.hdsize_unit), '') AS hdsize_unit,
-    NULLIF(TRIM(pm.hddtype_name), '') AS hddtype_name,
     c.last_discovered
 FROM view_part_v1 p
 JOIN view_partmodel_v1 pm ON pm.partmodel_pk = p.partmodel_fk
 JOIN computer c ON c.device_pk = p.device_fk
 WHERE pm.type_name = 'Hard Disk'
 ORDER BY p.part_pk
-LIMIT %d OFFSET %d
+LIMIT 1000 OFFSET 0
 ```
 
 2026-09-15 두 서버에서 실행해 통과를 확인했다.

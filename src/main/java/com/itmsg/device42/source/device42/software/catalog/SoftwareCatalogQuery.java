@@ -7,13 +7,13 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class TloamSoftwareQuery {
+public class SoftwareCatalogQuery {
 
     private final DoqlClient doql;
     private final DeviceSelection selection;
     private final String supplementalName;
 
-    public TloamSoftwareQuery(DeviceSelection selection, String supplementalName, DoqlClient doql) {
+    public SoftwareCatalogQuery(DeviceSelection selection, String supplementalName, DoqlClient doql) {
         this.doql = doql;
         this.selection = selection;
         this.supplementalName = supplementalName;
@@ -88,7 +88,15 @@ public class TloamSoftwareQuery {
             ) catalog
             """;
 
-    private static final String SOURCE_QUERY = CATALOG_SOURCE_QUERY + """
-            ORDER BY software_name, version, manufacturer
+    // 동일 그룹의 대표 원천값은 NULL로 돌려준다. 타겟 기본값 생성은 Mapper가 소유한다.
+    // 내부 그룹 키는 기존 DISTINCT/정렬/페이지 경계 보존을 위해 호출자의 동치값 정책을 사용한다.
+    private static final String SOURCE_QUERY = """
+            SELECT NULLIF(catalog.software_name, {{SUPPLEMENTAL_NAME}}) AS software_name,
+                catalog.version,
+                NULLIF(catalog.manufacturer, {{SUPPLEMENTAL_NAME}}) AS manufacturer
+            FROM (
+            """ + CATALOG_SOURCE_QUERY + """
+            ) catalog
+            ORDER BY catalog.software_name, catalog.version, catalog.manufacturer
             """;
 }

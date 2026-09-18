@@ -46,9 +46,10 @@ OS·Disk·Filesystem·IP의 원천 관측은 [OS·Disk·Filesystem·IP 원천 �
 
 기준정보 보완과 나머지 정책은 [ISSUE-8·11](../../open-issues.md)에 둔다.
 Device·OS·Disk·Filesystem·IP·DB Instance 여섯 유형의 본체·속성을 구현했다.
-`integration/d42maximo/ci`의 기능별 Query·Mapper·Import가 수집을,
-`maximo/ci/ActCiWriter`가 공통 저장을 담당한다. 공통 스펙 매핑은 `ci/mapping/CiSpecMapper`다.
-일곱 관계 정의는 `ci/relation/CiRelationSource`에 있으며 `ci` 본체 뒤 또는 `ci-relation` 단독으로 실행한다.
+`source/device42/ci`의 Query가 조회를, `pipeline/d42maximo/ci`의 Mapper·Import가 변환·실행을,
+`target/maximo/ci/ActCiWriter`가 공통 저장을 담당한다. 공통 스펙 매핑은 Pipeline의 `ci/mapping/CiSpecMapper`다.
+일곱 관계의 D42 연결 정의는 Source의 `ci/relation/Device42Relation`, 타겟 코드와 매핑은 Pipeline의
+`ci/relation/CiRelationSource`·`CiRelationMapper`다. `ci` 본체 뒤 또는 `ci-relation` 단독으로 실행한다.
 실제 관계별 운영 검증 이력은 [ACTCIRELATION](actcirelation.md)을 따른다. 이번 구조 리팩토링에서는 DB 적재를 실행하지 않았다.
 실제 Maximo Device 적재·Switch CI 승격·UI 검증은 미완료다.
 

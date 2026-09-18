@@ -1,7 +1,7 @@
 package com.itmsg.device42.pipeline.d42maximo.conversion.adapter;
 
 import com.itmsg.device42.source.device42.conversion.adapter.AdapterModelSource;
-import com.itmsg.device42.source.device42.conversion.adapter.DpamAdapterQuery;
+import com.itmsg.device42.source.device42.conversion.adapter.AdapterModelsQuery;
 
 import com.itmsg.device42.target.maximo.conversion.DpamAdapterUpsert;
 import com.itmsg.device42.target.maximo.conversion.DpamAdapterWriter;
@@ -19,10 +19,10 @@ public class DpamAdapterImport {
 
     private static final int DEFAULT_BATCH_SIZE = 1000;
 
-    private final DpamAdapterQuery query;
+    private final AdapterModelsQuery query;
     private final DpamAdapterWriter writer;
 
-    public DpamAdapterImport(DpamAdapterQuery query, DpamAdapterWriter writer) {
+    public DpamAdapterImport(AdapterModelsQuery query, DpamAdapterWriter writer) {
         this.query = query;
         this.writer = writer;
     }

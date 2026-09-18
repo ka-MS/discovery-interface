@@ -24,10 +24,10 @@
 - [x] source/target/pipeline 패키지 이전과 원천 독립화.
 - [x] CI 관계 원천·매핑 분리 및 본체와 식별자 규칙 공유.
 - [x] 설정 기반 단일 타겟 조립, 비선택 타겟 초기화 차단.
-- [ ] 기존 회귀 및 테스트 전용 대체 타겟·의미 동등성 검증.
+- [x] 기존 회귀 및 테스트 전용 대체 타겟·의미 동등성 검증.
 - [ ] 문서·아키텍처 검사·전체 test/bootJar·최종 리뷰·로컬 커밋.
 
-## 조사와 결정
+## 기준선 조사와 결정
 
 - 관계 Query는 타겟 DTO를 직접 생성하며 SQL에서 타겟 식별자를 생성한다.
 - Device CI SQL의 식별자/고정값 일부는 이미 Mapper에서 계산하고 있어 조회에서 제거 가능한 중복이다.
@@ -37,7 +37,7 @@
 
 ## 다음 작업
 
-카탈로그·기준정보 SQL 투영의 정책 전달을 검증하고, 문서 정본 갱신과 전체 회귀·산출물 감사를 진행한다.
+최종 문서·전체 회귀·산출물 결과를 기록하고 후속 로컬 커밋과 깨끗한 작업 트리를 확인한다.
 
 ## 구현 체크포인트 1
 
@@ -54,3 +54,43 @@
 - `./gradlew test --tests '*EquivalenceTest'` 성공: 장비 조건 10,800 조합의 SQL 3값 논리, 파일시스템 제외/대소문자/NULL, 일곱 관계의 식별자·코드·문자열 정렬·중복·NULL·페이지 경계.
 - 검증은 H2/Mockito이며 운영 D42·DB2에 접속하지 않았다.
 - 삭제한 이전 CiSourceFilter/FilesystemSelection은 이번 변경으로 대체된 규칙이며 Git 이력으로 복구 가능하다.
+
+## 구현 체크포인트 2
+
+- 원천 Query에서 Maximo 테이블 이름을 제거했다. 같은 기준정보를 읽던 네 쌍은 공통 조회로 합쳤다.
+  27 Import 실행 흐름은 보존하며 본체/기준정보 Query는 23개, 관계까지 총 24개다.
+- 카탈로그 SQL은 연계가 제공한 누락값 동치 그룹으로 DISTINCT/COUNT/정렬을 유지하고,
+  반환 모델은 NULL 대표값을 사용한다. 실제 타겟 기본값은 Mapper가 생성한다.
+- Printer MAC의 UPPER를 Mapper로 옮겼다. SQL+Mapper 결과 동등성 검증을 추가했다.
+- AlternativeTarget을 테스트 Pipeline 아래 독립 설정으로 이동했다. 실제 Application의
+  모듈 탐색으로 등록되며 별도의 코어 설정 변경이나 테스트에서 직접 모듈 import를 하지 않는다.
+- `./gradlew test bootJar --rerun-tasks`: 성공, 142 tests / 35 suites / 실패·오류·skip 0, 7 tasks executed.
+- `python3 scripts/refactoring/check_target_baseline.py --artifact`: 성공.
+  전체 클래스 148개, 기존 Query 27개의 실행/행읽기를 포함한 메서드 67개, 기존 테스트 이름 128개 보존.
+  파라미터화 테스트를 포함한 기존 실행 케이스 131개는 유지했다.
+  jdeps 내부 의존 522개에 금지 역참조·패키지 순환 없음.
+  JAR 애플리케이션 클래스 193개, Import 27개, Query 24개이며 옛/테스트 경로 없음.
+- SourceSqlParityTest의 검증된 실효 SQL을 `build/refactoring/current-sql`에 출력하고
+  전체 27개 매핑 문서의 본체 SQL 및 일곱 관계 SQL을 현재 코드와 맞췄다.
+  문서의 예시 LIMIT/OFFSET은 1000/0이다. 과거 운영 관측과 이번 모의 검증을 구분했다.
+- `git diff --check` 통과. 모든 문서 로컬 링크 검사에서 과거 계획의 Computer 문서 링크 두 개를 발견해 현재 Device 정본으로 정리했다.
+
+## 최종 검증 — 2026-09-18
+
+모든 명령은 저장소 루트, WSL Ubuntu에서 실행했다. DB 접속 없이 실행했다.
+
+| 명령 / 확인 | 실제 결과 |
+| --- | --- |
+| `./gradlew test bootJar --rerun-tasks` | BUILD SUCCESSFUL, 47초, 7 tasks executed |
+| `build/test-results/test/TEST-*.xml` 집계 | 35 suites, 142 tests, 실패 0, 오류 0, skip 0 |
+| `python3 scripts/refactoring/check_target_baseline.py --artifact --docs` | 148개 전체 클래스, 67개 메서드, 기존 테스트 이름 128개 보존; 내부 의존 522개 검사 통과 |
+| 위 검사: bootJar | 193개 클래스, Import 27개, Query 24개; 옛 실행/테스트 전용 경로 없음 |
+| 위 검사: 문서 | 로컬 링크 462개 정상; 실효 PAGE SQL 30개(공유 본체 23 + 관계 7)가 문서와 대응 |
+| `git diff --check` | 통과 |
+
+문서 SQL 검사의 최초 두 누락은 한 코드 블록에 나란히 기록한 관계 SQL 두 개를 검사기가
+하나로 취급한 것이었다. 세미콜론 구분을 인식하도록 검사기를 수정했고 두 SQL 모두 대응했다.
+과거 계획의 잘못된 링크 외에 기존 완료 이력은 보존했다.
+
+실제 DOQL 엔진의 실행 계획·문자열 collation, DB2 적재·운영 연결은 미검증이다.
+H2/Mockito 결과를 실제 DB 검증으로 해석하지 않는다. 두 번째 운영 타겟은 추가하지 않았다.

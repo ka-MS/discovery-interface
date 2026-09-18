@@ -3,7 +3,7 @@
 > 관측: 2026-09-15 · D42 192.168.2.68 / 192.168.1.35 각각 읽기 전용 조회.
 > 재조회: [컬럼·유형](../../exploration-queries/device42/device-ci-source-shapes.sql), [기존 조인 투영·포트 범위](../../exploration-queries/device42/device-ci-projection.sql), [JSON 키](../../exploration-queries/device42/device-ci-json-keys.sql).
 > 로컬 원본: `local/db-access-kit/work/device-ci-unification-20260915/d42-{68,35}/`.
-> 구현 대조: `DeviceCiImport`, `DeviceSource`, 본체용 `CiSourceFilter.DEVICE`와 자식·관계용 `CiSourceFilter.COMPUTER`.
+> 구현 대조: `DeviceCiImport`, `DeviceSource`, 본체용 `MaximoSourcePolicy.CI_DEVICE`와 자식·관계용 `MaximoSourcePolicy.CI_COMPUTER`.
 > 1차 재검증에서 제품 조회를 양 서버에 읽기 전용으로 실행했으며 Maximo DB 값은 변경하지 않았다.
 
 ## 1. 조사 경계

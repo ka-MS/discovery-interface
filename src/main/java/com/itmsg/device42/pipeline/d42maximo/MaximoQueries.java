@@ -5,7 +5,7 @@ import com.itmsg.device42.source.device42.ci.relation.CiRelationQuery;
 import com.itmsg.device42.pipeline.d42maximo.selection.MaximoSourcePolicy;
 import com.itmsg.device42.source.device42.asset.computer.ComputerQuery;
 import com.itmsg.device42.source.device42.asset.cpu.CpuQuery;
-import com.itmsg.device42.source.device42.asset.device.DeployedAssetQuery;
+import com.itmsg.device42.source.device42.asset.device.DeviceQuery;
 import com.itmsg.device42.source.device42.asset.disk.DiskQuery;
 import com.itmsg.device42.source.device42.asset.logicaldrive.LogicalDriveQuery;
 import com.itmsg.device42.source.device42.asset.mediaadapter.MediaAdapterQuery;
@@ -20,16 +20,12 @@ import com.itmsg.device42.source.device42.ci.disk.DiskCiQuery;
 import com.itmsg.device42.source.device42.ci.filesystem.FilesystemCiQuery;
 import com.itmsg.device42.source.device42.ci.ip.IpCiQuery;
 import com.itmsg.device42.source.device42.ci.os.OsCiQuery;
-import com.itmsg.device42.source.device42.conversion.adapter.DpamAdapterQuery;
-import com.itmsg.device42.source.device42.conversion.adapter.DpamAdptVariantQuery;
-import com.itmsg.device42.source.device42.conversion.manufacturer.DpamManuVariantQuery;
-import com.itmsg.device42.source.device42.conversion.manufacturer.DpamManufacturerQuery;
-import com.itmsg.device42.source.device42.conversion.os.DpamOsQuery;
-import com.itmsg.device42.source.device42.conversion.os.DpamOsVariantQuery;
-import com.itmsg.device42.source.device42.conversion.processor.DpamProcVariantQuery;
-import com.itmsg.device42.source.device42.conversion.processor.DpamProcessorQuery;
-import com.itmsg.device42.source.device42.software.catalog.TloamSoftwareQuery;
-import com.itmsg.device42.source.device42.software.installed.DpaSoftwareQuery;
+import com.itmsg.device42.source.device42.conversion.adapter.AdapterModelsQuery;
+import com.itmsg.device42.source.device42.conversion.manufacturer.ManufacturerNamesQuery;
+import com.itmsg.device42.source.device42.conversion.os.OperatingSystemNamesQuery;
+import com.itmsg.device42.source.device42.conversion.processor.ProcessorModelsQuery;
+import com.itmsg.device42.source.device42.software.catalog.SoftwareCatalogQuery;
+import com.itmsg.device42.source.device42.software.installed.InstalledSoftwareQuery;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -43,43 +39,23 @@ public class MaximoQueries {
     }
 
     @Bean
-    DpamManufacturerQuery dpamManufacturerQuery(DoqlClient doql) {
-        return new DpamManufacturerQuery(MaximoSourcePolicy.ASSET_COMPUTER, MaximoSourcePolicy.ASSET_DEVICE, MaximoSourcePolicy.UNKNOWN, doql);
+    ManufacturerNamesQuery dpamManufacturerQuery(DoqlClient doql) {
+        return new ManufacturerNamesQuery(MaximoSourcePolicy.ASSET_COMPUTER, MaximoSourcePolicy.ASSET_DEVICE, MaximoSourcePolicy.UNKNOWN, doql);
     }
 
     @Bean
-    DpamManuVariantQuery dpamManuVariantQuery(DoqlClient doql) {
-        return new DpamManuVariantQuery(MaximoSourcePolicy.ASSET_COMPUTER, MaximoSourcePolicy.ASSET_DEVICE, MaximoSourcePolicy.UNKNOWN, doql);
+    ProcessorModelsQuery dpamProcessorQuery(DoqlClient doql) {
+        return new ProcessorModelsQuery(MaximoSourcePolicy.ASSET_COMPUTER, doql);
     }
 
     @Bean
-    DpamProcessorQuery dpamProcessorQuery(DoqlClient doql) {
-        return new DpamProcessorQuery(MaximoSourcePolicy.ASSET_COMPUTER, doql);
+    OperatingSystemNamesQuery dpamOsQuery(DoqlClient doql) {
+        return new OperatingSystemNamesQuery(MaximoSourcePolicy.ASSET_COMPUTER, doql);
     }
 
     @Bean
-    DpamProcVariantQuery dpamProcVariantQuery(DoqlClient doql) {
-        return new DpamProcVariantQuery(MaximoSourcePolicy.ASSET_COMPUTER, doql);
-    }
-
-    @Bean
-    DpamOsQuery dpamOsQuery(DoqlClient doql) {
-        return new DpamOsQuery(MaximoSourcePolicy.ASSET_COMPUTER, doql);
-    }
-
-    @Bean
-    DpamOsVariantQuery dpamOsVariantQuery(DoqlClient doql) {
-        return new DpamOsVariantQuery(MaximoSourcePolicy.ASSET_COMPUTER, doql);
-    }
-
-    @Bean
-    DpamAdapterQuery dpamAdapterQuery(DoqlClient doql) {
-        return new DpamAdapterQuery(MaximoSourcePolicy.ASSET_COMPUTER, MaximoSourcePolicy.UNKNOWN, doql);
-    }
-
-    @Bean
-    DpamAdptVariantQuery dpamAdptVariantQuery(DoqlClient doql) {
-        return new DpamAdptVariantQuery(MaximoSourcePolicy.ASSET_COMPUTER, MaximoSourcePolicy.UNKNOWN, doql);
+    AdapterModelsQuery dpamAdapterQuery(DoqlClient doql) {
+        return new AdapterModelsQuery(MaximoSourcePolicy.ASSET_COMPUTER, MaximoSourcePolicy.UNKNOWN, doql);
     }
 
     @Bean
@@ -98,8 +74,8 @@ public class MaximoQueries {
     }
 
     @Bean
-    DeployedAssetQuery deployedAssetQuery(DoqlClient doql) {
-        return new DeployedAssetQuery(MaximoSourcePolicy.ASSET_DEVICE, doql);
+    DeviceQuery deployedAssetQuery(DoqlClient doql) {
+        return new DeviceQuery(MaximoSourcePolicy.ASSET_DEVICE, doql);
     }
 
     @Bean
@@ -168,12 +144,12 @@ public class MaximoQueries {
     }
 
     @Bean
-    TloamSoftwareQuery tloamSoftwareQuery(DoqlClient doql) {
-        return new TloamSoftwareQuery(MaximoSourcePolicy.ASSET_COMPUTER, MaximoSourcePolicy.UNKNOWN, doql);
+    SoftwareCatalogQuery tloamSoftwareQuery(DoqlClient doql) {
+        return new SoftwareCatalogQuery(MaximoSourcePolicy.ASSET_COMPUTER, MaximoSourcePolicy.UNKNOWN, doql);
     }
 
     @Bean
-    DpaSoftwareQuery dpaSoftwareQuery(DoqlClient doql) {
-        return new DpaSoftwareQuery(MaximoSourcePolicy.ASSET_COMPUTER, doql);
+    InstalledSoftwareQuery dpaSoftwareQuery(DoqlClient doql) {
+        return new InstalledSoftwareQuery(MaximoSourcePolicy.ASSET_COMPUTER, doql);
     }
 }

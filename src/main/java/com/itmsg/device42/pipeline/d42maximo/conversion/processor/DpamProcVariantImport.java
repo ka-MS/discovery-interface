@@ -1,6 +1,6 @@
 package com.itmsg.device42.pipeline.d42maximo.conversion.processor;
 
-import com.itmsg.device42.source.device42.conversion.processor.DpamProcVariantQuery;
+import com.itmsg.device42.source.device42.conversion.processor.ProcessorModelsQuery;
 import com.itmsg.device42.source.device42.conversion.processor.ProcessorModelSource;
 
 import com.itmsg.device42.target.maximo.conversion.DpamProcVariantUpsert;
@@ -19,10 +19,10 @@ public class DpamProcVariantImport {
 
     private static final int DEFAULT_BATCH_SIZE = 1000;
 
-    private final DpamProcVariantQuery query;
+    private final ProcessorModelsQuery query;
     private final DpamProcVariantWriter writer;
 
-    public DpamProcVariantImport(DpamProcVariantQuery query, DpamProcVariantWriter writer) {
+    public DpamProcVariantImport(ProcessorModelsQuery query, DpamProcVariantWriter writer) {
         this.query = query;
         this.writer = writer;
     }
