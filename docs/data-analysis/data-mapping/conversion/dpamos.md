@@ -2,7 +2,7 @@
 
 운영체제 변환 대상
 
-> Target: MAXIMO.DPAMOS · 구현: [DpamOsImport](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/conversion/os/DpamOsImport.java) · [DpamOsQuery](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/conversion/os/DpamOsQuery.java) · [DpamOsWriter](../../../../src/main/java/com/itmsg/device42/maximo/conversion/DpamOsWriter.java)
+> Target: MAXIMO.DPAMOS · 구현: [DpamOsImport](../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/conversion/os/DpamOsImport.java) · [DpamOsQuery](../../../../src/main/java/com/itmsg/device42/source/device42/conversion/os/DpamOsQuery.java) · [DpamOsWriter](../../../../src/main/java/com/itmsg/device42/target/maximo/conversion/DpamOsWriter.java)
 > 관측 2026-08-28 · Device42 192.168.1.35 · 192.168.2.68 / Maximo BLUDB
 > 재조회 `../../exploration-queries/maximo/dpa-view-conversion-requirements.sql`
 

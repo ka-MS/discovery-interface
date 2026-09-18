@@ -2,7 +2,7 @@
 
 배치된 자산 컴퓨터 디스크
 
-> Target: MAXIMO.DPADISK · ASSETCLASS: COMPUTER · 구현: [DiskImport](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/asset/disk/DiskImport.java) · [DiskQuery](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/asset/disk/DiskQuery.java) · [DiskMapper](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/asset/disk/DiskMapper.java) · [DpaDiskWriter](../../../../src/main/java/com/itmsg/device42/maximo/asset/DpaDiskWriter.java)
+> Target: MAXIMO.DPADISK · ASSETCLASS: COMPUTER · 구현: [DiskImport](../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/asset/disk/DiskImport.java) · [DiskQuery](../../../../src/main/java/com/itmsg/device42/source/device42/asset/disk/DiskQuery.java) · [DiskMapper](../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/asset/disk/DiskMapper.java) · [DpaDiskWriter](../../../../src/main/java/com/itmsg/device42/target/maximo/asset/DpaDiskWriter.java)
 
 > 관측 2026-08-27 · Device42 **양쪽 서버** 192.168.2.68 / 192.168.1.35 · Maximo BLUDB
 > 원천 건수는 서버별로 병기한다. 표기는 `.68 / .35` 순이다.

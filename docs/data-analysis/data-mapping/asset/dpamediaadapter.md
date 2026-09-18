@@ -2,7 +2,7 @@
 
 배치된 자산 컴퓨터 미디어 어댑터
 
-> Target: MAXIMO.DPAMEDIAADAPTER · ASSETCLASS: COMPUTER · 구현: [MediaAdapterImport](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/asset/mediaadapter/MediaAdapterImport.java) · [MediaAdapterQuery](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/asset/mediaadapter/MediaAdapterQuery.java) · [MediaAdapterMapper](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/asset/mediaadapter/MediaAdapterMapper.java) · [DpaMediaAdapterWriter](../../../../src/main/java/com/itmsg/device42/maximo/asset/DpaMediaAdapterWriter.java)
+> Target: MAXIMO.DPAMEDIAADAPTER · ASSETCLASS: COMPUTER · 구현: [MediaAdapterImport](../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/asset/mediaadapter/MediaAdapterImport.java) · [MediaAdapterQuery](../../../../src/main/java/com/itmsg/device42/source/device42/asset/mediaadapter/MediaAdapterQuery.java) · [MediaAdapterMapper](../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/asset/mediaadapter/MediaAdapterMapper.java) · [DpaMediaAdapterWriter](../../../../src/main/java/com/itmsg/device42/target/maximo/asset/DpaMediaAdapterWriter.java)
 > 관측 2026-08-27 · Device42 192.168.1.35, 192.168.2.68 / Maximo BLUDB
 
 ## 1. 관계

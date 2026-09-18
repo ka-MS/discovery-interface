@@ -35,7 +35,7 @@ class DependencyBoundaryTest {
             var declaration = PACKAGE.matcher(entry.getValue());
             declaration.find();
             String owner = declaration.group(1);
-            assertThat(owner).doesNotContain(ROOT + "dto", ROOT + "enums", ROOT + "config");
+            assertThat(owner).doesNotContain(ROOT + "dto", ROOT + "enums", ROOT + "config", ROOT + "integration", ROOT + "device42", ROOT + "maximo");
             var imports = IMPORT.matcher(entry.getValue());
             while (imports.find()) {
                 String imported = imports.group(1);
@@ -44,8 +44,8 @@ class DependencyBoundaryTest {
                 if (dependency == null) dependency = classes.get(imported.substring(0, imported.lastIndexOf('.')));
                 assertThat(dependency).as("해결 가능한 내부 import %s", imported).isNotNull();
                 if (owner.startsWith(ROOT + "runtime")) assertThat(dependency).startsWith(ROOT + "runtime");
-                if (owner.startsWith(ROOT + "device42")) assertThat(dependency).startsWith(ROOT + "device42");
-                if (owner.startsWith(ROOT + "maximo")) assertThat(dependency).startsWith(ROOT + "maximo");
+                if (owner.startsWith(ROOT + "source.device42")) assertThat(dependency).startsWith(ROOT + "source.device42");
+                if (owner.startsWith(ROOT + "target.maximo")) assertThat(dependency).startsWith(ROOT + "target.maximo");
                 if (owner.startsWith(ROOT + "cli")) assertThat(dependency).startsWith(ROOT + "runtime");
                 if (!owner.equals(dependency)) graph.computeIfAbsent(owner, ignored -> new HashSet<>()).add(dependency);
             }

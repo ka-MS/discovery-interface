@@ -2,7 +2,7 @@
 
 배치된 자산 컴퓨터 TCP/IP
 
-> Target: MAXIMO.DPATCPIP · ASSETCLASS: COMPUTER · 구현: [TcpIpImport](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/asset/tcpip/TcpIpImport.java) · [TcpIpQuery](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/asset/tcpip/TcpIpQuery.java) · [TcpIpMapper](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/asset/tcpip/TcpIpMapper.java) · [DpaTcpIpWriter](../../../../src/main/java/com/itmsg/device42/maximo/asset/DpaTcpIpWriter.java)
+> Target: MAXIMO.DPATCPIP · ASSETCLASS: COMPUTER · 구현: [TcpIpImport](../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/asset/tcpip/TcpIpImport.java) · [TcpIpQuery](../../../../src/main/java/com/itmsg/device42/source/device42/asset/tcpip/TcpIpQuery.java) · [TcpIpMapper](../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/asset/tcpip/TcpIpMapper.java) · [DpaTcpIpWriter](../../../../src/main/java/com/itmsg/device42/target/maximo/asset/DpaTcpIpWriter.java)
 > 관측 2026-08-31, 설계 갱신 2026-09-17 · Device42 192.168.1.35 · 192.168.2.68 / Maximo BLUDB
 
 ## 1. 관계

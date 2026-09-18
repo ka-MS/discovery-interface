@@ -2,7 +2,7 @@
 
 배치된 자산 컴퓨터 프로세서
 
-> Target: MAXIMO.DPACPU · ASSETCLASS: COMPUTER · 구현: [CpuImport](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/asset/cpu/CpuImport.java) · [CpuQuery](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/asset/cpu/CpuQuery.java) · [CpuMapper](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/asset/cpu/CpuMapper.java) · [DpaCpuWriter](../../../../src/main/java/com/itmsg/device42/maximo/asset/DpaCpuWriter.java)
+> Target: MAXIMO.DPACPU · ASSETCLASS: COMPUTER · 구현: [CpuImport](../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/asset/cpu/CpuImport.java) · [CpuQuery](../../../../src/main/java/com/itmsg/device42/source/device42/asset/cpu/CpuQuery.java) · [CpuMapper](../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/asset/cpu/CpuMapper.java) · [DpaCpuWriter](../../../../src/main/java/com/itmsg/device42/target/maximo/asset/DpaCpuWriter.java)
 
 > 관측 2026-08-27 · Device42 **양쪽 서버** 192.168.2.68 / 192.168.1.35 · Maximo BLUDB
 > 원천 건수는 서버별로 병기한다. 표기는 `.68 / .35` 순이다.

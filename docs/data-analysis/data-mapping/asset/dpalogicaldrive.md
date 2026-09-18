@@ -2,7 +2,7 @@
 
 배치된 자산 컴퓨터 논리 드라이브
 
-> Target: MAXIMO.DPALOGICALDRIVE · ASSETCLASS: COMPUTER · 구현: [LogicalDriveImport](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/asset/logicaldrive/LogicalDriveImport.java) · [LogicalDriveQuery](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/asset/logicaldrive/LogicalDriveQuery.java) · [LogicalDriveMapper](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/asset/logicaldrive/LogicalDriveMapper.java) · [DpaLogicalDriveWriter](../../../../src/main/java/com/itmsg/device42/maximo/asset/DpaLogicalDriveWriter.java)
+> Target: MAXIMO.DPALOGICALDRIVE · ASSETCLASS: COMPUTER · 구현: [LogicalDriveImport](../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/asset/logicaldrive/LogicalDriveImport.java) · [LogicalDriveQuery](../../../../src/main/java/com/itmsg/device42/source/device42/asset/logicaldrive/LogicalDriveQuery.java) · [LogicalDriveMapper](../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/asset/logicaldrive/LogicalDriveMapper.java) · [DpaLogicalDriveWriter](../../../../src/main/java/com/itmsg/device42/target/maximo/asset/DpaLogicalDriveWriter.java)
 > 관측 2026-08-31 · Device42 192.168.1.35, 192.168.2.68 / Maximo BLUDB
 
 ## 1. 관계

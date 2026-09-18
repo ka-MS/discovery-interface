@@ -2,7 +2,7 @@
 
 > Target: MAXIMO.ACTCI · MAXIMO.ACTCISPEC
 > 원천·메타데이터 확인: 2026-09-15 · D42 .68 / .35 · Maximo BLUDB
-> 구현: [DiskCiImport](../../../../../src/main/java/com/itmsg/device42/integration/d42maximo/ci/disk/DiskCiImport.java) · [DiskCiQuery](../../../../../src/main/java/com/itmsg/device42/integration/d42maximo/ci/disk/DiskCiQuery.java) · [DiskCiMapper](../../../../../src/main/java/com/itmsg/device42/integration/d42maximo/ci/disk/DiskCiMapper.java) · [ActCiWriter](../../../../../src/main/java/com/itmsg/device42/maximo/ci/ActCiWriter.java) · 상태: 본체·스펙 적재 구현 및 자동 테스트 완료. 관계 미적재. 실제 Maximo 적재·UI 검증은 미완료.
+> 구현: [DiskCiImport](../../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/ci/disk/DiskCiImport.java) · [DiskCiQuery](../../../../../src/main/java/com/itmsg/device42/source/device42/ci/disk/DiskCiQuery.java) · [DiskCiMapper](../../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/ci/disk/DiskCiMapper.java) · [ActCiWriter](../../../../../src/main/java/com/itmsg/device42/target/maximo/ci/ActCiWriter.java) · 상태: 본체·스펙 적재 구현 및 자동 테스트 완료. 관계 미적재. 실제 Maximo 적재·UI 검증은 미완료.
 > 분류 선택 이유·관계 추천안·미결 근거는 [Disk 수집 설계](../../../design/ci/disk.md)에 있다.
 
 공통 컬럼 정의는 [ACTCI](../actci.md), [ACTCISPEC](../actcispec.md)가 소유한다.

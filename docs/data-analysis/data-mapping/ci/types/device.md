@@ -2,7 +2,7 @@
 
 > Target: MAXIMO.ACTCI · MAXIMO.ACTCISPEC
 > 원천·메타데이터 확인: 2026-09-15 · D42 .68 / .35 · Maximo BLUDB
-> 구현: [DeviceCiImport](../../../../../src/main/java/com/itmsg/device42/integration/d42maximo/ci/device/DeviceCiImport.java) · [DeviceCiQuery](../../../../../src/main/java/com/itmsg/device42/integration/d42maximo/ci/device/DeviceCiQuery.java) · [DeviceCiMapper](../../../../../src/main/java/com/itmsg/device42/integration/d42maximo/ci/device/DeviceCiMapper.java) · [ActCiWriter](../../../../../src/main/java/com/itmsg/device42/maximo/ci/ActCiWriter.java) · 상태: Computer·VM·Switch·Network Cluster 수집과 ACTCI·ACTCISPEC 저장 및 자동 테스트 완료. 실제 Maximo Cluster 적재·관계·CI 승격·UI 검증은 미완료.
+> 구현: [DeviceCiImport](../../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/ci/device/DeviceCiImport.java) · [DeviceCiQuery](../../../../../src/main/java/com/itmsg/device42/source/device42/ci/device/DeviceCiQuery.java) · [DeviceCiMapper](../../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/ci/device/DeviceCiMapper.java) · [ActCiWriter](../../../../../src/main/java/com/itmsg/device42/target/maximo/ci/ActCiWriter.java) · 상태: Computer·VM·Switch·Network Cluster 수집과 ACTCI·ACTCISPEC 저장 및 자동 테스트 완료. 실제 Maximo Cluster 적재·관계·CI 승격·UI 검증은 미완료.
 > 실행 방법·추가 속성 등록·현재 처리 동작은 [실행 준비](device-run.md)를 따른다. 미대응 항목은 아래 표에 구분한다.
 
 ## 1. 대상과 식별자

@@ -2,7 +2,7 @@
 
 배치된 자산 컴퓨터 애플리케이션
 
-> Target: MAXIMO.DPASOFTWARE · ASSETCLASS: COMPUTER · 구현: [DpaSoftwareImport](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/software/installed/DpaSoftwareImport.java) · [DpaSoftwareQuery](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/software/installed/DpaSoftwareQuery.java) · [DpaSoftwareMapper](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/software/installed/DpaSoftwareMapper.java) · [DpaSoftwareWriter](../../../../src/main/java/com/itmsg/device42/maximo/software/DpaSoftwareWriter.java)
+> Target: MAXIMO.DPASOFTWARE · ASSETCLASS: COMPUTER · 구현: [DpaSoftwareImport](../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/software/installed/DpaSoftwareImport.java) · [DpaSoftwareQuery](../../../../src/main/java/com/itmsg/device42/source/device42/software/installed/DpaSoftwareQuery.java) · [DpaSoftwareMapper](../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/software/installed/DpaSoftwareMapper.java) · [DpaSoftwareWriter](../../../../src/main/java/com/itmsg/device42/target/maximo/software/DpaSoftwareWriter.java)
 > 관측 2026-08-27 · Device42 192.168.1.35 · 192.168.2.68 / Maximo BLUDB
 
 ## 1. 관계

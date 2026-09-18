@@ -1,0 +1,94 @@
+package com.itmsg.device42.source.device42.asset.netdevice;
+
+import com.itmsg.device42.source.device42.selection.DeviceSelection;
+
+import com.itmsg.device42.source.device42.DoqlClient;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+
+public class NetDeviceQuery {
+
+    private final DoqlClient doql;
+    private final DeviceSelection selection;
+
+    public NetDeviceQuery(DeviceSelection selection, DoqlClient doql) {
+        this.doql = doql;
+        this.selection = selection;
+    }
+
+    public long getTotalCount() {
+        try {
+            return doql.preparedQuery(sql(DEVICE_TOTAL_COUNT_QUERY), resultSet -> {
+
+                return resultSet.next() ? resultSet.getLong(1) : 0L;
+            });
+        } catch (SQLException e) {
+            throw new IllegalStateException("DPA NetDevice 대상 장비 건수 조회에 실패했습니다.", e);
+        }
+    }
+
+    public List<NetworkDeviceSource> getData(long offset, int limit) {
+        String query = sql(DEVICE_QUERY) + "LIMIT %d OFFSET %d".formatted(limit, offset);
+
+        try {
+            return doql.query(query, resultSet -> {
+
+                List<NetworkDeviceSource> devices = new ArrayList<>(limit);
+                while (resultSet.next()) {
+                    devices.add(new NetworkDeviceSource(
+                            resultSet.getInt("device_pk"),
+                            resultSet.getString("os_version"),
+                            resultSet.getString("mac"),
+                            resultSet.getString("mgmt_ip")
+                    ));
+                }
+                return devices;
+            });
+        } catch (SQLException e) {
+            throw new IllegalStateException(
+                    "DPA NetDevice 원천 조회에 실패했습니다. offset=" + offset + ", limit=" + limit,
+                    e
+            );
+        }
+    }
+
+    private String sql(String template) {
+        return template
+                .replace("{{DEVICE_FILTER}}", selection.sql())
+                .replace("{{COMPUTER_FILTER}}", selection.sql());
+    }
+
+    private static final String DEVICE_TOTAL_COUNT_QUERY = """
+            SELECT COUNT(*)
+            FROM view_device_v2 d
+            WHERE {{DEVICE_FILTER}}
+            """;
+
+    private static final String DEVICE_QUERY = """
+            WITH target AS (
+                SELECT device_pk, os_version
+                FROM view_device_v2 d
+                WHERE {{DEVICE_FILTER}}
+            ),
+            link AS (
+                SELECT second_device_fk AS physical_pk,
+                       device_fk AS cluster_pk,
+                       MIN(hwaddress) AS mac
+                FROM view_netport_v1
+                WHERE second_device_fk IS NOT NULL
+                  AND hwaddress IS NOT NULL
+                  AND hwaddress <> ''
+                GROUP BY second_device_fk, device_fk
+            )
+            SELECT t.device_pk,
+                   t.os_version,
+                   l.mac,
+                   (SELECT MIN(ip_address)
+                      FROM view_ipaddress_v2
+                     WHERE l.cluster_pk = ANY(device_fks)) AS mgmt_ip
+            FROM target t
+            LEFT JOIN link l ON l.physical_pk = t.device_pk
+            ORDER BY t.device_pk
+            """;
+}

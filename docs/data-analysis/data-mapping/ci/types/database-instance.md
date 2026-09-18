@@ -1,6 +1,6 @@
 # Database Instance
 
-> 구현: [DatabaseInstanceCiImport](../../../../../src/main/java/com/itmsg/device42/integration/d42maximo/ci/databaseinstance/DatabaseInstanceCiImport.java) · [DatabaseInstanceCiQuery](../../../../../src/main/java/com/itmsg/device42/integration/d42maximo/ci/databaseinstance/DatabaseInstanceCiQuery.java) · [DatabaseInstanceCiMapper](../../../../../src/main/java/com/itmsg/device42/integration/d42maximo/ci/databaseinstance/DatabaseInstanceCiMapper.java) · [ActCiWriter](../../../../../src/main/java/com/itmsg/device42/maximo/ci/ActCiWriter.java)
+> 구현: [DatabaseInstanceCiImport](../../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/ci/databaseinstance/DatabaseInstanceCiImport.java) · [DatabaseInstanceCiQuery](../../../../../src/main/java/com/itmsg/device42/source/device42/ci/databaseinstance/DatabaseInstanceCiQuery.java) · [DatabaseInstanceCiMapper](../../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/ci/databaseinstance/DatabaseInstanceCiMapper.java) · [ActCiWriter](../../../../../src/main/java/com/itmsg/device42/target/maximo/ci/ActCiWriter.java)
 
 > 관측 2026-09-16 · Device42 192.168.2.68 / 192.168.1.35 · Maximo BLUDB
 

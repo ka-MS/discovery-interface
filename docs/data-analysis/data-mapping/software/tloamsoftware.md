@@ -2,7 +2,7 @@
 
 소프트웨어 카탈로그
 
-> Target: MAXIMO.TLOAMSOFTWARE · 구현: [TloamSoftwareImport](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/software/catalog/TloamSoftwareImport.java) · [TloamSoftwareQuery](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/software/catalog/TloamSoftwareQuery.java) · [TloamSoftwareMapper](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/software/catalog/TloamSoftwareMapper.java) · [TloamSoftwareWriter](../../../../src/main/java/com/itmsg/device42/maximo/software/TloamSoftwareWriter.java)
+> Target: MAXIMO.TLOAMSOFTWARE · 구현: [TloamSoftwareImport](../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/software/catalog/TloamSoftwareImport.java) · [TloamSoftwareQuery](../../../../src/main/java/com/itmsg/device42/source/device42/software/catalog/TloamSoftwareQuery.java) · [TloamSoftwareMapper](../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/software/catalog/TloamSoftwareMapper.java) · [TloamSoftwareWriter](../../../../src/main/java/com/itmsg/device42/target/maximo/software/TloamSoftwareWriter.java)
 > 관측 2026-08-28 · Device42 192.168.1.35 · 192.168.2.68 / Maximo BLUDB
 > 재조회 `../../exploration-queries/device42/dpa-software-mapping.sql` · `../../exploration-queries/maximo/dpa-view-conversion-requirements.sql`
 

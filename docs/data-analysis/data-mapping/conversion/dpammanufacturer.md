@@ -2,7 +2,7 @@
 
 제조업체 변환 대상
 
-> Target: MAXIMO.DPAMMANUFACTURER · 구현: [DpamManufacturerImport](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/conversion/manufacturer/DpamManufacturerImport.java) · [DpamManufacturerQuery](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/conversion/manufacturer/DpamManufacturerQuery.java) · [DpamManufacturerWriter](../../../../src/main/java/com/itmsg/device42/maximo/conversion/DpamManufacturerWriter.java)
+> Target: MAXIMO.DPAMMANUFACTURER · 구현: [DpamManufacturerImport](../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/conversion/manufacturer/DpamManufacturerImport.java) · [DpamManufacturerQuery](../../../../src/main/java/com/itmsg/device42/source/device42/conversion/manufacturer/DpamManufacturerQuery.java) · [DpamManufacturerWriter](../../../../src/main/java/com/itmsg/device42/target/maximo/conversion/DpamManufacturerWriter.java)
 > 관측 2026-08-28 · Device42 192.168.1.35 · 192.168.2.68 / Maximo BLUDB
 > 재조회 `../../exploration-queries/maximo/dpa-view-conversion-requirements.sql`
 

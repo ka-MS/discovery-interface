@@ -1,9 +1,20 @@
 package com.itmsg.device42;
 
 import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
+import com.itmsg.device42.cli.JobRunner;
+import com.itmsg.device42.runtime.TargetModule;
+import org.springframework.boot.SpringBootConfiguration;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.FilterType;
+import org.springframework.context.annotation.Import;
 
-@SpringBootApplication
+@SpringBootConfiguration
+@EnableAutoConfiguration(exclude = DataSourceAutoConfiguration.class)
+@Import(JobRunner.class)
+@ComponentScan(basePackages = "com.itmsg.device42.pipeline", useDefaultFilters = false,
+        includeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = TargetModule.class))
 public class DiscoveryInterfaceApplication {
 
     public static void main(String[] args) {

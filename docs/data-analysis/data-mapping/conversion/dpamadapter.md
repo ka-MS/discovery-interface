@@ -2,7 +2,7 @@
 
 어댑터 변환 대상
 
-> Target: MAXIMO.DPAMADAPTER · 구현: [DpamAdapterImport](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/conversion/adapter/DpamAdapterImport.java) · [DpamAdapterQuery](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/conversion/adapter/DpamAdapterQuery.java) · [DpamAdapterWriter](../../../../src/main/java/com/itmsg/device42/maximo/conversion/DpamAdapterWriter.java)
+> Target: MAXIMO.DPAMADAPTER · 구현: [DpamAdapterImport](../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/conversion/adapter/DpamAdapterImport.java) · [DpamAdapterQuery](../../../../src/main/java/com/itmsg/device42/source/device42/conversion/adapter/DpamAdapterQuery.java) · [DpamAdapterWriter](../../../../src/main/java/com/itmsg/device42/target/maximo/conversion/DpamAdapterWriter.java)
 > 관측 2026-08-28 · Device42 192.168.1.35 · 192.168.2.68 / Maximo BLUDB
 > 재조회 `../../exploration-queries/maximo/dpa-view-conversion-requirements.sql`
 

@@ -38,3 +38,21 @@
 원천 조회 + Mapper의 결과 동등성과 순서로 검증한다. 타겟 선택·비활성화는 실제
 Spring 설정 경로를 사용한 테스트로 검증한다. 테스트 전용 타겟은 운영 산출물에 포함하지 않는다.
 모의/H2 검증은 운영 D42/DB2 검증을 대신하지 않는다.
+
+## 구현 결정
+
+- `integration.target` 생략은 maximo, 그 외 값은 대소문자 구분한 등록 ID다.
+- Application은 TargetModule 구현 설정만 탐색한다. 각 모듈은 조건부 활성화와 자신이 필요한
+  컴포넌트·원천 조회·데이터소스를 조립한다. JobRunner는 활성 모듈이 정확히 하나이며 선택 ID와
+  일치하는지 검사한 뒤 해당 Job 맵만 사용한다.
+- D42 Query는 일반 객체다. 수집 조건을 생성자에 명시적으로 전달하며 Maximo 기본값을 내장하지 않는다.
+- `DeviceSelection`의 구조화된 조건 생성과 `FilesystemFilter`를 사용한다. 자유 SQL 설정/DSL은 없다.
+- 카탈로그의 기본값 적용은 DISTINCT/ORDER BY보다 앞서 있어, 제거하면 건수와 페이지가 달라진다.
+  기준정보의 보충 이름 행도 UNION의 중복 제거·COUNT에 포함된다. 이런 경우 연계부가 값 정책을
+  제공하고 SQL이 연산을 수행하도록 전달한다. 값 선택은 원천 소유가 아니며 사후 필터로 바꾸지 않는다.
+- 기존 CI 본체가 읽지 않던 Device source_id/system_type/is_virtual 투영은 제거했다.
+  사용 중인 타겟 식별자는 전부 Pipeline에서 생성한다.
+- 관계 PK는 CAST(... AS varchar)를 유지하고 출발/도착 PK 문자열로 정렬한다.
+  일곱 각 조회는 끝점별 접두어가 고정이므로 기존 접두어 연결 정렬과 같은 순서를 갖는다.
+- 운영 타겟은 Maximo 하나다. AlternativeTarget은 테스트 소스에만 있으며 다른 작업 이름,
+  다른 DeviceSelection, 실제 CpuQuery 행 읽기와 독자적인 적재 모델로 교체 계약을 검증한다.

@@ -20,10 +20,10 @@
 ## 체크포인트
 
 - [x] 지침·기준선 확인, 새 브랜치 생성, 기준 test/bootJar 실행.
-- [ ] 전체 Query/모델/매핑 및 정책 결합 감사, 설계 확정.
-- [ ] source/target/pipeline 패키지 이전과 원천 독립화.
-- [ ] CI 관계 원천·매핑 분리 및 본체와 식별자 규칙 공유.
-- [ ] 설정 기반 단일 타겟 조립, 비선택 타겟 초기화 차단.
+- [x] 전체 Query/모델/매핑 및 정책 결합 감사, 설계 확정.
+- [x] source/target/pipeline 패키지 이전과 원천 독립화.
+- [x] CI 관계 원천·매핑 분리 및 본체와 식별자 규칙 공유.
+- [x] 설정 기반 단일 타겟 조립, 비선택 타겟 초기화 차단.
 - [ ] 기존 회귀 및 테스트 전용 대체 타겟·의미 동등성 검증.
 - [ ] 문서·아키텍처 검사·전체 test/bootJar·최종 리뷰·로컬 커밋.
 
@@ -37,4 +37,20 @@
 
 ## 다음 작업
 
-전체 조회와 테스트를 감사하고 구체적인 정책 전달·타겟 조립 계약을 확정한다.
+카탈로그·기준정보 SQL 투영의 정책 전달을 검증하고, 문서 정본 갱신과 전체 회귀·산출물 감사를 진행한다.
+
+## 구현 체크포인트 1
+
+- 176개 기존 클래스의 source/target/pipeline 책임별 이전. Mapper/Writer/Import 실행 본문은 최대한 유지.
+- 원천 Query를 자동 스캔하지 않고 `MaximoQueries`가 명시적인 원천 조건으로 생성한다.
+- `DeviceSelection`은 D42 조건의 SQL 표현, `MaximoSourcePolicy`는 실제 수집 값 선택을 소유한다.
+- 관계는 `Device42Relation`/`RelationSource` → `CiRelationMapper` → Writer로 분리했다.
+- `MaximoCiIdentity`를 여섯 CI 본체 Mapper와 관계 Mapper가 공유한다.
+- `integration.target` 기본값 maximo. `TargetModule` 계약을 구현한 조건부 조립부만 탐색한다.
+- 전역 DataSource 자동 설정을 제외하고 선택된 Maximo 조립부에서만 가져온다.
+- 기존 131 테스트에 타겟 선택 테스트 4개를 추가하여 135개 전체 통과.
+- 추가 표적 검증: `./gradlew test --tests '*SourceSqlParityTest' --tests '*TargetSelectionTest'` 중 초기 Printer 정규화 공백 차이를 수정했고 두 클래스가 각각 통과했다.
+- `SourceSqlParityTest`: 기준 커밋에서 동결한 27 Query + 7 관계 COUNT/PAGE SQL 전체 대조 통과. 정책 차이는 별도 실행 검증.
+- `./gradlew test --tests '*EquivalenceTest'` 성공: 장비 조건 10,800 조합의 SQL 3값 논리, 파일시스템 제외/대소문자/NULL, 일곱 관계의 식별자·코드·문자열 정렬·중복·NULL·페이지 경계.
+- 검증은 H2/Mockito이며 운영 D42·DB2에 접속하지 않았다.
+- 삭제한 이전 CiSourceFilter/FilesystemSelection은 이번 변경으로 대체된 규칙이며 Git 이력으로 복구 가능하다.

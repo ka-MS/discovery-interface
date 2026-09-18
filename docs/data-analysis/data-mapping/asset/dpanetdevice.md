@@ -2,7 +2,7 @@
 
 배치된 자산 네트워크 디바이스
 
-> Target: MAXIMO.DPANETDEVICE · ASSETCLASS: NETDEVICE · 구현: [NetDeviceImport](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/asset/netdevice/NetDeviceImport.java) · [NetDeviceQuery](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/asset/netdevice/NetDeviceQuery.java) · [DpaNetDeviceWriter](../../../../src/main/java/com/itmsg/device42/maximo/asset/DpaNetDeviceWriter.java)
+> Target: MAXIMO.DPANETDEVICE · ASSETCLASS: NETDEVICE · 구현: [NetDeviceImport](../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/asset/netdevice/NetDeviceImport.java) · [NetDeviceQuery](../../../../src/main/java/com/itmsg/device42/source/device42/asset/netdevice/NetDeviceQuery.java) · [DpaNetDeviceWriter](../../../../src/main/java/com/itmsg/device42/target/maximo/asset/DpaNetDeviceWriter.java)
 
 > 관측 2026-08-27 · Device42 **양쪽 서버** 192.168.2.68 / 192.168.1.35 · Maximo BLUDB
 > 원천 건수는 `.68 / .35` 순으로 병기한다.

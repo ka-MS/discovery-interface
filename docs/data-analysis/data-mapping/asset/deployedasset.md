@@ -2,7 +2,7 @@
 
 배치된 자산
 
-> Target: MAXIMO.DEPLOYEDASSET · ASSETCLASS: COMPUTER, NETDEVICE, NETPRINTER · 구현: [DeployedAssetImport](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/asset/device/DeployedAssetImport.java) · [DeployedAssetQuery](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/asset/device/DeployedAssetQuery.java) · [DeployedAssetMapper](../../../../src/main/java/com/itmsg/device42/integration/d42maximo/asset/device/DeployedAssetMapper.java) · [DeployedAssetWriter](../../../../src/main/java/com/itmsg/device42/maximo/asset/DeployedAssetWriter.java)
+> Target: MAXIMO.DEPLOYEDASSET · ASSETCLASS: COMPUTER, NETDEVICE, NETPRINTER · 구현: [DeployedAssetImport](../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/asset/device/DeployedAssetImport.java) · [DeployedAssetQuery](../../../../src/main/java/com/itmsg/device42/source/device42/asset/device/DeployedAssetQuery.java) · [DeployedAssetMapper](../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/asset/device/DeployedAssetMapper.java) · [DeployedAssetWriter](../../../../src/main/java/com/itmsg/device42/target/maximo/asset/DeployedAssetWriter.java)
 
 > 관측 2026-08-27 · Device42 **양쪽 서버** 192.168.2.68 / 192.168.1.35 · Maximo BLUDB
 > 원천 건수는 서버별로 병기한다. 표기는 `.68 / .35` 순이다.

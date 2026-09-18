@@ -2,7 +2,7 @@
 
 > Target: MAXIMO.ACTCI · MAXIMO.ACTCISPEC
 > 원천·메타데이터 확인: 2026-09-15 · D42 .68 / .35 · Maximo BLUDB
-> 구현: [IpCiImport](../../../../../src/main/java/com/itmsg/device42/integration/d42maximo/ci/ip/IpCiImport.java) · [IpCiQuery](../../../../../src/main/java/com/itmsg/device42/integration/d42maximo/ci/ip/IpCiQuery.java) · [IpCiMapper](../../../../../src/main/java/com/itmsg/device42/integration/d42maximo/ci/ip/IpCiMapper.java) · [ActCiWriter](../../../../../src/main/java/com/itmsg/device42/maximo/ci/ActCiWriter.java) · 상태: 본체·스펙 적재 구현 및 자동 테스트 완료. 현재 Device→IP `USES` 관계는 별도 관계 단계에서 적재한다.
+> 구현: [IpCiImport](../../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/ci/ip/IpCiImport.java) · [IpCiQuery](../../../../../src/main/java/com/itmsg/device42/source/device42/ci/ip/IpCiQuery.java) · [IpCiMapper](../../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/ci/ip/IpCiMapper.java) · [ActCiWriter](../../../../../src/main/java/com/itmsg/device42/target/maximo/ci/ActCiWriter.java) · 상태: 본체·스펙 적재 구현 및 자동 테스트 완료. 현재 Device→IP `USES` 관계는 별도 관계 단계에서 적재한다.
 > 분류 선택 이유·관계 선택지는 [IP 수집 설계](../../../design/ci/ip.md)에 있다.
 
 공통 컬럼 정의는 [ACTCI](../actci.md), [ACTCISPEC](../actcispec.md)가 소유한다.
