@@ -6,23 +6,44 @@
 
 ## 1. 관계도
 
-화살표는 저장되는 SOURCECI → TARGETCI 방향이다. 선은 코드가 생성하는 관계 후보를 뜻한다.
-실제 저장은 양 끝 ACTCI와 해당 분류쌍의 규칙이 있어야 한다.
-Device → IP의 Device는 Computer·VM·네트워크 후보를 포함한다.
+화살표는 SOURCECI → TARGETCI의 저장 방향이며, 선은 코드가 생성하는 관계 후보를 뜻한다.
+실제 저장에는 원천 연결 쌍, 양 끝 ACTCI, 해당 관계 코드와 분류쌍 규칙이 필요하다.
+영역으로 연결한 화살표는 그 영역의 조건에 맞는 개별 CI에 적용하며, 영역 전체를 하나의 CI로 저장하지 않는다.
 
 ```mermaid
-flowchart LR
-    OS["OS / SYS.OPERATINGSYSTEM"] -->|"RELATION.INSTALLEDON"| C["Computer / 물리·VM"]
-    C -->|"RELATION.CONTAINS"| D["Disk / DEV.DISKDRIVE"]
-    C -->|"RELATION.CONTAINS"| F["Filesystem / SYS.FILESYSTEM"]
-    H["Host / 물리·VM Computer"] -->|"VIRTUALIZES"| VM["VM / SYS.VIRTUALCOMPUTERSYSTEM"]
-    DB["DB Instance / 엔진별 4분류"] -->|"RELATION.RUNSON"| C
-    DEV["Device / Computer·VM·네트워크 후보"] -->|"USES"| IP["IP / NET.IPADDRESS"]
-    NC["Network Cluster / SYS.COMPUTERSYSTEMCLUSTER"] -->|"FEDERATES"| SW["물리 Switch / SYS.GENERICSWITCH"]
+flowchart TB
+    subgraph C["ComputerSystem · 물리 / VM"]
+        direction TB
+        H["Host 역할의 Computer<br/>(물리 또는 VM)"]
+        VM["VM"]
+        H -->|"VIRTUALIZES"| VM
+    end
+
+    OS["OS"] -->|"RELATION.INSTALLEDON"| C
+    DB["DB Instance"] -->|"RELATION.RUNSON"| C
+    C -->|"RELATION.CONTAINS"| D["Disk"]
+    C -->|"RELATION.CONTAINS"| F["Filesystem"]
+    C -->|"USES"| IP["IP"]
+
+    subgraph N["NetworkSystem · 논리 / 물리"]
+        direction TB
+        NC["Network Cluster<br/>(논리 스택)"] -->|"FEDERATES"| ND["Network Device<br/>(현재 물리 Switch)"]
+    end
+    N -->|"USES"| IP
 ```
 
-Computer·VM·Switch·Network Cluster는 모두 Device 원천의 서로 다른 분류다.
-위 그림의 반복 노드는 관계 역할을 구분한 것이며 중복 본체를 생성한다는 뜻이 아니다.
+**영역과 역할:** ComputerSystem·NetworkSystem은 설명용 묶음이며 실제 CLASSIFICATIONID가 아니다.
+ComputerSystem 영역은 Host·VM 이외의 일반 물리 Computer도 포함한다. Host는 별도 분류가 아니라
+물리 Computer 또는 VM이 수행하는 역할이고, VIRTUALIZES의 도착은 VM이다.
+NetworkSystem 영역은 논리 Cluster와 물리 장비를 구분한다. 현재 FEDERATES 구현의 물리 대상은
+Switch이며 Router까지 지원한다는 뜻이 아니다. 정확한 분류 대응은 3절 표를 따른다.
+
+**IP 연결:** ComputerSystem·NetworkSystem의 USES는 같은 DEVICE_USES_IP 정의를 영역별로 나눈 표현이다.
+NetworkSystem 전체에서 후보를 조회하지만 실제 Device–IP 쌍과 저장된 분류쌍 규칙이 있어야 연결된다.
+기존 관측에서는 네트워크 관리 IP가 Cluster에 연결됐고 물리 Switch의 직접 IP 쌍은 0건이었다.
+당시 Switch→IP 규칙도 미등록으로 기록돼 있으므로, 이 그림을 물리 Switch의 IP 적재·검증 완료로 해석하지 않는다.
+관측 근거와 등록 이력은 [관계 설계](../../design/ci/relations.md)를 따른다.
+
 OS는 RUNSON이 아닌 **RELATION.INSTALLEDON**, DB Instance는 **RELATION.RUNSON**을 사용한다.
 VIRTUALIZES·USES·FEDERATES에는 RELATION. 접두어를 붙이지 않는다.
 

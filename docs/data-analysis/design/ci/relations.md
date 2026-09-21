@@ -32,34 +32,12 @@ OS는 설치 사실을 매핑한다. device 연결만으로 실행 상태까지 
 
 ## 관계도 — 화살표는 토폴로지 의미 방향
 
-```mermaid
-flowchart TB
-  subgraph C["COMPUTERSYSTEM · 물리 / VM"]
-    direction TB
-    H["COMPUTERSYSTEM<br/>(VIRTUAL HOST)"]
-    V["COMPUTERSYSTEM"]
-    H -->|"VIRTUALIZES"| V
-  end
+제출용 관계도의 정본은 [CI 관계 통합 명세 — 관계도](../../data-mapping/ci/relations.md#1-관계도)에 둔다.
+ComputerSystem·NetworkSystem 영역으로 묶은 그림과 범례는 정본에서만 유지하고,
+이 문서에는 관계를 선택한 이유와 당시 원천·기준정보·검증 이력을 남긴다.
+NetworkSystem→IP 표시는 논리·물리 장비의 조회 후보 범위이며 모든 분류쌍의 등록·적재 완료를 뜻하지 않는다.
 
-  O["OS"] -->|"RELATION.INSTALLEDON"| C
-  DBI["DB Instance"] -->|"RELATION.RUNSON"| C
-  C -->|"RELATION.CONTAINS"| D["Disk"]
-  C -->|"RELATION.CONTAINS"| F["Filesystem"]
-  C -->|"USES"| I["IP"]
-
-  subgraph N["NETWORKSYSTEM · 논리 / 물리"]
-    direction TB
-    NC["NETWORK CLUSTER<br/>(논리 스택)"] -->|"FEDERATES"| ND["NETWORK DEVICE<br/>(물리 장비)"]
-  end
-  NC -->|"USES"| I
-```
-
-실선은 확정된 관계 매핑이다. 구현·운영 검증 상태는 위 표의 판정을 따른다.
-`COMPUTERSYSTEM · 물리 / VM`은 별도 CI 하나가 아니라 Device 본체 분류 범위를 묶어 보여 주는 영역이다.
-Virtual Host와 VM은 모두 그 영역의 Device CI이며, Host→VM 가상화 관계를 영역 안에서 표현한다.
-Disk·Filesystem·OS는 ComputerSystem 영역에 연결한다. IP는 ComputerSystem과 Network Cluster 양쪽에서
-같은 `USES`로 연결하되 분류 규칙은 각각 유지한다.
-DB Instance도 물리·가상 Device의 공통 ComputerSystem 영역으로 `RELATION.RUNSON` 방향을 갖는다.
+DB Instance는 물리·가상 Computer로 `RELATION.RUNSON` 방향을 갖는다.
 원천 조회는 `databaseinstance.appcomp_fk → appcomp.device_fk → device.device_pk`를 경유하지만,
 Application Component를 관계 노드로 만들지 않고 `DB Instance → Device` 쌍으로 저장한다.
 DB Instance 본체는 엔진별 네 분류로 나뉘지만 네 분류 모두 같은 `RELATION.RUNSON` 규칙을 가지므로
