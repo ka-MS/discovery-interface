@@ -116,3 +116,55 @@ LIMIT 1000 OFFSET 0
   `NODEID` 라 노드당 1행만 가능한데 원천은 포트와 IP 를 여럿 가질 수 있다.
   두 서버를 다 봐도 프린터는 같은 1장비뿐이고 MAC·IP 가 각 1건이라 현재는
   드러나지 않는다.
+
+## 실제 저장 SQL
+
+아래는 현재 Writer의 SQL이다. `?`는 USING source 열 순서로 DTO 값을 바인딩한다.
+INSERT에 없는 컬럼은 이 ETL이 신규 값을 지정하지 않으며 DB 기본값·제약에 따른다.
+UPDATE에 없는 컬럼은 기존 값을 유지한다. 문서의 원천 미대응·미결 표기는 NULL로 덮어쓴다는 뜻이 아니다.
+
+```sql
+MERGE INTO MAXIMO.DPANETPRINTER AS target
+USING (
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+) AS source (
+    NODEID,
+    CURRENTRAM,
+    NETMACADDR,
+    NETWORKADDRESS,
+    NUMBEROFTRAYS,
+    RAMUNIT,
+    CREATEDATE,
+    CHANGEDATE
+)
+ON target.NODEID = source.NODEID
+WHEN MATCHED THEN
+    UPDATE SET
+        CURRENTRAM = source.CURRENTRAM,
+        NETMACADDR = source.NETMACADDR,
+        NETWORKADDRESS = source.NETWORKADDRESS,
+        NUMBEROFTRAYS = source.NUMBEROFTRAYS,
+        RAMUNIT = source.RAMUNIT,
+        CHANGEDATE = source.CHANGEDATE
+WHEN NOT MATCHED THEN
+    INSERT (
+        NODEID,
+        CURRENTRAM,
+        NETMACADDR,
+        NETWORKADDRESS,
+        NUMBEROFTRAYS,
+        RAMUNIT,
+        CREATEDATE,
+        CHANGEDATE
+    )
+    VALUES (
+        source.NODEID,
+        source.CURRENTRAM,
+        source.NETMACADDR,
+        source.NETWORKADDRESS,
+        source.NUMBEROFTRAYS,
+        source.RAMUNIT,
+        source.CREATEDATE,
+        source.CHANGEDATE
+    )
+```

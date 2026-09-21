@@ -42,7 +42,7 @@ Maximo UI 는 `DPA*` 자식 테이블을 직접 읽지 않는다. 자식 위에 
 | 프로세서 | `view_partmodel_v1.name` | `view_part_v1` 경유, `type_name = 'CPU'` |
 | 어댑터 | `view_partmodel_v1.name` | `view_part_v1` 경유, `type_name = 'GPU'` |
 
-자식 태스크와 **같은 `DEVICE_FILTER`** 를 쓴다. 그래야 자식이 기록할 값만
+자식 태스크와 **같은 COMPUTER 선택 조건** 를 쓴다. 그래야 자식이 기록할 값만
 등록된다. 부모 범위(`DEPLOYEDASSET`)와 COMPUTER 자식 범위가 다른 점에 주의한다.
 
 | 범위 | 필터 |
@@ -69,6 +69,10 @@ Maximo UI 는 `DPA*` 자식 테이블을 직접 읽지 않는다. 자식 위에 
 `DPANETADAPTER.MAKEMODEL` 만 Device42 에 대응 컬럼이 없다. `view_netport_v1` 에
 어댑터 모델이 없어 매핑이 상수로 정한 값이다. 어댑터 변환 대상는 GPU 모델명에
 상수 `UNKNOWN` 을 더해 만든다.
+
+OS·CPU 표의 `UNKNOWN`은 **자식이 기록할 수 있어 필요한 값**이지 현재 변환 조회가 보충하는 값이 아니다.
+현재 제조사·어댑터 조회는 상수를 보충하지만 OS·CPU 조회는 보충하지 않는다.
+따라서 아래 과거 표본의 일치는 모든 NULL 입력에서 변환 조인이 보장된다는 뜻이 아니다.
 
 ### 검증
 

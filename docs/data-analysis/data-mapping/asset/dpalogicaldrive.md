@@ -102,3 +102,79 @@ LIMIT 1000 OFFSET 0
 ## 6. 미결
 
 없음.
+
+## 실제 저장 SQL
+
+아래는 현재 Writer의 SQL이다. `?`는 USING source 열 순서로 DTO 값을 바인딩한다.
+INSERT에 없는 컬럼은 이 ETL이 신규 값을 지정하지 않으며 DB 기본값·제약에 따른다.
+UPDATE에 없는 컬럼은 기존 값을 유지한다. 문서의 원천 미대응·미결 표기는 NULL로 덮어쓴다는 뜻이 아니다.
+
+```sql
+MERGE INTO MAXIMO.DPALOGICALDRIVE AS target
+USING (
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+) AS source (
+    LOGICALDRIVEID,
+    ATTACHEDNETNAME,
+    AVAILABLESIZE,
+    COMPRESSED,
+    DRIVETYPE,
+    ENCRYPTED,
+    FILESYSTEM,
+    MOUNT,
+    NODEID,
+    SIZEUNIT,
+    TOTALSIZE,
+    VOLUMELABEL,
+    CREATEDATE,
+    CHANGEDATE
+)
+ON target.LOGICALDRIVEID = source.LOGICALDRIVEID
+WHEN MATCHED THEN
+    UPDATE SET
+        ATTACHEDNETNAME = source.ATTACHEDNETNAME,
+        AVAILABLESIZE = source.AVAILABLESIZE,
+        COMPRESSED = source.COMPRESSED,
+        DRIVETYPE = source.DRIVETYPE,
+        ENCRYPTED = source.ENCRYPTED,
+        FILESYSTEM = source.FILESYSTEM,
+        MOUNT = source.MOUNT,
+        NODEID = source.NODEID,
+        SIZEUNIT = source.SIZEUNIT,
+        TOTALSIZE = source.TOTALSIZE,
+        VOLUMELABEL = source.VOLUMELABEL,
+        CHANGEDATE = source.CHANGEDATE
+WHEN NOT MATCHED THEN
+    INSERT (
+        LOGICALDRIVEID,
+        ATTACHEDNETNAME,
+        AVAILABLESIZE,
+        COMPRESSED,
+        DRIVETYPE,
+        ENCRYPTED,
+        FILESYSTEM,
+        MOUNT,
+        NODEID,
+        SIZEUNIT,
+        TOTALSIZE,
+        VOLUMELABEL,
+        CREATEDATE,
+        CHANGEDATE
+    )
+    VALUES (
+        source.LOGICALDRIVEID,
+        source.ATTACHEDNETNAME,
+        source.AVAILABLESIZE,
+        source.COMPRESSED,
+        source.DRIVETYPE,
+        source.ENCRYPTED,
+        source.FILESYSTEM,
+        source.MOUNT,
+        source.NODEID,
+        source.SIZEUNIT,
+        source.TOTALSIZE,
+        source.VOLUMELABEL,
+        source.CREATEDATE,
+        source.CHANGEDATE
+    )
+```

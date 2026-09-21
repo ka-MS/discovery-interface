@@ -33,7 +33,7 @@
 | 네트워크 장비 제외 | `d.network_device = false OR d.network_device IS NULL` | NETDEVICE 는 DPANETDEVICE 로 간다 |
 | 프린터·PDU 제외 | `d.physicalsubtype IS NULL OR d.physicalsubtype NOT IN ('Network Printer','PDU')` | 프린터는 DPANETPRINTER 로 가고 PDU 는 수집하지 않는다 |
 
-근거: `ComputerQuery.java` `DEVICE_FILTER`.
+근거: `MaximoSourcePolicy.ASSET_COMPUTER`가 `ComputerQuery`에 전달하는 선택 조건.
 
 ## 4. 컬럼 매핑
 
@@ -112,3 +112,75 @@ LIMIT 1000 OFFSET 0
 
 - `RAMDESCRIPTION`의 다중 슬롯 대표값 규칙이 미정이다.
 - `TLOAMPARENTID`에 호스트의 `NODEID`를 연결하는 규칙이 미정이다.
+
+## 실제 저장 SQL
+
+아래는 현재 Writer의 SQL이다. `?`는 USING source 열 순서로 DTO 값을 바인딩한다.
+INSERT에 없는 컬럼은 이 ETL이 신규 값을 지정하지 않으며 DB 기본값·제약에 따른다.
+UPDATE에 없는 컬럼은 기존 값을 유지한다. 문서의 원천 미대응·미결 표기는 NULL로 덮어쓴다는 뜻이 아니다.
+
+```sql
+MERGE INTO MAXIMO.DPACOMPUTER AS target
+USING (
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+) AS source (
+    NODEID,
+    BIOSNAME,
+    BIOSVERSION,
+    BIOSDATE,
+    SUPPORTSWMI,
+    BIOSPNP,
+    RAMSIZE,
+    RAMUNIT,
+    SMBIOS,
+    CREATEDATE,
+    CHANGEDATE,
+    NUMCPUTOTAL1,
+    NUMCORETOTAL
+)
+ON target.NODEID = source.NODEID
+WHEN MATCHED THEN
+    UPDATE SET
+        BIOSNAME = source.BIOSNAME,
+        BIOSVERSION = source.BIOSVERSION,
+        BIOSDATE = source.BIOSDATE,
+        SUPPORTSWMI = source.SUPPORTSWMI,
+        BIOSPNP = source.BIOSPNP,
+        RAMSIZE = source.RAMSIZE,
+        RAMUNIT = source.RAMUNIT,
+        SMBIOS = source.SMBIOS,
+        CHANGEDATE = source.CHANGEDATE,
+        NUMCPUTOTAL1 = source.NUMCPUTOTAL1,
+        NUMCORETOTAL = source.NUMCORETOTAL
+WHEN NOT MATCHED THEN
+    INSERT (
+        NODEID,
+        BIOSNAME,
+        BIOSVERSION,
+        BIOSDATE,
+        SUPPORTSWMI,
+        BIOSPNP,
+        RAMSIZE,
+        RAMUNIT,
+        SMBIOS,
+        CREATEDATE,
+        CHANGEDATE,
+        NUMCPUTOTAL1,
+        NUMCORETOTAL
+    )
+    VALUES (
+        source.NODEID,
+        source.BIOSNAME,
+        source.BIOSVERSION,
+        source.BIOSDATE,
+        source.SUPPORTSWMI,
+        source.BIOSPNP,
+        source.RAMSIZE,
+        source.RAMUNIT,
+        source.SMBIOS,
+        source.CREATEDATE,
+        source.CHANGEDATE,
+        source.NUMCPUTOTAL1,
+        source.NUMCORETOTAL
+    )
+```

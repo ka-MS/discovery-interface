@@ -7,8 +7,7 @@
 
 공통 컬럼 정의는 [ACTCI](../actci.md), [ACTCISPEC](../actcispec.md)가 소유한다.
 
-2026-09-18 구조 대조: 아래의 「직접 규칙 없음·경로 결정 필요」는 2026-09-15 관측이다.
-후속 확정된 `USES` 경로와 전체 장비–IP 쌍 조회·검증 상태의 정본은 [ACTCIRELATION](../actcirelation.md)이다.
+현재 `USES` 경로와 전체 장비–IP 쌍 조회의 정본은 [관계 통합 명세](../relations.md), 저장 규약은 [ACTCIRELATION](../actcirelation.md)이다.
 IP 본체의 대표 장비 한 건을 관계 입력으로 사용하지 않는다.
 
 > SQL의 LIMIT/OFFSET은 예시 페이지 값이다. 본체·관계 조회는 Source, 타겟 식별자·값 생성은 Pipeline Mapper가 소유한다.
@@ -21,7 +20,7 @@ IP 본체의 대표 장비 한 건을 관계 입력으로 사용하지 않는다
 | 분류 | `NET.IPADDRESS` 한 개 |
 | ACTCINUM | `D42:IPADDRESS:<ipaddress_pk>` |
 | 스펙 참조 | ACTCINUM·CLASSSTRUCTUREID는 본체와 동일, REFOBJECTID=ACTCIID |
-| 관계 | **Computer와 직접 규칙이 없다.** 5절 |
+| 관계 | Device → IP, 접두어 없는 `USES`. 실제 저장된 분류쌍의 규칙이 있을 때 저장 |
 
 전체 IP 297 / 543건 중 어떤 장비에도 붙지 않은 행이 192 / 432건이며 이것만 제외한다.
 IP는 장비 종속 개체가 아니라 독립 CI이므로 Computer·네트워크·컨테이너를 구분하지 않는다.
@@ -33,7 +32,7 @@ IP는 장비 종속 개체가 아니라 독립 CI이므로 Computer·네트워�
 `DISTINCT ON`이 **실제로 필요하다**. 근거는 ISSUE-9.
 
 `ip_address`는 `inet`이다. `CAST(... AS VARCHAR)`는 실제 프리픽스가 아닌 `/32`를 붙이므로
-`HOST()`로 주소만 뽑는다. 프리픽스 길이는 서브넷에서 가져온다.
+`HOST()`로 주소만 뽑는다. 현재 CI 조회는 프리픽스 길이·서브넷 마스크를 적재하지 않는다.
 
 ```sql
 SELECT DISTINCT ON (i.ipaddress_pk)
@@ -51,7 +50,7 @@ LIMIT 1000 OFFSET 0
 
 2026-09-15 두 서버에서 실행해 통과를 확인했다.
 `netport_fk`와 `mask_bits`는 관계·서브넷 조사용이다. 현재 IpCiImport의 원천 SQL·DTO에는 포함하지 않는다.
-관계 구현 시 netport_fk 및 전체 device_fks 보존이 필요하다.
+현재 직접 관계는 `view_ipaddress_device_v2`의 모든 연결 쌍을 사용하며 netport_fk를 요구하지 않는다.
 2026-09-15의 실제 경로·다중 연결 대조는 [관계 원천](../../../knowledge/device42/computer-ci-relations.md)을 참조한다.
 
 ## 3. 본체 매핑
@@ -85,7 +84,7 @@ LIMIT 1000 OFFSET 0
 
 | 항목 | 상태 |
 | --- | --- |
-| **관계 경로** | `SYS.*COMPUTERSYSTEM`↔`NET.IPADDRESS` 규칙이 양방향 0건이다. CDM 경로는 `Computer → NET.IPINTERFACE → NET.IPADDRESS`다. Interface CI 도입은 범위 확대라 **사용자 결정 필요**. ISSUE-8 |
+| 관계 경로 | 현재 구현은 Device → IP `USES` 직접 연결이다. Interface CI를 경유하는 별도 CDM 경로는 구현하지 않는다. 정확한 후보 범위·저장 가드는 [관계 명세](../relations.md) 참조 |
 | 서브넷 마스크 | `b.mask_bits` 전건 보유하나 `NET.IPADDRESS`에 자리 없음. `NET.IPNETWORK` 별도 CI 필요. ISSUE-8 |
 | `b.gateway` | 컬럼은 있으나 두 서버 모두 값 0건 |
 | IPADDRESS_ADDRESSTYPE | DOMAINID 없음, 시스템 기존 값 0건이라 코드 규약을 알 수 없다. ISSUE-11 |

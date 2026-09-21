@@ -2,6 +2,10 @@
 
 기본은 테이블 단위이며 문서 한 장이 해당 연계의 조회·매핑과 타겟 Writer에 대응한다.
 Query·원천 모델은 source/device42, Mapper·Import·수집 정책은 pipeline/d42maximo, 저장 SQL·DTO는 target/maximo가 소유한다.
+현재 구현을 기준으로 작성한 **제출용 명세**이며 후속 가이드의 근거다. 코드 대조 기준과 검증 범위는 [정합성 점검 기록](documentation-audit.md)에 있다.
+관측 날짜가 붙은 건수·메타데이터는 당시 DB 스냅샷이며 현재 운영 상태를 보증하지 않는다.
+`원천없음`·`미결`은 SQL의 NULL 바인딩과 같은 뜻이 아니다. 각 문서의 실제 저장 SQL에서 INSERT/UPDATE 포함 여부를 확인한다.
+
 CI는 [문서 예외 규칙](../README.md#ci-매핑-문서-예외)에 따라 공통 Target 규약과 유형별 매핑을 분리한다.
 
 | 문서 | 구현 |
@@ -24,7 +28,8 @@ CI는 [문서 예외 규칙](../README.md#ci-매핑-문서-예외)에 따라 공
 
 CI는 [ci/README.md](ci/README.md)에서 시작한다. `ACTCI`, `ACTCISPEC`,
 `ACTCIRELATION`의 Target 구조와 분류·속성 템플릿 조사는 완료했다.
-Computer·VM·Switch의 DPA와 독립된 수집·본체·스펙 매핑 및 SQL은 [Device](ci/types/device.md)에 있다. 저장 구현·D42 양 서버 검증과 [Switch·Printer 기준정보 설계](../design/ci/device-reference-data.md)는 완료했으며, MAS UI 적용과 실제 승격·UI 검증은 남아 있다.
+CI 전체 [분류·스펙](ci/classstructure.md)과 [관계도·연결 SQL](ci/relations.md)을 먼저 확인한다.
+Computer·VM·Switch·Network Cluster의 DPA와 독립된 수집·본체·스펙 매핑 및 SQL은 [Device](ci/types/device.md)에 있다. 저장 구현·D42 양 서버 검증과 [Switch·Printer 기준정보 설계](../design/ci/device-reference-data.md)는 완료했으며, MAS UI 적용과 실제 승격·UI 검증은 남아 있다.
 DB·DB Instance의 전체 원천 컬럼별 사용처와 실제 SQL은 `ci/types/`에 있다.
 DB Instance의 현재 구현·분류·관계·검증 범위는 [유형 매핑](ci/types/database-instance.md)을 따른다.
 독립 Database 등 별도 미결은 각 유형 문서와 open-issues에서 구분한다.
@@ -44,7 +49,9 @@ DB Instance의 현재 구현·분류·관계·검증 범위는 [유형 매핑](c
 ## 실행 순서
 
 Device42 PK를 DPA 행의 Maximo ID로 직접 사용한다. `DEPLOYEDASSET.NODEID`는
-`device_pk`, 각 1:N DPA 자식의 자체 ID는 해당 원천 레코드 PK다.
+`device_pk`다. 일반적인 1:N 자식(CPU·Disk·LogicalDrive·Adapter)은 원천 레코드 PK를 사용한다.
+예외로 [DPATCPIP](asset/dpatcpip.md)은 `(NODEID,TCPIPADDRESS)`로 MERGE하고 `TCPIPID`를 시퀀스로 채번한다.
+[DPASOFTWARE](software/dpasoftware.md)의 키·식별자는 해당 문서의 Writer 규약을 따른다.
 `DISCOVERY.SOURCE_TARGET_MAP`은 사용하지 않는다. 전역 변환 데이터와
 `TLOAMSOFTWARE`의 신규 ID는 각 Maximo 시퀀스로 발번한다.
 
@@ -62,11 +69,13 @@ Device42 PK를 DPA 행의 Maximo ID로 직접 사용한다. `DEPLOYEDASSET.NODEI
 
 `DEPLOYEDASSET.ASSETCLASS` 가 적재 대상 자식 테이블을 결정한다.
 판별자 구조는 `../knowledge/maximo/deployedasset-model.md` 참조.
-PDU 는 `DEPLOYEDASSET` 과 모든 자식의 조회 대상에서 제외한다.
+PDU는 `DEPLOYEDASSET`과 COMPUTER 범위 조회에서 제외한다. 다만 `DPANETDEVICE`의 현재
+`ASSET_NETWORK` 조건은 physical + network_device=true만 검사하며 PDU 제외식이 없다.
+모든 자식이 부모와 완전히 같은 필터를 쓴다고 가정하지 않는다. 실제 조건은 각 Query SQL을 따른다.
 
 | ASSETCLASS | 자식 테이블 |
 | --- | --- |
-| COMPUTER | DPACOMPUTER, DPAOS, DPASOFTWARE, DPACPU, DPADISK, DPALOGICALDRIVE, DPANETADAPTER, DPATCPIP, DPAMEDIAADAPTER, DPADISPLAY, DPASWSUITE |
+| COMPUTER | DPACOMPUTER, DPAOS, DPASOFTWARE, DPACPU, DPADISK, DPALOGICALDRIVE, DPANETADAPTER, DPATCPIP, DPAMEDIAADAPTER; DPADISPLAY·DPASWSUITE는 구조상 자식이나 미구현 |
 | NETDEVICE | DPANETDEVICE |
 | NETPRINTER | DPANETPRINTER |
 

@@ -51,7 +51,7 @@ where dpanetadapter.manufacturer = dpammanuvariant.manufacturervar
 | 조건 | 식 | 사유 |
 | --- | --- | --- |
 | GPU 파트만 | `pm.type_name = 'GPU'` | `view_part_v1` 은 여러 파트 종류를 한 테이블에 담는다 |
-| COMPUTER 대상 | `MediaAdapterQuery` 와 동일한 `DEVICE_FILTER` | 자식이 기록할 값만 등록한다 |
+| COMPUTER 대상 | `MediaAdapterQuery` 와 동일한 `MaximoSourcePolicy.ASSET_COMPUTER` | 자식이 기록할 값만 등록한다 |
 | 상수 추가 | `UNION SELECT 'UNKNOWN'` | `DPANETADAPTER` 가 기록하는 값 |
 | 빈 값 제외 | `name IS NOT NULL AND name <> ''` | 이름 컬럼이 NOT NULL 이다 |
 

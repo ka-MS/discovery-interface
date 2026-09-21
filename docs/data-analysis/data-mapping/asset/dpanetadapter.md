@@ -56,7 +56,7 @@
 | NETMACADDR1 | MAC 주소 1 | ALN(17) | Y | 변환 | `view_netport_v1.hwaddress` | `UPPER(hwaddress)`. 양 서버 관측값은 구분자 없는 12자리이며 기존 수집분 형식과 같다 |
 | NETMACADDR2 | MAC 주소 2 | ALN(17) | Y | 변환 | `view_netport_v1.hwaddress2` | `UPPER(hwaddress2)`. 양 서버 모두 관측값 없음 |
 | NODEID | 노드 ID | BIGINT(19) | N | 직접 | `view_netport_v1.device_fk` | 부모 DEPLOYEDASSET와 동일한 ID를 직접 사용한다 |
-| PORT | 포트 | ALN(16) | Y | 변환 | `view_netport_v1.port` | `LEFT(port, 16)`. 관측 최대 71자로 타겟 길이에 맞춘다 |
+| PORT | 포트 | ALN(16) | Y | 변환 | `view_netport_v1.port` | Mapper에서 trim → 빈 문자열은 NULL → 16자 초과 시 앞 16자. 원문에 곧바로 LEFT를 적용하지 않는다 |
 | PROTOCOL | 프로토콜 | ALN(64) | Y | 직접 | `view_netport_v1.global_type` | 양쪽 서버 모두 전건 비어 있다 |
 | SERIALNUMBER | 일련 번호 | ALN(64) | Y | 원천없음 | – | 대응 원천이 없다 |
 | VBANDWIDTH | 대역폭 | ALN(32) | Y | 원천없음 | – | 비영속 속성(PERSISTENT=0). DB 컬럼이 아니므로 적재 대상이 아니다 |
@@ -91,3 +91,79 @@ LIMIT 1000 OFFSET 0
 ## 6. 미결
 
 없음.
+
+## 실제 저장 SQL
+
+아래는 현재 Writer의 SQL이다. `?`는 USING source 열 순서로 DTO 값을 바인딩한다.
+INSERT에 없는 컬럼은 이 ETL이 신규 값을 지정하지 않으며 DB 기본값·제약에 따른다.
+UPDATE에 없는 컬럼은 기존 값을 유지한다. 문서의 원천 미대응·미결 표기는 NULL로 덮어쓴다는 뜻이 아니다.
+
+```sql
+MERGE INTO MAXIMO.DPANETADAPTER AS target
+USING (
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+) AS source (
+    ADAPTERID,
+    ADAPTERTYPE,
+    BANDWIDTH,
+    BANDWIDTHUNIT,
+    DESCRIPTION,
+    MAKEMODEL,
+    MANUFACTURER,
+    NETMACADDR1,
+    NETMACADDR2,
+    NODEID,
+    PORT,
+    PROTOCOL,
+    CREATEDATE,
+    CHANGEDATE
+)
+ON target.ADAPTERID = source.ADAPTERID
+WHEN MATCHED THEN
+    UPDATE SET
+        ADAPTERTYPE = source.ADAPTERTYPE,
+        BANDWIDTH = source.BANDWIDTH,
+        BANDWIDTHUNIT = source.BANDWIDTHUNIT,
+        DESCRIPTION = source.DESCRIPTION,
+        MAKEMODEL = source.MAKEMODEL,
+        MANUFACTURER = source.MANUFACTURER,
+        NETMACADDR1 = source.NETMACADDR1,
+        NETMACADDR2 = source.NETMACADDR2,
+        NODEID = source.NODEID,
+        PORT = source.PORT,
+        PROTOCOL = source.PROTOCOL,
+        CHANGEDATE = source.CHANGEDATE
+WHEN NOT MATCHED THEN
+    INSERT (
+        ADAPTERID,
+        ADAPTERTYPE,
+        BANDWIDTH,
+        BANDWIDTHUNIT,
+        DESCRIPTION,
+        MAKEMODEL,
+        MANUFACTURER,
+        NETMACADDR1,
+        NETMACADDR2,
+        NODEID,
+        PORT,
+        PROTOCOL,
+        CREATEDATE,
+        CHANGEDATE
+    )
+    VALUES (
+        source.ADAPTERID,
+        source.ADAPTERTYPE,
+        source.BANDWIDTH,
+        source.BANDWIDTHUNIT,
+        source.DESCRIPTION,
+        source.MAKEMODEL,
+        source.MANUFACTURER,
+        source.NETMACADDR1,
+        source.NETMACADDR2,
+        source.NODEID,
+        source.PORT,
+        source.PROTOCOL,
+        source.CREATEDATE,
+        source.CHANGEDATE
+    )
+```

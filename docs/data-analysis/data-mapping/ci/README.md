@@ -1,70 +1,39 @@
-# CI 데이터 매핑
+# CI 매핑 명세
 
-Device42 개체를 Maximo Actual CI로 적재하는 매핑 정본이다.
-
-> **공통 Target 규약과 유형별 원천 매핑을 분리한다. 같은 규칙은 한 곳에만 둔다.**
+현재 코드의 Device42 → Maximo Actual CI 연계 명세다. 제출·가이드 작성은 아래 순서로 읽는다.
+이번 문서 대조에서는 운영 DB에 접속하지 않았다. 과거 검증 기록은 날짜와 범위를 함께 인용한다.
 
 ## 읽는 순서
 
-Device·OS·Disk·Filesystem·IP의 관계 조사 결과는 [관계 설계](../../design/ci/relations.md)에서 시작한다.
-실제 연결 SQL은 출발 유형의 [Device](types/device.md#7-관계-매핑--2026-09-15)와
-[OS](types/os.md#6-관계-매핑--2026-09-15), 공통 저장 초안은 [ACTCIRELATION](actcirelation.md)에 있다.
+1. [분류·스펙 매핑](classstructure.md): CI 유형별 12개 분류, 전체 수집 속성, 정의 조회와 누락 처리.
+2. [관계 통합 명세](relations.md): 일곱 관계도·방향·정확한 코드, 연결 키와 COUNT/PAGE SQL.
+3. [ACTCI](actci.md)·[ACTCISPEC](actcispec.md)·[ACTCIRELATION](actcirelation.md): 전체 컬럼·키·바인딩·실제 MERGE.
+4. 아래 유형별 원천 SQL·값 변환.
+5. [문서 점검 기록](../documentation-audit.md): 코드 기준과 검증 범위.
 
-1. [CI 모델](../../knowledge/maximo/ci-model.md) — Actual CI와 CI 비교, 참조 경로
-2. [CI 분류 모델](../../knowledge/maximo/ci-classification.md) — CLASSSTRUCTURE·CLASSSPEC 컬럼과 적용 범위
-3. [ci-targets.md](ci-targets.md) — CI 후보, 중복 View, 포함·제외 범위
-4. [ACTCI](actci.md), [ACTCISPEC](actcispec.md), [ACTCIRELATION](actcirelation.md) — 테이블별 컬럼 매핑
-5. [Database](types/database.md), [Database Instance](types/database-instance.md) — 유형별 조회·분류·속성·관계
+## 현재 구현
 
-Computer·VM·Switch 본체·스펙 매핑은 [Device](types/device.md)에서 시작한다.
-Printer 본체 분류·스펙과 Switch CI 승격 추천안은 [Device CI 기준정보 설계](../../design/ci/device-reference-data.md)에 있다.
-수집 항목·원천 연결·표본 근거는 [Computer 연관 수집 원천](../../knowledge/device42/computer-inventory.md)에 있다.
-실제 분류·스펙·관계 정의는 [Computer 관련 분류 조사](../../knowledge/maximo/computer-classification-specs.md),
-수집 대상·스펙 추천안은 [Computer CI 수집 설계](../../design/ci/computer.md)에 있다.
-
-DB·Instance 전체 원천 컬럼과 참조 구조는 [원천 구조](../../knowledge/device42/database-model.md)에 있다.
-
-OS·Disk·Filesystem·IP의 원천 관측은 [OS·Disk·Filesystem·IP 원천 조사](../../knowledge/device42/ci-component-inventory.md),
-분류·스펙·관계 규칙은 [OS·Disk·Filesystem·IP 분류 조사](../../knowledge/maximo/ci-component-classifications.md),
-승격 범위 설정은 [CI 승격 범위](../../knowledge/maximo/ci-promotion-scope.md),
-수집 구성안은 `../../design/ci/` 의 [os](../../design/ci/os.md)·[disk](../../design/ci/disk.md)·[filesystem](../../design/ci/filesystem.md)·[ip](../../design/ci/ip.md)에 있다.
-
-공통 7열 표는 전체 컬럼·참조 규칙을 소유한다. 유형 문서 본문에는 실제 조회 SQL과
-본체·속성 매핑을 작성한다. 관계 SQL과 정의는 출발 유형 문서에만 둔다.
-
-## 유형별 진행
-
-| 유형 | 문서 | 상태 |
+| 유형 | 원천·변환 명세 | 현재 실행 범위 |
 | --- | --- | --- |
-| Device | [device.md](types/device.md) | Computer·VM·Switch ACTCI 구현·D42 양 서버 검증 완료. [기준정보 설계](../../design/ci/device-reference-data.md) 완료, MAS UI 적용·실제 승격 필요; Printer 코드·Router 미지원 |
-| Database | [database.md](types/database.md) | 원천 10컬럼 사용처·SQL 작성; 본체 이름·메모·분류, 이름 속성 대응. 추가 속성·적용 설정·필수값 미결 |
-| Database Instance | [database-instance.md](types/database-instance.md) | 엔진별 본체·스펙과 Device 관계 구현. 실제 검증 범위는 유형 문서 참조 |
-| OS | [os.md](types/os.md) | 본체·스펙 적재 구현 및 자동 테스트 완료. 분류 SYS.OPERATINGSYSTEM, 속성 5개(대조 기준 CI.OS). 관계 미적재. EOL·EOS 대응 속성 없음 |
-| Disk | [disk.md](types/disk.md) | 본체·스펙 적재 구현 및 자동 테스트 완료. 분류 DEV.DISKDRIVE, 속성 3개(CI 대조 기준 없음). 관계 미적재. 제조사·펌웨어는 원천 전건 비어 있음 |
-| Filesystem | [filesystem.md](types/filesystem.md) | 본체·스펙 적재 구현 및 자동 테스트 완료. 분류 SYS.FILESYSTEM, 속성 5개(대조 기준 CI.FILESYSTEM). 관계 미적재. 컨테이너·가상 마운트는 제외 |
-| IP | [ip.md](types/ip.md) | 본체·스펙 적재 구현 및 자동 테스트 완료. 분류 NET.IPADDRESS, 속성 4개(대조 기준 CI.IPADDRESS). 장비 연결 IP 전체 수집. Device→IP USES 관계 구현 |
+| Device | [device.md](types/device.md), [실행 준비](types/device-run.md) | 물리 Computer·VM·판정 가능한 Switch·Network Cluster. Printer·Router 제외 |
+| DB Instance | [database-instance.md](types/database-instance.md) | 엔진별 네 분류, 다섯 속성. Component를 경유하는 RUNSON 관계 |
+| OS | [os.md](types/os.md) | SYS.OPERATINGSYSTEM, 다섯 속성. Computer 대상 INSTALLEDON |
+| Disk | [disk.md](types/disk.md) | DEV.DISKDRIVE, 세 속성. Computer 출발 CONTAINS |
+| Filesystem | [filesystem.md](types/filesystem.md) | SYS.FILESYSTEM, 다섯 속성. 선택 조건을 통과한 모든 Computer–마운트 연결 |
+| IP | [ip.md](types/ip.md) | NET.IPADDRESS, 네 속성. 본체는 PK당 하나, USES는 연결 쌍별 |
 
-기준정보 보완과 나머지 정책은 [ISSUE-8·11](../../open-issues.md)에 둔다.
-Device·OS·Disk·Filesystem·IP·DB Instance 여섯 유형의 본체·속성을 구현했다.
-`source/device42/ci`의 Query가 조회를, `pipeline/d42maximo/ci`의 Mapper·Import가 변환·실행을,
-`target/maximo/ci/ActCiWriter`가 공통 저장을 담당한다. 공통 스펙 매핑은 Pipeline의 `ci/mapping/CiSpecMapper`다.
-일곱 관계의 D42 연결 정의는 Source의 `ci/relation/Device42Relation`, 타겟 코드와 매핑은 Pipeline의
-`ci/relation/CiRelationSource`·`CiRelationMapper`다. `ci` 본체 뒤 또는 `ci-relation` 단독으로 실행한다.
-실제 관계별 운영 검증 이력은 [ACTCIRELATION](actcirelation.md)을 따른다. 이번 구조 리팩토링에서는 DB 적재를 실행하지 않았다.
-실제 Maximo Device 적재·Switch CI 승격·UI 검증은 미완료다.
+실행: `ci`는 정의 준비 → DB Instance → Device → Disk → Filesystem → IP → OS → 관계다.
+`ci-relation`은 관계만 실행한다. 본체 실패 후에도 관계를 실행하되 정의 준비 실패는 전파한다.
+구현 책임은 Source(Query·원천 모델), Pipeline(정책·Mapper·Import·Job), Target(DTO·Writer·정의 조회)이다.
+본체·속성은 공통 ActCiWriter, 관계는 공통 ActCiRelationWriter를 쓴다.
 
-## Target
+## 실행 명세 밖의 자료
 
-| 역할 | Maximo 테이블 |
-| --- | --- |
-| CI 본체 | `MAXIMO.ACTCI` |
-| CI 분류별 속성 | `MAXIMO.ACTCISPEC` |
-| CI 간 관계 | `MAXIMO.ACTCIRELATION` |
+- [독립 Database](types/database.md): 미구현 검토안. 현재 `ci`가 생성하지 않는다.
+- [CI 대상 후보](ci-targets.md): 2026-09-04 조사 스냅샷이며 현재 구현 목록이 아니다.
+- [CI 모델](../../knowledge/maximo/ci-model.md)·[분류 모델](../../knowledge/maximo/ci-classification.md): DB 구조 관측.
+- [분류 관측](../../knowledge/maximo/computer-classification-specs.md)·[관계 관측](../../knowledge/maximo/computer-ci-relations.md): 당시 등록값·검증 이력.
+- [관계 설계](../../design/ci/relations.md) 및 [ISSUE-8·11](../../open-issues.md): 선택 이유·후속 범위와 미결 정책.
 
-## 원칙
-
-- CI 수집·매핑은 D42 원천을 기준으로 정의하며, DPA 테이블·적재 결과·변환 규칙에 의존하지 않는다. 공통 원천 사실은 knowledge에서 참조한다.
-- View 하나를 CI 유형 하나로 간주하지 않는다.
-- 같은 개체를 표현하는 범용 View와 전용 View는 대표 Source 하나로 합친다.
-- 본체, 속성, 관계, 비대상을 구분한다.
-- 수집 구성 후보·대조표는 `../../design/ci/`에 두고, 남은 포함·제외 결정은 `../../open-issues.md`에서 추적한다.
+현재 코드에 분류·관계가 있다는 사실은 운영 기준정보 등록·실제 적재·CI 승격·UI 검증 완료를 뜻하지 않는다.
+ETL은 기준정보 등록이나 Authorized CI 승격을 수행하지 않는다.

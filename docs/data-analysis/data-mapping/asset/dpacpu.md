@@ -44,7 +44,7 @@
 | CPUID | CPU ID | BIGINT(19) | N | 직접 | `view_part_v1.part_pk` | Maximo ID로 그대로 사용하며 MERGE 키로 삼는다 |
 | CPUNUM | 프로세서 ID | ALN(64) | Y | 직접 | `view_part_v1.slot` | 예: `CPU.Socket.1`. MERGE 매칭에는 사용하지 않는다 |
 | CREATEDATE | 작성 날짜 | DATETIME(10) | N | 채번 | – | 적재 시각 |
-| CURRSPEED | 현재 속도 | DECIMAL(10,2) | Y | 원천없음 | – | Device42 는 정격 속도만 제공한다. 기존 수집분은 `0.00` 으로 채움 |
+| CURRSPEED | 현재 속도 | DECIMAL(10,2) | Y | 상수 | – | 현재 CpuMapper의 ZERO_SPEED 값 `0.00`. 원천 현재 속도를 측정한 값이 아니다 |
 | DESCRIPTION | 설명 | ALN(256) | Y | 변환 | `view_part_v1.description` | 비어 있으면 `view_partmodel_v1.name`. .68 은 전건 비어 있다 |
 | IS64BITEN | 64비트 사용 | YORN(1) | N | 상수 | – | 기존 수집분도 전건 `0`. DEFAULTVALUE=0 |
 | MAKEMODEL | 제조/모델 | ALN(128) | N | 직접 | `view_partmodel_v1.name` | 없으면 `UNKNOWN`. DEFAULTVALUE=UNKNOWN |
@@ -92,3 +92,75 @@ LIMIT 1000 OFFSET 0
 ## 6. 미결
 
 없음.
+
+## 실제 저장 SQL
+
+아래는 현재 Writer의 SQL이다. `?`는 USING source 열 순서로 DTO 값을 바인딩한다.
+INSERT에 없는 컬럼은 이 ETL이 신규 값을 지정하지 않으며 DB 기본값·제약에 따른다.
+UPDATE에 없는 컬럼은 기존 값을 유지한다. 문서의 원천 미대응·미결 표기는 NULL로 덮어쓴다는 뜻이 아니다.
+
+```sql
+MERGE INTO MAXIMO.DPACPU AS target
+USING (
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+) AS source (
+    CPUID,
+    CPUNUM,
+    CURRSPEED,
+    DESCRIPTION,
+    IS64BITEN,
+    MAKEMODEL,
+    MANUFACTURER,
+    MAXSPEED,
+    NODEID,
+    NUMCORE,
+    SPEEDUNIT,
+    CREATEDATE,
+    CHANGEDATE
+)
+ON target.CPUID = source.CPUID
+WHEN MATCHED THEN
+    UPDATE SET
+        CPUNUM = source.CPUNUM,
+        CURRSPEED = source.CURRSPEED,
+        DESCRIPTION = source.DESCRIPTION,
+        IS64BITEN = source.IS64BITEN,
+        MAKEMODEL = source.MAKEMODEL,
+        MANUFACTURER = source.MANUFACTURER,
+        MAXSPEED = source.MAXSPEED,
+        NODEID = source.NODEID,
+        NUMCORE = source.NUMCORE,
+        SPEEDUNIT = source.SPEEDUNIT,
+        CHANGEDATE = source.CHANGEDATE
+WHEN NOT MATCHED THEN
+    INSERT (
+        CPUID,
+        CPUNUM,
+        CURRSPEED,
+        DESCRIPTION,
+        IS64BITEN,
+        MAKEMODEL,
+        MANUFACTURER,
+        MAXSPEED,
+        NODEID,
+        NUMCORE,
+        SPEEDUNIT,
+        CREATEDATE,
+        CHANGEDATE
+    )
+    VALUES (
+        source.CPUID,
+        source.CPUNUM,
+        source.CURRSPEED,
+        source.DESCRIPTION,
+        source.IS64BITEN,
+        source.MAKEMODEL,
+        source.MANUFACTURER,
+        source.MAXSPEED,
+        source.NODEID,
+        source.NUMCORE,
+        source.SPEEDUNIT,
+        source.CREATEDATE,
+        source.CHANGEDATE
+    )
+```

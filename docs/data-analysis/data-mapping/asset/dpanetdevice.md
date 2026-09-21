@@ -112,3 +112,47 @@ LIMIT 1000 OFFSET 0
 
 - 다중 멤버 스택을 실측하지 못했다. 관측 시점에 cluster 당 물리 멤버가 1개뿐이다.
   멤버가 둘 이상인 스택이 생기면 재확인한다. ISSUE-2 참조.
+
+## 실제 저장 SQL
+
+아래는 현재 Writer의 SQL이다. `?`는 USING source 열 순서로 DTO 값을 바인딩한다.
+INSERT에 없는 컬럼은 이 ETL이 신규 값을 지정하지 않으며 DB 기본값·제약에 따른다.
+UPDATE에 없는 컬럼은 기존 값을 유지한다. 문서의 원천 미대응·미결 표기는 NULL로 덮어쓴다는 뜻이 아니다.
+
+```sql
+MERGE INTO MAXIMO.DPANETDEVICE AS target
+USING (
+    VALUES (?, ?, ?, ?, ?, ?)
+) AS source (
+    NODEID,
+    NETMACADDR,
+    NETWORKADDRESS,
+    OSVERSION,
+    CREATEDATE,
+    CHANGEDATE
+)
+ON target.NODEID = source.NODEID
+WHEN MATCHED THEN
+    UPDATE SET
+        NETMACADDR = source.NETMACADDR,
+        NETWORKADDRESS = source.NETWORKADDRESS,
+        OSVERSION = source.OSVERSION,
+        CHANGEDATE = source.CHANGEDATE
+WHEN NOT MATCHED THEN
+    INSERT (
+        NODEID,
+        NETMACADDR,
+        NETWORKADDRESS,
+        OSVERSION,
+        CREATEDATE,
+        CHANGEDATE
+    )
+    VALUES (
+        source.NODEID,
+        source.NETMACADDR,
+        source.NETWORKADDRESS,
+        source.OSVERSION,
+        source.CREATEDATE,
+        source.CHANGEDATE
+    )
+```

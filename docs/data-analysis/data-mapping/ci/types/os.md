@@ -119,22 +119,4 @@ RUNSON은 실행 의미를 추가하므로 단순 device_fk 연결로 함께 생
 연결 의미의 기존 운영 검증 이력은 위와 같다. 아래는 타겟 표현을 분리한 현재 원천 조회이며 이번 리팩터링에서는 운영 DB에 재실행하지 않았다.
 본체 조회 결과를 재사용하지 않는다.
 
-```sql
-WITH computer AS (
-    SELECT d.device_pk
-    FROM view_device_v2 d
-    WHERE
-d.type IN ('physical', 'virtual')
-AND (d.network_device = false OR d.network_device IS NULL)
-AND (
-    (d.type = 'physical' AND d.physicalsubtype IN ('Generic', 'Rackable', 'Blade', 'WorkStation', 'ThinClient', 'Laptop'))
-    OR (d.type = 'virtual' AND d.virtualsubtype IN ('Internal VM', 'Amazon EC2 Instance', 'VMWare', 'Hyper-V'))
-)
-)
-SELECT CAST(o.deviceos_pk AS varchar) AS source_pk,
-       CAST(c.device_pk AS varchar) AS target_pk
-FROM view_deviceos_v1 o
-JOIN computer c ON c.device_pk = o.device_fk
-ORDER BY source_pk, target_pk
-LIMIT 1000 OFFSET 0
-```
+현재 OS_DEVICE COUNT/PAGE SQL과 매핑은 [관계 통합 명세](../relations.md)에 단일 관리한다.

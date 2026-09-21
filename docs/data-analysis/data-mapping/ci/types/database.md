@@ -1,4 +1,7 @@
-# Database
+# Database — 미구현 검토안
+
+> **현재 실행 명세가 아니다.** 독립 Database의 Query·Mapper·Import는 운영 코드에 없고, `APP.DB.DATABASE`도 실행 분류 목록에 없다.
+> 아래 SQL·매핑은 기존 조사·검토 기록이며 `ci` 실행으로 적재되지 않는다. 구현된 DB 연계는 [Database Instance](database-instance.md)다.
 
 > 관측 2026-09-04 · Device42 192.168.2.68 / 192.168.1.35 · Maximo BLUDB
 

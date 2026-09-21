@@ -8,7 +8,7 @@
 [공유 식별자](../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/ci/mapping/MaximoCiIdentity.java) ·
 [공통 저장](../../../../src/main/java/com/itmsg/device42/target/maximo/ci/ActCiRelationWriter.java).
 
-실제 CI 관계의 공통 Target 매핑이다. 유형별 연결 의미와 원천 SQL은 출발 유형 문서가 소유한다.
+실제 CI 관계의 공통 Target 매핑이다. 전체 관계도·연결 의미·COUNT/PAGE SQL은 [관계 통합 명세](relations.md)가 소유한다.
 
 원천 조회는 `source_pk`·`target_pk` 문자열을 반환한다. 관계 코드와 `D42:<종류>:` 접두어는
 Pipeline Mapper가 생성하며 본체와 같은 식별자 규칙을 사용한다. PK 문자열 정렬·페이징과 모든 연결 쌍은 유지한다.
@@ -46,8 +46,8 @@ DB Instance→Device는 같은 DB Instance 문서의 원천 경로를 사용하�
 
 ## 2. 컬럼 매핑
 
-공통 11개 영속 컬럼이다. 신규 Computer 관련 관계에 적용할 제안이며,
-기존 관계를 일괄 갱신하거나 선택하지 않은 관계를 생성하지 않는다.
+공통 11개 영속 컬럼이다. 일곱 관계 정의가 같은 Writer를 사용한다.
+선택된 원천 연결 쌍만 처리하며 관계 기준정보는 수정하지 않는다.
 
 | Target 컬럼 | 한글명 | 타입 | Null | 구분 | Source | 변환·조건 |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -55,13 +55,13 @@ DB Instance→Device는 같은 DB Instance 문서의 원천 경로를 사용하�
 | SOURCECI | 소스 실제 구성 품목 번호 | UPPER(150) | N | 변환 | 유형별 원천 연결 키 | 유형 매핑의 출발 ACTCINUM |
 | TARGETCI | 대상 실제 구성 품목 번호 | UPPER(150) | N | 변환 | 유형별 원천 연결 키 | 유형 매핑의 도착 ACTCINUM |
 | RELATIONNUM | 관계 | UPPER(192) | N | 상수 | CiRelationSource 상수 | RELATION·RELATIONRULES에서 확인된 정확한 코드 |
-| SWAPPED | 스왑됨 | YORN(1) | Y | 상수 | 사전 정의한 저장 방향 | OS → 물리 Computer는 0으로 단건 승격·표시 확인. 다른 관계는 검증 필요. 규칙 SWAPPED를 그대로 복사하지 않음 |
+| SWAPPED | 스왑됨 | YORN(1) | Y | 상수 | Writer 상수 | 일곱 관계 모두 0. RELATIONRULES.SWAPPED를 복사하거나 끝점을 뒤집지 않음; 분류쌍별 UI 검증은 별도 |
 | CHANGEBY | 변경자 | UPPER(100) | Y | 상수 | 기존 CI 적재 규약 | Device42 |
-| CHANGEDATE | 변경 날짜 | DATETIME(10) | Y | 변환 | 관계 매핑 시각 | 기존 CI와 같은 JVM 기본 시간대. 원천 발견 시각이 아님 |
-| ANCESTORCI | 상위 실제 CI | UPPER(150) | Y | 원천없음 | 별도 상위 원천 없음 | 신규 NULL. SOURCECI를 무조건 복사하지 않음 |
-| BASELINEDATE | 기준선 날짜 | DATETIME(10) | Y | 원천없음 | D42 관계 기준선 없음 | 신규 NULL |
-| SOURCECIGUID | 소스 실제 CI GUID | ALN(192) | Y | 원천없음 | D42 GUID 없음 | 신규 NULL. 아래 관측 참조. 기존 값은 MERGE에서 유지 |
-| TARGETCIGUID | 대상 실제 CI GUID | ALN(192) | Y | 원천없음 | D42 GUID 없음 | 신규 NULL. 기존 값은 MERGE에서 유지 |
+| CHANGEDATE | 변경 날짜 | DATETIME(10) | Y | 변환 | Writer 호출 시각 | LocalDateTime.now(), 페이지별 시각. 원천 발견 시각이 아님 |
+| ANCESTORCI | 상위 실제 CI | UPPER(150) | Y | 원천없음 | 현재 매핑 없음 | INSERT·UPDATE에서 생략. 신규는 DB 기본값/제약에 따르고 기존 값 유지 |
+| BASELINEDATE | 기준선 날짜 | DATETIME(10) | Y | 원천없음 | 현재 매핑 없음 | INSERT·UPDATE에서 생략. 신규는 DB 기본값/제약에 따르고 기존 값 유지 |
+| SOURCECIGUID | 소스 실제 CI GUID | ALN(192) | Y | 원천없음 | 현재 매핑 없음 | INSERT·UPDATE에서 생략. 신규는 DB 기본값/제약에 따르고 기존 값 유지 |
+| TARGETCIGUID | 대상 실제 CI GUID | ALN(192) | Y | 원천없음 | 현재 매핑 없음 | INSERT·UPDATE에서 생략. 신규는 DB 기본값/제약에 따르고 기존 값 유지 |
 
 **GUID 두 컬럼을 NULL로 두는 근거:** OS → 물리 Computer 샘플을 GUID 없이 INSERT한 뒤
 CI 승격과 관계·부모 보존이 정상 동작했다. GUID는 UI가 만든 관계에서 관측되는 값이며
@@ -73,10 +73,12 @@ CONTAINMENT·REVRELATIONSHIP·CARDINALITY는 ACTCIRELATION 컬럼이 아니다.
 SWAPPED는 저장 순서 변경 여부를 나타내는 별도 필드이며
 [관측 설명](../../knowledge/maximo/computer-ci-relations.md#플래그-의미와-주의)을 따른다.
 
-## 3. 공통 저장 SQL 제안
+<a id="3-공통-저장-sql-제안"></a>
+
+## 3. 실제 공통 저장 SQL
 
 호출자가 승인된 규칙과 실제 원천 연결로 sourceci/targetci를 만든다.
-동일 관계 입력 중복은 세 컬럼 키로 제거하고, 양 끝과 규칙 확인은 MERGE의 USING 안에서 한다.
+입력 중복을 메모리에서 제거하지 않는다. 같은 세 컬럼 키는 MERGE로 동일 저장 행에 반영하며, 양 끝과 규칙 확인은 USING 안에서 한다.
 
 **예상 분류를 파라미터로 받지 않는다.** 현재 최소 정책은 저장된 ACTCI의
 **실제 CLASSSTRUCTUREID** 쌍에 등록된 관계 규칙이 있는지 확인하는 것이다.
@@ -89,43 +91,45 @@ RELATIONRULES에 두 분류쌍 행이 모두 있기 때문이다.
 ```sql
 MERGE INTO MAXIMO.ACTCIRELATION AS target
 USING (
-    SELECT input.SOURCECI,input.TARGETCI,input.RELATIONNUM,
-           input.SWAPPED,input.CHANGEBY,input.CHANGEDATE
+    SELECT input.SOURCECI, input.TARGETCI, input.RELATIONNUM,
+           input.SWAPPED, input.CHANGEBY, input.CHANGEDATE
     FROM (VALUES (
         CAST(? AS VARCHAR(150)), CAST(? AS VARCHAR(150)),
         CAST(? AS VARCHAR(192)), CAST(? AS INTEGER),
         CAST(? AS VARCHAR(100)), CAST(? AS TIMESTAMP)
     )) AS input (
-        SOURCECI,TARGETCI,RELATIONNUM,SWAPPED,CHANGEBY,CHANGEDATE
+        SOURCECI, TARGETCI, RELATIONNUM, SWAPPED, CHANGEBY, CHANGEDATE
     )
-    JOIN MAXIMO.ACTCI s ON s.ACTCINUM=input.SOURCECI
-    JOIN MAXIMO.ACTCI t ON t.ACTCINUM=input.TARGETCI
+    JOIN MAXIMO.ACTCI s ON s.ACTCINUM = input.SOURCECI
+    JOIN MAXIMO.ACTCI t ON t.ACTCINUM = input.TARGETCI
     WHERE EXISTS (
         SELECT 1 FROM MAXIMO.RELATIONRULES r
-        WHERE r.RELATIONNUM=input.RELATIONNUM
-          AND r.SOURCECLASS=s.CLASSSTRUCTUREID
-          AND r.TARGETCLASS=t.CLASSSTRUCTUREID
+        WHERE r.RELATIONNUM = input.RELATIONNUM
+          AND r.SOURCECLASS = s.CLASSSTRUCTUREID
+          AND r.TARGETCLASS = t.CLASSSTRUCTUREID
     )
     AND EXISTS (
         SELECT 1 FROM MAXIMO.RELATION r
-        WHERE r.RELATIONNUM=input.RELATIONNUM
+        WHERE r.RELATIONNUM = input.RELATIONNUM
     )
 ) AS source
-ON target.SOURCECI=source.SOURCECI
-   AND target.TARGETCI=source.TARGETCI
-   AND target.RELATIONNUM=source.RELATIONNUM
-WHEN MATCHED THEN UPDATE SET
-    SWAPPED=source.SWAPPED,
-    CHANGEBY=source.CHANGEBY,
-    CHANGEDATE=source.CHANGEDATE
-WHEN NOT MATCHED THEN INSERT (
-    ACTCIRELATIONID,SOURCECI,TARGETCI,RELATIONNUM,
-    SWAPPED,CHANGEBY,CHANGEDATE
-) VALUES (
-    NEXT VALUE FOR MAXIMO.ACTCIRELATIONSEQ,
-    source.SOURCECI,source.TARGETCI,source.RELATIONNUM,
-    source.SWAPPED,source.CHANGEBY,source.CHANGEDATE
-);
+ON target.SOURCECI = source.SOURCECI
+    AND target.TARGETCI = source.TARGETCI
+    AND target.RELATIONNUM = source.RELATIONNUM
+WHEN MATCHED THEN
+    UPDATE SET
+        SWAPPED = source.SWAPPED,
+        CHANGEBY = source.CHANGEBY,
+        CHANGEDATE = source.CHANGEDATE
+WHEN NOT MATCHED THEN
+    INSERT (
+        ACTCIRELATIONID, SOURCECI, TARGETCI, RELATIONNUM,
+        SWAPPED, CHANGEBY, CHANGEDATE
+    ) VALUES (
+        NEXT VALUE FOR MAXIMO.ACTCIRELATIONSEQ,
+        source.SOURCECI, source.TARGETCI, source.RELATIONNUM,
+        source.SWAPPED, source.CHANGEBY, source.CHANGEDATE
+    )
 ```
 
 파라미터 순서는 sourceCiNum, targetCiNum, relationNum, swapped, changeBy, changeDate다.
@@ -135,7 +139,7 @@ Maximo의 모든 관계 적재 방식에 대한 제약이라고 주장하지 않
 - 부모/자식 존재 확인을 별도 SELECT로 반복할 필요는 없다.
 - 규칙 조인을 EXISTS로 처리해 규칙 행 중복 때문에 한 관계 후보가 여러 행으로 늘어나지 않게 한다.
 - 0건은 양 끝 미존재 또는 실제 분류쌍의 규칙 부재 가능성을 뜻한다. 최초 로그에 한 원인으로 단정하지 않는다.
-- 저장 예외는 해당 관계를 기록하고 다음 관계로 진행하는 안이다.
+- 저장 예외는 해당 관계를 로그에 기록하고 다음 관계로 진행한다.
 - 가드는 현재 저장 상태를 확인한다. 외부 동시 삭제까지 물리 FK처럼 보장하지 않는다.
 - MERGE 키가 달라진 새 관계는 추가된다. 이전 호스트·장비 관계 삭제는 자동 수행하지 않는다.
 - 신규 NULL 필드들은 기존 행에서 덮어쓰지 않는다.

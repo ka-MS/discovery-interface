@@ -33,7 +33,7 @@ where dpacpu.manufacturer = dpammanuvariant.manufacturervar
 | `view_partmodel_v1.name` (`type_name = 'CPU'`) | MAXIMO.DPAMPROCESSOR | N:1 (같은 이름이 여러 곳에 나타난다) |
 
 `CpuQuery` 와 같은 원천·같은 필터를 쓴다. 자식이
-`defaultUnknown(model_name)` 으로 기록하므로 상수 `UNKNOWN` 도 함께 넣는다.
+`defaultUnknown(model_name)`으로 비어 있는 모델명을 `UNKNOWN`으로 기록한다. 그러나 현재 변환 조회는 비어 있지 않은 CPU 모델명만 수집하며 `UNKNOWN` 상수를 추가하지 않는다. 원천에 그 이름이 없고 Maximo에도 등록되지 않았다면 해당 자식의 UI 변환 조인이 성립하지 않을 수 있다.
 
 기존 13행은 Device42 가 수집하는 모델명과 겹치는 값이 없다.
 
@@ -42,7 +42,7 @@ where dpacpu.manufacturer = dpammanuvariant.manufacturervar
 | 조건 | 식 | 사유 |
 | --- | --- | --- |
 | CPU 파트만 | `pm.type_name = 'CPU'` | `view_part_v1` 은 여러 파트 종류를 한 테이블에 담는다 |
-| COMPUTER 대상 | `CpuQuery` 와 동일한 `DEVICE_FILTER` | 자식이 기록할 값만 등록한다 |
+| COMPUTER 대상 | `CpuQuery` 와 동일한 `MaximoSourcePolicy.ASSET_COMPUTER` | 자식이 기록할 값만 등록한다 |
 | 빈 값 제외 | `name IS NOT NULL AND name <> ''` | 이름 컬럼이 NOT NULL 이다 |
 
 ## 4. 컬럼 매핑

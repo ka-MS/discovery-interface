@@ -103,6 +103,8 @@ python3 docs/data-analysis/tools/gen-mapping-skeleton.py
 - 유형별 본체 표: `Target 컬럼 | 한글명 | 구분 | Source | 변환·조건`.
 - 유형별 속성 표: `ASSETATTRID | 한글 의미 | 값 컬럼 | 구분 | Source | 변환·조건`.
   분류를 표 앞에 명시하며, 행은 물리 컬럼이 아닌 ACTCISPEC 속성 한 건에 대응한다.
-- 유형 간 관계는 출발 유형 문서 한 곳에서 정의하고 다른 유형 문서는 링크한다.
+- `data-mapping/ci/classstructure.md`: 구현된 CI의 분류 선택, 분류별 수집 스펙, 실행 정의 조회·유효성 규칙.
+- `data-mapping/ci/relations.md`: 구현된 일곱 관계의 관계도·방향·코드·연결 조건·COUNT/PAGE SQL 정본. 유형 문서는 이 문서로 연결한다.
+- 매핑 문서는 제출용이며 후속 가이드의 근거다. 코드가 현재 구현의 원천이다. 코드 선택 목록을 운영 DB의 전체 등록 목록으로 단정하지 않으며, 과거 관측·미구현 설계는 명시적으로 구분한다.
 - 분류를 가정한 대응안은 확정 매핑 표에 넣지 않는다. 분류·스펙 대조표와 수집 구성안은 `design/ci/<유형>.md`, 미결 상태·남은 결정은 `open-issues.md`에 둔다.
 - 원천·분류·속성·관계 조회 SQL은 해당 매핑 문서 본문에 둔다. `exploration-queries/`와 연결하지 않는다.

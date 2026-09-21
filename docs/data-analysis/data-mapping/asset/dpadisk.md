@@ -95,3 +95,83 @@ LIMIT 1000 OFFSET 0
 ## 6. 미결
 
 없음.
+
+## 실제 저장 SQL
+
+아래는 현재 Writer의 SQL이다. `?`는 USING source 열 순서로 DTO 값을 바인딩한다.
+INSERT에 없는 컬럼은 이 ETL이 신규 값을 지정하지 않으며 DB 기본값·제약에 따른다.
+UPDATE에 없는 컬럼은 기존 값을 유지한다. 문서의 원천 미대응·미결 표기는 NULL로 덮어쓴다는 뜻이 아니다.
+
+```sql
+MERGE INTO MAXIMO.DPADISK AS target
+USING (
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+) AS source (
+    DISKID,
+    DESCRIPTION,
+    DISKINTERFACE,
+    EXTERNALDEVICE,
+    HOTSWAPPABLE,
+    MAKEMODEL,
+    MANUFACTURER,
+    NODEID,
+    REMOVABLEMEDIA,
+    SERIALNUMBER,
+    SIZEUNIT,
+    TOTALSPACE,
+    WRITECAPABLE,
+    CREATEDATE,
+    CHANGEDATE
+)
+ON target.DISKID = source.DISKID
+WHEN MATCHED THEN
+    UPDATE SET
+        DESCRIPTION = source.DESCRIPTION,
+        DISKINTERFACE = source.DISKINTERFACE,
+        EXTERNALDEVICE = source.EXTERNALDEVICE,
+        HOTSWAPPABLE = source.HOTSWAPPABLE,
+        MAKEMODEL = source.MAKEMODEL,
+        MANUFACTURER = source.MANUFACTURER,
+        NODEID = source.NODEID,
+        REMOVABLEMEDIA = source.REMOVABLEMEDIA,
+        SERIALNUMBER = source.SERIALNUMBER,
+        SIZEUNIT = source.SIZEUNIT,
+        TOTALSPACE = source.TOTALSPACE,
+        WRITECAPABLE = source.WRITECAPABLE,
+        CHANGEDATE = source.CHANGEDATE
+WHEN NOT MATCHED THEN
+    INSERT (
+        DISKID,
+        DESCRIPTION,
+        DISKINTERFACE,
+        EXTERNALDEVICE,
+        HOTSWAPPABLE,
+        MAKEMODEL,
+        MANUFACTURER,
+        NODEID,
+        REMOVABLEMEDIA,
+        SERIALNUMBER,
+        SIZEUNIT,
+        TOTALSPACE,
+        WRITECAPABLE,
+        CREATEDATE,
+        CHANGEDATE
+    )
+    VALUES (
+        source.DISKID,
+        source.DESCRIPTION,
+        source.DISKINTERFACE,
+        source.EXTERNALDEVICE,
+        source.HOTSWAPPABLE,
+        source.MAKEMODEL,
+        source.MANUFACTURER,
+        source.NODEID,
+        source.REMOVABLEMEDIA,
+        source.SERIALNUMBER,
+        source.SIZEUNIT,
+        source.TOTALSPACE,
+        source.WRITECAPABLE,
+        source.CREATEDATE,
+        source.CHANGEDATE
+    )
+```

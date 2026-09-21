@@ -33,7 +33,7 @@ where dpaos.manufacturer = dpammanuvariant.manufacturervar
 | `view_deviceos_v1.os_name` | MAXIMO.DPAMOSVARIANT | N:1 |
 
 `OsQuery` 와 같은 원천·같은 필터를 쓴다. 자식이
-`defaultUnknown(os_name)` 으로 기록하므로 상수 `UNKNOWN` 도 함께 넣는다.
+`defaultUnknown(os_name)`으로 비어 있는 OS명을 `UNKNOWN`으로 기록한다. 그러나 현재 변환 조회는 비어 있지 않은 OS명만 수집하며 `UNKNOWN` 상수를 추가하지 않는다. 원천에 그 이름이 없고 Maximo에도 등록되지 않았다면 해당 자식의 UI 변환 조인이 성립하지 않을 수 있다.
 
 기존 23행은 `Windows 98`, `Windows 2000`, `HP-UX` 같은 구세대 목록이며 Device42
 가 수집하는 이름과 겹치는 값이 하나도 없다.
@@ -42,7 +42,7 @@ where dpaos.manufacturer = dpammanuvariant.manufacturervar
 
 | 조건 | 식 | 사유 |
 | --- | --- | --- |
-| COMPUTER 대상 | `OsQuery` 와 동일한 `DEVICE_FILTER` | 자식이 기록할 값만 등록한다 |
+| COMPUTER 대상 | `OsQuery` 와 동일한 `MaximoSourcePolicy.ASSET_COMPUTER` | 자식이 기록할 값만 등록한다 |
 | 빈 값 제외 | `name IS NOT NULL AND name <> ''` | 이름 컬럼이 NOT NULL 이다 |
 
 ## 4. 컬럼 매핑

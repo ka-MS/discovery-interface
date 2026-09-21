@@ -24,7 +24,7 @@ DPA 적재 결과나 변환 규칙에 의존하지 않는다.
 | ACTCIID | Maximo 숫자 채번. 원천 PK를 대입하지 않음 |
 | 갱신 | 같은 ACTCINUM은 기존 ACTCIID 유지. device_pk가 바뀌면 신규 CI |
 | 스펙 참조 | ACTCINUM·CLASSSTRUCTUREID는 본체와 동일, REFOBJECTID=ACTCIID |
-| 스펙 선택 | Computer 공통 18개와 Switch의 GENERICTYPE. Cluster는 MANAGEDSYSTEMNAME·LOCATIONTAG만 사용. BIOS·CPU 코어 수 추가 경로 유지 |
+| 스펙 선택 | 물리 Computer 17개, VM은 VMID 포함 18개, Switch는 VMID 없이 GENERICTYPE 포함 18개. Cluster는 MANAGEDSYSTEMNAME·LOCATIONTAG만 사용. BIOS·CPU 코어 수 추가 경로 유지 |
 
 CiClassification에 사용할 분류명을 명시하고, CI 실행 시작 시 공통 캐시로 CLASSSTRUCTUREID를 조회한다.
 환경별 숫자·문자열 ID를 상수로 고정하지 않는다. ComputerSpec에는 전체 ASSETATTRID를 명시한다.
@@ -87,11 +87,11 @@ Switch 후보는 `second_device_fk`로 연결된 cluster가 정확히 하나이�
 ## 4. ACTCISPEC 값 매핑
 
 적용 분류는 두 ACTCI Computer 분류와 `SYS.GENERICSWITCH`다. 아래 ASSETATTRID는
-공통 접두어 `COMPUTERSYSTEM_`를 생략했다.
+공통 접두어 `COMPUTERSYSTEM_`를 생략했다. 아래 FQDN·MANAGEDSYSTEMNAME·SIGNATURE·SYSTEMBOARDUUID는 미수집 후보이며 현재 수집 목록은 [분류·스펙 명세](../classstructure.md)가 기준이다.
 ALNVALUE는 문자열, NUMVALUE는 숫자다. 한 행에서 값 컬럼 하나만 사용한다.
 `d/h/v/b`는 2절 별칭이며 파생 필드는 5절 SQL의 반환값이다.
 
-### CI 기준 18개
+### 현재 매핑과 CI 기준 후보의 대조
 
 | ASSETATTRID | 한글 의미 | 값 컬럼 | 구분 | Source | 변환·조건 |
 | --- | --- | --- | --- | --- | --- |
@@ -269,55 +269,15 @@ LIMIT 1000 OFFSET 0
 
 ### Maximo 공통 캐시 조회
 
-CiDefinitionLoader가 CI 실행 시작 시 아래 정의를 조회한다. 실제 코드의 분류명 IN 목록은
-연계 측 CiClassification.ids()에서 생성해 로더에 전달하고, 스펙은 앞에서 조회한 분류 ID 목록을 바인딩한다.
-아래 SQL은 현재 Device 본체 enum의 네 분류로 재조회할 수 있는 형태다.
-
-```sql
-SELECT s.CLASSIFICATIONID,s.CLASSSTRUCTUREID
-FROM MAXIMO.CLASSSTRUCTURE s
-WHERE s.CLASSIFICATIONID IN
-    ('SYS.COMPUTERSYSTEM','SYS.VIRTUALCOMPUTERSYSTEM','SYS.GENERICSWITCH',
-     'SYS.COMPUTERSYSTEMCLUSTER')
-  AND EXISTS (
-      SELECT 1 FROM MAXIMO.CLASSUSEWITH u
-      WHERE u.CLASSSTRUCTUREID=s.CLASSSTRUCTUREID AND u.OBJECTNAME='ACTCI'
-  );
-```
-
-ASSETATTRIBUTE는 이름 중복을 보존하도록 숫자 ASSETATTRIBUTEID로 캐싱한다.
-
-```sql
-SELECT ASSETATTRIBUTEID,ASSETATTRID,DATATYPE,MEASUREUNITID,ORGID,SITEID
-FROM MAXIMO.ASSETATTRIBUTE;
-```
-
-설정이 없는 템플릿도 조회하여 존재 여부를 기록한다. 정상 템플릿에는 속성 ID·이름의 일치와
-ACTCI 적용 설정·표시 순서·필수 여부가 필요하다. 비정상 템플릿을 추가 경로로 우회하지 않는다.
-
-```sql
-SELECT c.CLASSSTRUCTUREID,c.CLASSSPECID,c.ASSETATTRID,c.ASSETATTRIBUTEID,
-    c.SECTION,c.MEASUREUNITID,c.LINKEDTOATTRIBUTE,c.LINKEDTOSECTION,
-    u.SEQUENCE,u.MANDATORY
-FROM MAXIMO.CLASSSPEC c
-LEFT JOIN MAXIMO.CLASSSPECUSEWITH u
-  ON u.CLASSSPECID=c.CLASSSPECID AND u.OBJECTNAME='ACTCI' AND u.USEINSPEC=1
-  AND u.CLASSSTRUCTUREID=c.CLASSSTRUCTUREID AND u.ASSETATTRID=c.ASSETATTRID
-  AND (u.SECTION=c.SECTION OR (u.SECTION IS NULL AND c.SECTION IS NULL))
-WHERE c.CLASSSTRUCTUREID IN (SELECT s.CLASSSTRUCTUREID FROM MAXIMO.CLASSSTRUCTURE s
-    WHERE s.CLASSIFICATIONID IN
-        ('SYS.COMPUTERSYSTEM','SYS.VIRTUALCOMPUTERSYSTEM','SYS.GENERICSWITCH',
-         'SYS.COMPUTERSYSTEMCLUSTER')
-      AND EXISTS (SELECT 1 FROM MAXIMO.CLASSUSEWITH w
-          WHERE w.CLASSSTRUCTUREID=s.CLASSSTRUCTUREID AND w.OBJECTNAME='ACTCI'));
-```
+12개 분류의 공통 조회 SQL·ORGID/SITEID 조건·정의 유효성 검사는
+[분류·스펙 명세](../classstructure.md)에 단일 관리한다. Device 전용으로 잘라낸 조사 SQL을 실행 로더 SQL로 해석하지 않는다.
 
 ACTCISPEC의 부모·템플릿 참조는 [공통 매핑](../actcispec.md)을 적용한다.
 MEMORYSIZE·CPUSPEED의 MEASUREUNITID는 4절의 명시적 단위 매핑을 우선한다.
 구현은 ACTCINUM 및 속성 키를 MERGE 자연키로 사용한다. 기존 ID는 유지하고 신규 행만 시퀀스로 채번한다.
 DeviceCiMapper.mapData에서 본체·스펙 DTO를 만들고 ActCiWriter.write에서 본체를 저장한 뒤
 ACTCINUM으로 본체 ID를 참조하는 스펙 MERGE를 실행한다.
-명시적 트랜잭션·롤백은 적용하지 않으며 조회 SQL은 DeviceCiQuery, 저장 SQL은 maximo.ci.ActCiWriter가 소유한다.
+명시적 트랜잭션·롤백은 적용하지 않으며 조회 SQL은 DeviceCiQuery, 저장 SQL은 target.maximo.ci.ActCiWriter가 소유한다.
 
 ## 6. 검증과 남은 작업
 
@@ -344,7 +304,7 @@ TYPE의 ComputerSystem 값은 [IBM ComputerSystem 매핑](https://www.ibm.com/do
 ## 7. 관계 매핑 — 2026-09-15
 
 관측·선택 근거는 [관계 설계](../../../design/ci/relations.md),
-Target 컬럼과 저장 SQL 제안은 [ACTCIRELATION](../actcirelation.md)을 참조한다.
+Target 컬럼과 저장 SQL은 [ACTCIRELATION](../actcirelation.md)을 참조한다.
 2026-09-15 `./run.sh ci-relation`으로 운영 적재를 검증했다. COMPUTER_CONTAINS_DISK 19건,
 COMPUTER_CONTAINS_FILESYSTEM 60건 모두 조회=적재이고, 재실행에서 `ACTCIRELATIONID`가
 유지됐다(멱등성). Filesystem의 `device_fks` 배열 팬아웃(마운트포인트 하나에 복수 장비)은
@@ -367,77 +327,19 @@ Disk·Filesystem 관계의 출발 분류는 SYS.COMPUTERSYSTEM 또는 SYS.VIRTUA
 Host→VM은 출발이 SYS.COMPUTERSYSTEM 또는 SYS.VIRTUALCOMPUTERSYSTEM이고 도착은
 SYS.VIRTUALCOMPUTERSYSTEM이다. 세 관계 모두 CONTAINMENT=1, REVRELATIONSHIP=0,
 CARDINALITY=1:N이다.
-관계의 방향이 Computer 출발이어도 원천 연결 키를 아는 쪽, 즉 Disk·Filesystem 도메인의
-조회 정의가 소유한다. 이 문서는 매핑 정본이고 조회 책임은 코드 쪽 기준이다.
+관계 원천 SQL은 source.device42.ci.relation.Device42Relation이 소유하고, 관계 코드·식별자 매핑은 Pipeline이 소유한다. 통합 정본은 [관계 명세](../relations.md)다.
 
 연결 의미의 기존 운영 검증 이력은 위와 같다. 아래는 타겟 표현을 분리한 현재 원천 조회이며 이번 리팩터링에서는 운영 DB에 재실행하지 않았다.
 관계 쌍에는 본체 전용 DISTINCT ON을 적용하지 않는다.
 
-```sql
-WITH computer AS (
-    SELECT d.device_pk
-    FROM view_device_v2 d
-    WHERE
-d.type IN ('physical', 'virtual')
-AND (d.network_device = false OR d.network_device IS NULL)
-AND (
-    (d.type = 'physical' AND d.physicalsubtype IN ('Generic', 'Rackable', 'Blade', 'WorkStation', 'ThinClient', 'Laptop'))
-    OR (d.type = 'virtual' AND d.virtualsubtype IN ('Internal VM', 'Amazon EC2 Instance', 'VMWare', 'Hyper-V'))
-)
-)
-SELECT CAST(c.device_pk AS varchar) AS source_pk,
-       CAST(p.part_pk AS varchar) AS target_pk
-FROM view_part_v1 p
-JOIN view_partmodel_v1 pm ON pm.partmodel_pk = p.partmodel_fk
-JOIN computer c ON c.device_pk = p.device_fk
-WHERE pm.type_name = 'Hard Disk'
-ORDER BY source_pk, target_pk
-LIMIT 1000 OFFSET 0;
+현재 DEVICE_DISK COUNT/PAGE SQL과 매핑은 [관계 통합 명세](../relations.md)에 단일 관리한다.
 
-WITH computer AS (
-    SELECT d.device_pk
-    FROM view_device_v2 d
-    WHERE
-d.type IN ('physical', 'virtual')
-AND (d.network_device = false OR d.network_device IS NULL)
-AND (
-    (d.type = 'physical' AND d.physicalsubtype IN ('Generic', 'Rackable', 'Blade', 'WorkStation', 'ThinClient', 'Laptop'))
-    OR (d.type = 'virtual' AND d.virtualsubtype IN ('Internal VM', 'Amazon EC2 Instance', 'VMWare', 'Hyper-V'))
-)
-)
-SELECT CAST(c.device_pk AS varchar) AS source_pk,
-       CAST(m.mountpoint_pk AS varchar) AS target_pk
-FROM view_mountpoint_v2 m
-JOIN computer c ON c.device_pk = ANY(m.device_fks)
-WHERE (m.fstype_name IS NULL OR m.fstype_name NOT IN ('overlay', 'squashfs', 'efivarfs'))
-ORDER BY source_pk, target_pk
-LIMIT 1000 OFFSET 0;
-```
+현재 DEVICE_FILESYSTEM COUNT/PAGE SQL과 매핑은 [관계 통합 명세](../relations.md)에 단일 관리한다.
 
 VM–호스트는 `virtual_host_device_fk`로 양 끝이 확인된다. 원천 FK는 VM → Host를 가리키지만
 ACTCIRELATION은 기준정보와 토폴로지 의미에 맞춰 Host → VM으로 저장한다.
 
-```sql
-WITH computer AS (
-    SELECT d.device_pk, d.type, d.virtual_host_device_fk
-    FROM view_device_v2 d
-    WHERE
-d.type IN ('physical', 'virtual')
-AND (d.network_device = false OR d.network_device IS NULL)
-AND (
-    (d.type = 'physical' AND d.physicalsubtype IN ('Generic', 'Rackable', 'Blade', 'WorkStation', 'ThinClient', 'Laptop'))
-    OR (d.type = 'virtual' AND d.virtualsubtype IN ('Internal VM', 'Amazon EC2 Instance', 'VMWare', 'Hyper-V'))
-)
-)
-SELECT CAST(host.device_pk AS varchar) AS source_pk,
-       CAST(vm.device_pk AS varchar) AS target_pk
-FROM computer vm
-JOIN computer host ON host.device_pk = vm.virtual_host_device_fk
-WHERE vm.type = 'virtual'
-  AND host.device_pk <> vm.device_pk
-ORDER BY source_pk, target_pk
-LIMIT 1000 OFFSET 0
-```
+현재 HOST_VM COUNT/PAGE SQL과 매핑은 [관계 통합 명세](../relations.md)에 단일 관리한다.
 
 2026-09-16 제품 SQL과 같은 조회를 실행해 `.68` 3건, `.35` 55건을 확인했다.
 실제 호스트는 physical과 virtual 모두 있다. Maximo의 새 `VIRTUALIZES` 규칙은
@@ -459,29 +361,7 @@ LIMIT 1000 OFFSET 0
 원천은 장비-IP 연결 전용 뷰를 쓴다. `view_ipaddress_v2.device_fks` 배열을 펼쳐도 같은 쌍이
 나오지만(양쪽 서버에서 건수 일치 확인) 연결 뷰가 의도를 직접 드러낸다.
 
-```sql
-WITH device AS (
-    SELECT d.device_pk
-    FROM view_device_v2 d
-    WHERE
-(d.type IN ('physical', 'virtual')
-AND (d.network_device = false OR d.network_device IS NULL)
-AND (
-    (d.type = 'physical' AND d.physicalsubtype IN ('Generic', 'Rackable', 'Blade', 'WorkStation', 'ThinClient', 'Laptop'))
-    OR (d.type = 'virtual' AND d.virtualsubtype IN ('Internal VM', 'Amazon EC2 Instance', 'VMWare', 'Hyper-V'))
-)
-)
-OR (d.type = 'physical' AND d.network_device = true)
-OR (d.type = 'cluster' AND d.network_device = true
-AND NULLIF(TRIM(d.details->>'fw_device_type'), '') = 'Switch')
-)
-SELECT CAST(d.device_pk AS varchar) AS source_pk,
-       CAST(x.ipaddress_fk AS varchar) AS target_pk
-FROM view_ipaddress_device_v2 x
-JOIN device d ON d.device_pk = x.device_fk
-ORDER BY source_pk, target_pk
-LIMIT 1000 OFFSET 0
-```
+현재 DEVICE_IP COUNT/PAGE SQL과 매핑은 [관계 통합 명세](../relations.md)에 단일 관리한다.
 
 `MaximoSourcePolicy.CI_DEVICE`로 확장한 2026-09-17 실행 결과는 `.68` 53쌍(IP 52 · Device 35),
 `.35` 120쌍(IP 99 · Device 66)이다. 두 서버 모두 Cluster 관계가 2쌍씩 추가됐고 물리 Switch의
@@ -511,32 +391,7 @@ LIMIT 1000 OFFSET 0
 포트마다 같은 연결이 반복되므로 `view_netport_v1`을 물리 장비별로 먼저 집계한다. 한 물리 장비가
 정확히 하나의 Switch Cluster에 연결된 경우에만 한 관계 쌍을 만든다.
 
-```sql
-WITH network_info AS (
-    SELECT n.second_device_fk AS physical_pk,
-           CASE WHEN COUNT(DISTINCT n.device_fk) = 1
-                THEN MIN(n.device_fk) END AS cluster_pk,
-           COUNT(DISTINCT n.device_fk) AS cluster_count,
-           COUNT(DISTINCT NULLIF(TRIM(c.details->>'fw_device_type'), ''))
-               AS network_kind_count,
-           MIN(NULLIF(TRIM(c.details->>'fw_device_type'), '')) AS network_kind
-    FROM view_netport_v1 n
-    JOIN view_device_v2 p ON p.device_pk = n.second_device_fk
-    JOIN view_device_v2 c ON c.device_pk = n.device_fk
-    WHERE p.type = 'physical' AND p.network_device = true
-      AND (p.physicalsubtype IS NULL OR p.physicalsubtype <> 'Network Printer')
-      AND c.type = 'cluster' AND c.network_device = true
-    GROUP BY n.second_device_fk
-)
-SELECT CAST(cluster_pk AS varchar) AS source_pk,
-       CAST(physical_pk AS varchar) AS target_pk
-FROM network_info
-WHERE cluster_count = 1
-  AND network_kind_count = 1
-  AND network_kind = 'Switch'
-ORDER BY source_pk, target_pk
-LIMIT 1000 OFFSET 0
-```
+현재 NETWORK_CLUSTER_DEVICE COUNT/PAGE SQL과 매핑은 [관계 통합 명세](../relations.md)에 단일 관리한다.
 
 제품 조회 정의와 같은 조건에서 `.68` 2쌍, `.35` 2쌍이다. 코드의 건수·페이지 조회와 포트 중복 제거,
 Cluster→물리 Switch 방향은 자동 테스트했다. 실제 저장은 MAS UI에 위 분류 규칙을 등록한 뒤

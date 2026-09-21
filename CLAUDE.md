@@ -14,7 +14,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - `knowledge/` — 관측 사실. 수치는 스냅샷이며 상단에 관측 시점과 재조회 쿼리를 명시한다.
 - `design/` — 수집 구성안·대조표·선택 이유. 검토안과 결정된 내용을 구분하며, CI 유형별 설계는 `design/ci/<유형>.md`에 둔다.
-- `data-mapping/` — 테이블 단위 매핑 정본. 문서 한 장이 해당 연계의 Query·매핑과 타겟 Writer에 대응한다.
+- `data-mapping/` — 제출용 매핑 정본이자 후속 가이드·문서의 근거다. 현재 코드를 구현 사실의 원천으로 삼아 조회 조건·변환·저장 동작을 기록한다. 구현 사실, 시점이 있는 DB 관측, 미구현 검토안을 혼동하지 않는다. CI 분류·스펙은 `ci/classstructure.md`, 관계도·코드·연결 SQL은 `ci/relations.md`에서 추적한다.
+  테이블 단위 매핑을 기본으로 한다. 문서 한 장이 해당 연계의 Query·매핑과 타겟 Writer에 대응한다.
   조회·원천 모델은 `source/device42`, 수집 정책·Mapper·Import·Job 조립은 `pipeline/d42maximo`,
   저장 SQL·타겟 DTO는 `target/maximo`에 둔다. 단순 변환은 Import 메서드로 유지한다.
   CI는 예외로 Target별 공통 규약과 CI 유형별 원천 매핑을 분리한다. 형식은 데이터 분석 README를 따른다.

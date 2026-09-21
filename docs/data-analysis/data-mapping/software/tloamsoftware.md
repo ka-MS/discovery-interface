@@ -169,3 +169,52 @@ LIMIT 1000 OFFSET 0
 
 - 원천에서 사라진 카탈로그 행의 삭제·비활성화 정책은 ISSUE-7에서 논의한다.
 - `TARGETSOFTWAREID`를 이용한 카탈로그 병합은 현재 범위에 포함하지 않는다.
+
+## 실제 저장 SQL
+
+아래는 현재 Writer의 SQL이다. `?`는 USING source 열 순서로 DTO 값을 바인딩한다.
+INSERT에 없는 컬럼은 이 ETL이 신규 값을 지정하지 않으며 DB 기본값·제약에 따른다.
+UPDATE에 없는 컬럼은 기존 값을 유지한다. 문서의 원천 미대응·미결 표기는 NULL로 덮어쓴다는 뜻이 아니다.
+이 Writer에는 WHEN MATCHED가 없다. 같은 UNIQUEID의 기존 카탈로그는 갱신하지 않고 신규만 등록한다.
+
+```sql
+MERGE INTO MAXIMO.TLOAMSOFTWARE AS target
+USING (
+    VALUES (?, ?, ?, ?)
+) AS source (
+    UNIQUEID,
+    SWNAME,
+    MANUFACTURER,
+    VERSION
+)
+ON target.UNIQUEID = source.UNIQUEID
+WHEN NOT MATCHED THEN
+    INSERT (
+        TLOAMSOFTWAREID,
+        UNIQUEID,
+        SWNAME,
+        MANUFACTURER,
+        VERSION,
+        RELEASE,
+        ROLE,
+        ISIPLA,
+        ISPVU,
+        ISSUBCAP,
+        ISDELETED,
+        ISREVIEWED
+    )
+    VALUES (
+        NEXT VALUE FOR MAXIMO.TLOAMSOFTWARESEQ,
+        source.UNIQUEID,
+        source.SWNAME,
+        source.MANUFACTURER,
+        source.VERSION,
+        NULL,
+        'SOFTWAREPRODUCT',
+        0,
+        0,
+        0,
+        0,
+        0
+    )
+```

@@ -115,3 +115,97 @@ LIMIT 1000 OFFSET 0
 ## 6. 미결
 
 - 원천에서 사라진 행의 삭제·비활성화 정책은 ISSUE-7에서 논의한다.
+
+## 실제 저장 SQL
+
+아래는 현재 Writer의 SQL이다. `?`는 USING source 열 순서로 DTO 값을 바인딩한다.
+INSERT에 없는 컬럼은 이 ETL이 신규 값을 지정하지 않으며 DB 기본값·제약에 따른다.
+UPDATE에 없는 컬럼은 기존 값을 유지한다. 문서의 원천 미대응·미결 표기는 NULL로 덮어쓴다는 뜻이 아니다.
+
+```sql
+MERGE INTO MAXIMO.DPASOFTWARE AS target
+USING (
+    SELECT
+        input.SOFTWAREID,
+        input.FIRSTENCOUNTERED1,
+        input.INSTALLDATE,
+        input.INSTALLPATH,
+        input.LASTENCOUNTERED1,
+        input.MANUFACTURER,
+        input.NODEID,
+        input.SOFTWARENAME,
+        input.SUITEID,
+        input.VERSION,
+        input.CREATEDATE,
+        input.CHANGEDATE,
+        catalog.TLOAMSOFTWAREID,
+        catalog.TLOAMSOFTWAREID AS TLOAMPRODUCTID
+    FROM (
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) AS input (
+        SOFTWAREID,
+        FIRSTENCOUNTERED1,
+        INSTALLDATE,
+        INSTALLPATH,
+        LASTENCOUNTERED1,
+        MANUFACTURER,
+        NODEID,
+        SOFTWARENAME,
+        SUITEID,
+        VERSION,
+        CREATEDATE,
+        CHANGEDATE,
+        TLOAMUNIQUEID
+    )
+    JOIN MAXIMO.TLOAMSOFTWARE catalog
+      ON catalog.UNIQUEID = input.TLOAMUNIQUEID
+) AS source
+ON target.SOFTWAREID = source.SOFTWAREID
+WHEN MATCHED THEN
+    UPDATE SET
+        FIRSTENCOUNTERED1 = source.FIRSTENCOUNTERED1,
+        INSTALLDATE = source.INSTALLDATE,
+        INSTALLPATH = source.INSTALLPATH,
+        LASTENCOUNTERED1 = source.LASTENCOUNTERED1,
+        MANUFACTURER = source.MANUFACTURER,
+        NODEID = source.NODEID,
+        SOFTWARENAME = source.SOFTWARENAME,
+        SUITEID = source.SUITEID,
+        VERSION = source.VERSION,
+        TLOAMSOFTWAREID = source.TLOAMSOFTWAREID,
+        TLOAMPRODUCTID = source.TLOAMPRODUCTID,
+        CHANGEDATE = source.CHANGEDATE
+WHEN NOT MATCHED THEN
+    INSERT (
+        SOFTWAREID,
+        FIRSTENCOUNTERED1,
+        INSTALLDATE,
+        INSTALLPATH,
+        LASTENCOUNTERED1,
+        MANUFACTURER,
+        NODEID,
+        SOFTWARENAME,
+        SUITEID,
+        VERSION,
+        TLOAMSOFTWAREID,
+        TLOAMPRODUCTID,
+        CREATEDATE,
+        CHANGEDATE
+    )
+    VALUES (
+        source.SOFTWAREID,
+        source.FIRSTENCOUNTERED1,
+        source.INSTALLDATE,
+        source.INSTALLPATH,
+        source.LASTENCOUNTERED1,
+        source.MANUFACTURER,
+        source.NODEID,
+        source.SOFTWARENAME,
+        source.SUITEID,
+        source.VERSION,
+        source.TLOAMSOFTWAREID,
+        source.TLOAMPRODUCTID,
+        source.CREATEDATE,
+        source.CHANGEDATE
+    )
+```

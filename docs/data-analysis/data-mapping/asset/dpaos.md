@@ -98,3 +98,55 @@ LIMIT 1000 OFFSET 0
 ## 6. 미결
 
 없음.
+
+## 실제 저장 SQL
+
+아래는 현재 Writer의 SQL이다. `?`는 USING source 열 순서로 DTO 값을 바인딩한다.
+INSERT에 없는 컬럼은 이 ETL이 신규 값을 지정하지 않으며 DB 기본값·제약에 따른다.
+UPDATE에 없는 컬럼은 기존 값을 유지한다. 문서의 원천 미대응·미결 표기는 NULL로 덮어쓴다는 뜻이 아니다.
+
+```sql
+MERGE INTO MAXIMO.DPAOS AS target
+USING (
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+) AS source (
+    OSID,
+    BUILD,
+    MANUFACTURER,
+    NAME,
+    NODEID,
+    VERSION,
+    CREATEDATE,
+    CHANGEDATE
+)
+ON target.OSID = source.OSID
+WHEN MATCHED THEN
+    UPDATE SET
+        BUILD = source.BUILD,
+        MANUFACTURER = source.MANUFACTURER,
+        NAME = source.NAME,
+        NODEID = source.NODEID,
+        VERSION = source.VERSION,
+        CHANGEDATE = source.CHANGEDATE
+WHEN NOT MATCHED THEN
+    INSERT (
+        OSID,
+        BUILD,
+        MANUFACTURER,
+        NAME,
+        NODEID,
+        VERSION,
+        CREATEDATE,
+        CHANGEDATE
+    )
+    VALUES (
+        source.OSID,
+        source.BUILD,
+        source.MANUFACTURER,
+        source.NAME,
+        source.NODEID,
+        source.VERSION,
+        source.CREATEDATE,
+        source.CHANGEDATE
+    )
+```

@@ -135,3 +135,53 @@ LIMIT 1000 OFFSET 0
 
 - 현행 MERGE는 신규·변경만 반영한다. 이후 Device42의 `device_fks`에서 제거된
   장비–IP 연결을 Maximo에서도 삭제하는 동기화 정책은 별도로 정해야 한다.
+
+## 실제 저장 SQL
+
+아래는 현재 Writer의 SQL이다. `?`는 USING source 열 순서로 DTO 값을 바인딩한다.
+INSERT에 없는 컬럼은 이 ETL이 신규 값을 지정하지 않으며 DB 기본값·제약에 따른다.
+UPDATE에 없는 컬럼은 기존 값을 유지한다. 문서의 원천 미대응·미결 표기는 NULL로 덮어쓴다는 뜻이 아니다.
+
+```sql
+MERGE INTO MAXIMO.DPATCPIP AS target
+USING (
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+) AS source (
+    GATEWAY,
+    HOST,
+    NODEID,
+    TCPIPADDRESS,
+    TCPIPNETMASK,
+    CREATEDATE,
+    CHANGEDATE
+)
+ON target.NODEID = source.NODEID
+    AND target.TCPIPADDRESS = source.TCPIPADDRESS
+WHEN MATCHED THEN
+    UPDATE SET
+        GATEWAY = source.GATEWAY,
+        HOST = source.HOST,
+        TCPIPNETMASK = source.TCPIPNETMASK,
+        CHANGEDATE = source.CHANGEDATE
+WHEN NOT MATCHED THEN
+    INSERT (
+        TCPIPID,
+        GATEWAY,
+        HOST,
+        NODEID,
+        TCPIPADDRESS,
+        TCPIPNETMASK,
+        CREATEDATE,
+        CHANGEDATE
+    )
+    VALUES (
+        NEXT VALUE FOR MAXIMO.DPATCPIPSEQ,
+        source.GATEWAY,
+        source.HOST,
+        source.NODEID,
+        source.TCPIPADDRESS,
+        source.TCPIPNETMASK,
+        source.CREATEDATE,
+        source.CHANGEDATE
+    )
+```

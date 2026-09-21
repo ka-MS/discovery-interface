@@ -33,7 +33,7 @@ MERGE 키는 `NODEID` 다. `NODEID = device_pk` 이므로 재실행해도 멱등
 | 컨테이너 제외 | `d.virtualsubtype_id IS NULL OR d.virtualsubtype_id <> 15` | Docker Container 는 자산으로 관리하지 않는다 |
 | PDU 제외 | `d.physicalsubtype IS NULL OR d.physicalsubtype <> 'PDU'` | 대응 ASSETCLASS 와 DPA 테이블이 없다 |
 
-근거: `DeviceQuery.java` `DEVICE_FILTER`.
+근거: `MaximoSourcePolicy.ASSET_DEVICE`가 `DeviceQuery`에 전달하는 선택 조건.
 
 ## 4. 컬럼 매핑
 
@@ -61,7 +61,7 @@ MERGE 키는 `NODEID` 다. `NODEID = device_pk` 이므로 재실행해도 멱등
 | SOURCEID | 소스 | ALN(128) | Y | 변환 | `view_device_v2`.device_pk | 문자열로 변환 |
 | SOURCEID2 | Source2 | ALN(128) | Y | 원천없음 | – | 보조 키 컬럼. 현행 적재는 사용하지 않는다 |
 | SUPPORTSSNMP | SNMP 지원 | YORN(1) | N | 상수 | – | `0` |
-| SYSTEMROLE | 역할 | ALN(32) | Y | 미결 | `view_device_v2`.type, .virtualsubtype, .physicalsubtype | 기존 수집분은 13종(Server, Network PC, Unix Box 등)을 쓴다. D42 타입 체계를 여기에 대응시킬 자리이나 값 대응 규칙 미정 |
+| SYSTEMROLE | 역할 | ALN(32) | Y | 변환 | ASSETCLASS와 동일 판정 | 현재 Mapper는 ASSETCLASS 값(COMPUTER·NETDEVICE·NETPRINTER)을 그대로 넣는다. Server 등의 별도 역할 분류는 구현하지 않음 |
 | TLOAMHASH | 파티션 ID | UPPER(192) | Y | 원천없음 | – |  |
 | TLOAMHWTYPE | 하드웨어 유형 | ALN(32) | Y | 원천없음 | – | 기존 수집분도 전건 NULL |
 | TLOAMISPROMOTED | 승격 여부 | UPPER(8) | Y | 원천없음 | – | Maximo 내부 상태값 |
@@ -111,9 +111,108 @@ ORDER BY d.device_pk
 LIMIT 1000 OFFSET 0
 ```
 
-`ram`, `ram_size_type`, `total_cpus`, `core_per_cpu`, `bios_version`, `bios_release_date` 도 함께 조회되지만 이 테이블에는 적재되지 않는다. DPACOMPUTER 가 같은 값을 별도 조회로 다시 가져간다.
+이 조회에는 RAM·CPU·BIOS 요약 컬럼이 없다. 해당 필드는 [DPACOMPUTER](dpacomputer.md)의 별도 조회·매핑이 소유한다.
 
 ## 6. 미결
 
-- `SYSTEMROLE`, `TLOAMNRSHOSTSYSTEM`, `TLOAMNRSMODEL`, `TLOAMNRSNAME`,
+- 현재 `SYSTEMROLE`은 ASSETCLASS를 복제한다. 별도 업무 역할 분류는 구현 범위 밖이다.
+- `TLOAMNRSHOSTSYSTEM`, `TLOAMNRSMODEL`, `TLOAMNRSNAME`,
   `TLOAMNRSPRIMARYMACADDRESS`, `TLOAMNRSSERIALNUMBER`의 매핑 규칙이 미정이다.
+
+## 실제 저장 SQL
+
+아래는 현재 Writer의 SQL이다. `?`는 USING source 열 순서로 DTO 값을 바인딩한다.
+INSERT에 없는 컬럼은 이 ETL이 신규 값을 지정하지 않으며 DB 기본값·제약에 따른다.
+UPDATE에 없는 컬럼은 기존 값을 유지한다. 문서의 원천 미대응·미결 표기는 NULL로 덮어쓴다는 뜻이 아니다.
+
+```sql
+MERGE INTO MAXIMO.DEPLOYEDASSET AS target
+USING (
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+) AS source (
+    NODEID,
+    SOURCEID,
+    IMPORTSOURCE,
+    NODENAME,
+    DOMAINNAME,
+    SERIALNUMBER,
+    ASSETTAG,
+    MAKEMODEL,
+    MANUFACTURER,
+    DESCRIPTION,
+    HWLASTSCANDATE,
+    HWDETECTIONTOOL,
+    SUPPORTSSNMP,
+    SYSTEMROLE,
+    ASSETCLASS,
+    CREATEDATE,
+    CHANGEDATE,
+    TLOAMSTATUS,
+    TLOAMNRSMANUFACTURER,
+    TLOAMNRSUUID
+)
+ON target.NODEID = source.NODEID
+WHEN MATCHED THEN
+    UPDATE SET
+        NODENAME = source.NODENAME,
+        DOMAINNAME = source.DOMAINNAME,
+        SERIALNUMBER = source.SERIALNUMBER,
+        ASSETTAG = source.ASSETTAG,
+        MAKEMODEL = source.MAKEMODEL,
+        MANUFACTURER = source.MANUFACTURER,
+        DESCRIPTION = source.DESCRIPTION,
+        HWLASTSCANDATE = source.HWLASTSCANDATE,
+        HWDETECTIONTOOL = source.HWDETECTIONTOOL,
+        SUPPORTSSNMP = source.SUPPORTSSNMP,
+        SYSTEMROLE = source.SYSTEMROLE,
+        ASSETCLASS = source.ASSETCLASS,
+        CHANGEDATE = source.CHANGEDATE,
+        TLOAMSTATUS = source.TLOAMSTATUS,
+        TLOAMNRSMANUFACTURER = source.TLOAMNRSMANUFACTURER,
+        TLOAMNRSUUID = source.TLOAMNRSUUID
+WHEN NOT MATCHED THEN
+    INSERT (
+        NODEID,
+        SOURCEID,
+        IMPORTSOURCE,
+        NODENAME,
+        DOMAINNAME,
+        SERIALNUMBER,
+        ASSETTAG,
+        MAKEMODEL,
+        MANUFACTURER,
+        DESCRIPTION,
+        HWLASTSCANDATE,
+        HWDETECTIONTOOL,
+        SUPPORTSSNMP,
+        SYSTEMROLE,
+        ASSETCLASS,
+        CREATEDATE,
+        CHANGEDATE,
+        TLOAMSTATUS,
+        TLOAMNRSMANUFACTURER,
+        TLOAMNRSUUID
+    )
+    VALUES (
+        source.NODEID,
+        source.SOURCEID,
+        source.IMPORTSOURCE,
+        source.NODENAME,
+        source.DOMAINNAME,
+        source.SERIALNUMBER,
+        source.ASSETTAG,
+        source.MAKEMODEL,
+        source.MANUFACTURER,
+        source.DESCRIPTION,
+        source.HWLASTSCANDATE,
+        source.HWDETECTIONTOOL,
+        source.SUPPORTSSNMP,
+        source.SYSTEMROLE,
+        source.ASSETCLASS,
+        source.CREATEDATE,
+        source.CHANGEDATE,
+        source.TLOAMSTATUS,
+        source.TLOAMNRSMANUFACTURER,
+        source.TLOAMNRSUUID
+    )
+```

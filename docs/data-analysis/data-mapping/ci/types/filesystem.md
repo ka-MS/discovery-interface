@@ -2,7 +2,7 @@
 
 > Target: MAXIMO.ACTCI · MAXIMO.ACTCISPEC
 > 원천·메타데이터 확인: 2026-09-15 · D42 .68 / .35 · Maximo BLUDB
-> 구현: [FilesystemCiImport](../../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/ci/filesystem/FilesystemCiImport.java) · [FilesystemCiQuery](../../../../../src/main/java/com/itmsg/device42/source/device42/ci/filesystem/FilesystemCiQuery.java) · [FilesystemCiMapper](../../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/ci/filesystem/FilesystemCiMapper.java) · [ActCiWriter](../../../../../src/main/java/com/itmsg/device42/target/maximo/ci/ActCiWriter.java) · 상태: 본체·스펙 적재 구현 및 자동 테스트 완료. 관계 미적재. 실제 Maximo 적재·UI 검증은 미완료.
+> 구현: [FilesystemCiImport](../../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/ci/filesystem/FilesystemCiImport.java) · [FilesystemCiQuery](../../../../../src/main/java/com/itmsg/device42/source/device42/ci/filesystem/FilesystemCiQuery.java) · [FilesystemCiMapper](../../../../../src/main/java/com/itmsg/device42/pipeline/d42maximo/ci/filesystem/FilesystemCiMapper.java) · [ActCiWriter](../../../../../src/main/java/com/itmsg/device42/target/maximo/ci/ActCiWriter.java) · 상태: 본체·스펙 적재 구현 및 자동 테스트 완료. Computer→Filesystem 관계 저장도 구현됨. 과거 DB 적재 이력과 승격·UI 미검증 범위는 [ACTCIRELATION](../actcirelation.md) 참조.
 > 분류 선택 이유·관계 추천안·선별 기준은 [Filesystem 수집 설계](../../../design/ci/filesystem.md)에 있다.
 
 공통 컬럼 정의는 [ACTCI](../actci.md), [ACTCISPEC](../actcispec.md)가 소유한다.
@@ -13,8 +13,8 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 대상 | `view_mountpoint_v2` 전 행. 117 / 141건 전건 Computer 연결 |
-| 분류 | `SYS.FILESYSTEM` 한 개. 로컬·원격·컨테이너를 구분하지 않는다 |
+| 대상 | CI Computer 대상에 연결된 마운트 중 overlay·squashfs·efivarfs 제외. NULL fstype은 포함; 배열 조인 후 mountpoint_pk당 한 본체 |
+| 분류 | `SYS.FILESYSTEM` 한 개. 선택된 로컬·원격 마운트를 같은 분류로 적재 |
 | ACTCINUM | `D42:MOUNTPOINT:<mountpoint_pk>` |
 | 스펙 참조 | ACTCINUM·CLASSSTRUCTUREID는 본체와 동일, REFOBJECTID=ACTCIID |
 | 관계 | [Computer 출발 관계 매핑](device.md#7-관계-매핑--2026-09-15)에 원천·분류쌍·저장 구현 완료. `ci-relation` 운영 적재·멱등성 검증 완료; CI 승격·UI 검증은 별도 |
@@ -56,7 +56,7 @@ ORDER BY m.mountpoint_pk, c.device_pk
 LIMIT 1000 OFFSET 0
 ```
 
-2026-09-15 두 서버에서 실행해 통과를 확인했다. 제외 적용 후 69 / 60건이다.
+과거 2026-09-15 조건의 관측은 69 / 60건이다. 현재 조건은 devtmpfs를 포함하도록 변경된 뒤의 SQL이며, 2026-09-17 관측은 78 / 70건이다. 이번 문서 대조에서 DB 재조회는 하지 않았다.
 
 ## 3. 본체 매핑
 
